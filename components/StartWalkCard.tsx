@@ -3,11 +3,12 @@
 import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 
+import { AddUserDialog } from '@/components/AddUserDialog';
 import { SpeedPicker } from '@/components/SpeedPicker';
 import { TreadmillPicker, busyLabel, elapsedSec, useNowTick } from '@/components/TreadmillPicker';
 import { UserSelect } from '@/components/UserSelect';
 import { Button } from '@/components/ui/8bit/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/8bit/card';
+import { Card, CardAction, CardContent, CardHeader, CardTitle } from '@/components/ui/8bit/card';
 import { Icon } from '@/components/ui/icon';
 import { Skeleton } from '@/components/ui/8bit/skeleton';
 import { ApiError, apiGet, apiSend, useTreadmills, useUserStats } from '@/lib/client/api';
@@ -31,6 +32,9 @@ export function StartWalkCard({ users, userId, onSelectUser }: StartWalkCardProp
   const [speed, setSpeed] = useState<number | null>(null);
   const [starting, setStarting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Диалог создания участника живёт здесь, а не в `UserSelect`: открывающая его
+  // кнопка стоит в шапке карточки, то есть вне поддерева селекта.
+  const [addOpen, setAddOpen] = useState(false);
 
   const list = treadmills ?? [];
   const free = list.filter((t) => t.busy === null);
@@ -127,12 +131,12 @@ export function StartWalkCard({ users, userId, onSelectUser }: StartWalkCardProp
   const canStart = userId !== null && speed !== null && blocker === null;
 
   return (
-    <StartCard title="Старт прогулки">
+    <StartCard title="Старт прогулки" action={<AddUserButton onClick={() => setAddOpen(true)} />}>
       <UserSelect users={users} value={userId} onChange={onSelectUser} />
 
       {users.length === 0 && (
         <p className="text-sm text-text-dim">
-          В команде пока никого. Нажмите «Добавить» и заведите первого участника.
+          В команде пока никого. Нажмите «Добавить участника» и заведите первого.
         </p>
       )}
 
@@ -176,6 +180,13 @@ export function StartWalkCard({ users, userId, onSelectUser }: StartWalkCardProp
           </p>
         )}
       </div>
+
+      <AddUserDialog
+        open={addOpen}
+        onClose={() => setAddOpen(false)}
+        users={users}
+        onCreated={(user) => onSelectUser(user.id)}
+      />
     </StartCard>
   );
 }
@@ -184,18 +195,41 @@ export function StartWalkCard({ users, userId, onSelectUser }: StartWalkCardProp
  * Общая рамка блока старта: заголовок пиксельный, содержимое — обычным sans,
  * иначе имена и подписи внутри карточки станут нечитаемыми (п. 6.7.1).
  */
-function StartCard({ title, children }: { title: string; children: React.ReactNode }) {
+function StartCard({
+  title,
+  action,
+  children,
+}: {
+  title: string;
+  /** Правый край шапки: кнопка добавления участника либо её скелетон. */
+  action?: React.ReactNode;
+  children: React.ReactNode;
+}) {
   // overflow-visible: базовая карточка shadcn режет содержимое по своей рамке,
   // и выпадающий список участников обрезался бы по нижнему краю карточки.
   return (
     <Card font="normal" className="overflow-visible">
-      <CardHeader>
+      {/* items-center вместо дефолтного items-start: заголовок в одну строку и
+          кнопка выравниваются по общей средней линии.
+
+          `retro` продублирован намеренно: `CardHeader` из 8bitcn спредит
+          `{...props}` после вычисленного `className`, поэтому любой переданный
+          класс затирает его целиком. Пока className не передавали, шапка
+          получала `retro` сама; теперь его надо вернуть руками. */}
+      <CardHeader className="retro items-center">
         {/* text-sm на мобильном: пиксельный шрифт широкий, «Старт прогулки»
             16-м кеглем упирается в край экрана 360 px (п. 6.7.2).
             `retro` в классе обязателен — className в 8bitcn перекрывает его. */}
         <CardTitle className="retro text-sm leading-snug break-words sm:text-base">
           {title}
         </CardTitle>
+        {/*
+          `CardAction` — штатный слот shadcn: при его наличии `CardHeader`
+          переключается в `grid-cols-[1fr_auto]`, а сам слот встаёт в
+          `col-start-2 justify-self-end`. Свой flex-ряд здесь дал бы то же
+          самое, но мимо сетки шапки — и сломался бы, добавь мы описание.
+        */}
+        {action && <CardAction className="self-center">{action}</CardAction>}
       </CardHeader>
       <CardContent font="normal" className="space-y-5">
         {children}
@@ -204,10 +238,36 @@ function StartCard({ title, children }: { title: string; children: React.ReactNo
   );
 }
 
+/**
+ * Кнопка создания участника в шапке карточки.
+ *
+ * `h-auto min-h-11`, а не фиксированная высота: пиксельная рамка 8-битной кнопки
+ * висит снаружи бокса (`-top-1.5` / `-bottom-1.5`) и добавляет по 6 px сверху и
+ * снизу, поэтому жёсткая высота обрезала бы её. Метка пиксельная — это действие,
+ * а не данные (п. 6.7.1), и на 360 px «Добавить участника» в неё уже не влезает,
+ * поэтому на узких экранах остаётся короткое «Добавить»: полный текст всегда
+ * доступен скринридеру через `aria-label`.
+ */
+function AddUserButton({ onClick }: { onClick: () => void }) {
+  return (
+    <Button
+      type="button"
+      variant="outline"
+      aria-label="Добавить участника"
+      className="h-auto min-h-11 shrink-0 gap-2 px-3 text-xs"
+      onClick={onClick}
+    >
+      <Icon name="plus" size={16} />
+      <span className="sm:hidden">Добавить</span>
+      <span className="hidden sm:inline">Добавить участника</span>
+    </Button>
+  );
+}
+
 /** Плейсхолдер блока старта: та же рамка, чтобы экран не «прыгал» после загрузки. */
 export function StartWalkCardSkeleton() {
   return (
-    <StartCard title="Старт прогулки">
+    <StartCard title="Старт прогулки" action={<Skeleton className="h-11 w-40" />}>
       <div className="space-y-3">
         <Skeleton className="h-3 w-20" />
         <Skeleton className="h-11 w-full" />

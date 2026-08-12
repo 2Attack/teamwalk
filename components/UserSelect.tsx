@@ -2,7 +2,7 @@
 
 import { useId, useState } from 'react';
 
-import { AddUserDialog, ChangeAvatarDialog } from '@/components/AddUserDialog';
+import { ChangeAvatarDialog } from '@/components/AddUserDialog';
 import { Avatar } from '@/components/Avatar';
 import { Button } from '@/components/ui/8bit/button';
 import {
@@ -27,8 +27,9 @@ interface UserSelectProps {
 
 /**
  * Комбобокс с поиском по вводу (п. 6.2): аватар + имя, фильтрация по подстроке,
- * управление с клавиатуры. Рядом — «+ Добавить»; клик по аватару выбранного
- * участника открывает смену персонажа (п. 6.5).
+ * управление с клавиатуры. Поле занимает всю ширину карточки — «+ Добавить
+ * участника» живёт в её шапке. Клик по аватару выбранного участника открывает
+ * смену персонажа (п. 6.5).
  *
  * Собран из `Popover` + `Command` 8bitcn — это рецепт комбобокса из их доков:
  * готового компонента там нет, страница «Combo Box» показывает ровно такую
@@ -46,7 +47,6 @@ interface UserSelectProps {
 export function UserSelect({ users, value, onChange }: UserSelectProps) {
   const triggerId = useId();
   const [open, setOpen] = useState(false);
-  const [addOpen, setAddOpen] = useState(false);
   const [avatarOpen, setAvatarOpen] = useState(false);
 
   const selected = users.find((u) => u.id === value) ?? null;
@@ -64,130 +64,112 @@ export function UserSelect({ users, value, onChange }: UserSelectProps) {
           Участник
         </Label>
 
-        {/* flex-wrap: на 360 px пиксельная метка «Добавить» уезжает на свою строку,
-            а поле остаётся во всю ширину — горизонтального скролла не возникает. */}
-        <div className="flex flex-wrap items-start gap-3">
-          <div className="min-w-0 flex-1 basis-56">
-            <Popover open={open} onOpenChange={setOpen}>
+        {/* Поле занимает всю ширину карточки. Раньше здесь был flex-ряд
+            «поле + кнопка», и поле делило строку с «Добавить»; кнопка переехала
+            в шапку карточки, так что делить ширину больше не с кем. */}
+        <div className="min-w-0">
+          <Popover open={open} onOpenChange={setOpen}>
+            {/*
+              Base UI (стиль `base-nova` в components.json) подставляет свой
+              элемент через `render`, а не через `asChild` как Radix.
+            */}
+            <PopoverTrigger
+              render={
+                <Button
+                  id={triggerId}
+                  type="button"
+                  variant="outline"
+                  font="normal"
+                  role="combobox"
+                  aria-expanded={open}
+                  disabled={users.length === 0}
+                  className="min-h-11 w-full justify-between gap-2 px-3 text-base"
+                />
+              }
+            >
+              <span className={cn('truncate', selected === null && 'text-text-dim')}>
+                {selected?.name ??
+                  (users.length === 0 ? 'Пока никого нет' : 'Начните вводить имя')}
+              </span>
+              <Icon name="chevronDown" size={16} />
+            </PopoverTrigger>
+
+            {/*
+              `--anchor-width` — переменная позиционера Base UI: список ровно по
+              ширине триггера, иначе поповер остаётся на своих `w-72` и на
+              узком экране вылезает за поле.
+            */}
+            <PopoverContent
+              font="normal"
+              align="start"
+              className="w-(--anchor-width) p-0"
+              aria-label="Участники"
+            >
               {/*
-                Base UI (стиль `base-nova` в components.json) подставляет свой
-                элемент через `render`, а не через `asChild` как Radix.
+                Две правки поверх `Command` из 8bitcn, обе — следствие того,
+                что он кладёт `className` и на внешнюю обёртку, и на сам
+                список:
+
+                `h-auto` — у списка стоит `h-full`, а поповер своей высоты не
+                задаёт, и панель схлопывалась в полоску нулевой высоты.
+
+                `[&>div.absolute]:hidden` — рамку рисует поповер, поэтому
+                пиксельные «уши» самого `Command` убраны, иначе на панели
+                оказались бы две рамки одна в другой. Селектор бьёт именно по
+                абсолютно спозиционированным потомкам: «все потомки, кроме
+                списка» здесь нельзя — на внутренней обёртке под это правило
+                попадало бы и поле поиска.
               */}
-              <PopoverTrigger
-                render={
-                  <Button
-                    id={triggerId}
-                    type="button"
-                    variant="outline"
-                    font="normal"
-                    role="combobox"
-                    aria-expanded={open}
-                    disabled={users.length === 0}
-                    className="min-h-11 w-full justify-between gap-2 px-3 text-base"
-                  />
-                }
+              <Command
+                filter={matchScore}
+                className={cn(
+                  'h-auto [&>div.absolute]:hidden',
+                  /*
+                    Строка поиска — без подчёркивающей линии. `CommandInput` из
+                    8bitcn вешает `border-b` на свою обёртку и наружу её не
+                    отдаёт (className уходит только на сам <input>), поэтому
+                    гасим правило отсюда, а не пропсом.
+                  */
+                  '[&_[data-slot=command-input-wrapper]]:border-b-0',
+                  /*
+                    И без рамки фокуса. Глобальный `:focus-visible` в
+                    globals.css рисует оранжевый outline на каждом поле — здесь
+                    он лишний и ничего не сообщает: поповер открывается сразу с
+                    фокусом в этом поле, фокус из него никуда не уходит (стрелки
+                    двигают подсветку строк, а не фокус), так что «где я» и без
+                    рамки видно по подсвеченной строке списка.
+
+                    `!` обязателен: правило в globals.css лежит вне слоёв и
+                    обычную утилиту перебивает.
+                  */
+                  '**:data-[slot=command-input]:outline-none!',
+                )}
               >
-                <span className={cn('truncate', selected === null && 'text-text-dim')}>
-                  {selected?.name ??
-                    (users.length === 0 ? 'Пока никого нет' : 'Начните вводить имя')}
-                </span>
-                <Icon name="chevronDown" size={16} />
-              </PopoverTrigger>
-
-              {/*
-                `--anchor-width` — переменная позиционера Base UI: список ровно по
-                ширине триггера, иначе поповер остаётся на своих `w-72` и на
-                узком экране вылезает за поле.
-              */}
-              <PopoverContent
-                font="normal"
-                align="start"
-                className="w-(--anchor-width) p-0"
-                aria-label="Участники"
-              >
-                {/*
-                  Две правки поверх `Command` из 8bitcn, обе — следствие того,
-                  что он кладёт `className` и на внешнюю обёртку, и на сам
-                  список:
-
-                  `h-auto` — у списка стоит `h-full`, а поповер своей высоты не
-                  задаёт, и панель схлопывалась в полоску нулевой высоты.
-
-                  `[&>div.absolute]:hidden` — рамку рисует поповер, поэтому
-                  пиксельные «уши» самого `Command` убраны, иначе на панели
-                  оказались бы две рамки одна в другой. Селектор бьёт именно по
-                  абсолютно спозиционированным потомкам: «все потомки, кроме
-                  списка» здесь нельзя — на внутренней обёртке под это правило
-                  попадало бы и поле поиска.
-                */}
-                <Command
-                  filter={matchScore}
-                  className={cn(
-                    'h-auto [&>div.absolute]:hidden',
-                    /*
-                      Строка поиска — без подчёркивающей линии. `CommandInput` из
-                      8bitcn вешает `border-b` на свою обёртку и наружу её не
-                      отдаёт (className уходит только на сам <input>), поэтому
-                      гасим правило отсюда, а не пропсом.
-                    */
-                    '[&_[data-slot=command-input-wrapper]]:border-b-0',
-                    /*
-                      И без рамки фокуса. Глобальный `:focus-visible` в
-                      globals.css рисует оранжевый outline на каждом поле — здесь
-                      он лишний и ничего не сообщает: поповер открывается сразу с
-                      фокусом в этом поле, фокус из него никуда не уходит (стрелки
-                      двигают подсветку строк, а не фокус), так что «где я» и без
-                      рамки видно по подсвеченной строке списка.
-
-                      `!` обязателен: правило в globals.css лежит вне слоёв и
-                      обычную утилиту перебивает.
-                    */
-                    '**:data-[slot=command-input]:outline-none!',
-                  )}
-                >
-                  <CommandInput placeholder="Начните вводить имя" className="font-sans text-base" />
-                  <CommandList>
-                    <CommandEmpty className="px-3 py-6 text-center font-sans text-sm text-text-dim">
-                      Никого не нашлось
-                    </CommandEmpty>
-                    <CommandGroup>
-                      {users.map((user) => (
-                        <CommandItem
-                          key={user.id}
-                          // Значение, по которому идёт поиск, — имя участника.
-                          // Имена уникальны: сервер отвечает NAME_TAKEN на дубль.
-                          value={user.name}
-                          onSelect={() => commit(user)}
-                          className="min-h-11 gap-3 font-sans"
-                        >
-                          <Avatar avatarId={user.avatarId} name={user.name} size={28} />
-                          {/* Имя — обычный sans: это данные, а не метка (п. 6.7.1). */}
-                          <span className="truncate text-base text-text-main">{user.name}</span>
-                        </CommandItem>
-                      ))}
-                    </CommandGroup>
-                  </CommandList>
-                </Command>
-              </PopoverContent>
-            </Popover>
-          </div>
-
-          <Button
-            type="button"
-            variant="outline"
-            /*
-              `self-center`, а не `self-stretch`: у поля и у кнопки одинаковый
-              бокс в 44 px (`min-h-11`), но пиксельная рамка кнопки висит снаружи
-              бокса (`-top-1.5` / `-bottom-1.5`) и добавляет по 6 px сверху и
-              снизу. Растягивание кнопку бы ещё и удлинило, а так обе половины
-              стоят на одной средней линии, и рамка выступает симметрично.
-            */
-            className="h-auto min-h-11 shrink-0 gap-2 self-center px-3 text-xs"
-            onClick={() => setAddOpen(true)}
-          >
-            <Icon name="plus" size={16} />
-            Добавить
-          </Button>
+                <CommandInput placeholder="Начните вводить имя" className="font-sans text-base" />
+                <CommandList>
+                  <CommandEmpty className="px-3 py-6 text-center font-sans text-sm text-text-dim">
+                    Никого не нашлось
+                  </CommandEmpty>
+                  <CommandGroup>
+                    {users.map((user) => (
+                      <CommandItem
+                        key={user.id}
+                        // Значение, по которому идёт поиск, — имя участника.
+                        // Имена уникальны: сервер отвечает NAME_TAKEN на дубль.
+                        value={user.name}
+                        onSelect={() => commit(user)}
+                        className="min-h-11 gap-3 font-sans"
+                      >
+                        <Avatar avatarId={user.avatarId} name={user.name} size={28} />
+                        {/* Имя — обычный sans: это данные, а не метка (п. 6.7.1). */}
+                        <span className="truncate text-base text-text-main">{user.name}</span>
+                      </CommandItem>
+                    ))}
+                  </CommandGroup>
+                </CommandList>
+              </Command>
+            </PopoverContent>
+          </Popover>
         </div>
       </div>
 
@@ -215,12 +197,12 @@ export function UserSelect({ users, value, onChange }: UserSelectProps) {
         </div>
       )}
 
-      <AddUserDialog
-        open={addOpen}
-        onClose={() => setAddOpen(false)}
-        users={users}
-        onCreated={(user) => commit(user)}
-      />
+      {/*
+        `AddUserDialog` здесь больше не живёт: кнопка, которая его открывает,
+        переехала в шапку карточки, а держать диалог отдельно от его кнопки —
+        значит тянуть состояние `open` через пропсы туда и обратно. Проще
+        поднять и то и другое в `StartWalkCard`.
+      */}
       <ChangeAvatarDialog
         open={avatarOpen}
         onClose={() => setAvatarOpen(false)}
