@@ -77,6 +77,27 @@ export const walks = pgTable(
   ],
 );
 
+/**
+ * Отрезки скорости внутри прогулки (п. 6.3): скорость можно менять на ходу.
+ *
+ * Первый отрезок здесь не лежит — им служит `walks.speedKmh` с `walks.startedAt`.
+ * Поэтому прогулка без единой смены скорости не порождает ни одной строки,
+ * а `walks.speedKmh` навсегда остаётся скоростью старта.
+ */
+export const walkSpeedSegments = pgTable(
+  'walk_speed_segments',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    walkId: uuid('walk_id')
+      .notNull()
+      .references(() => walks.id, { onDelete: 'cascade' }),
+    speedKmh: smallint('speed_kmh').notNull(),
+    /** Момент, с которого действует эта скорость. */
+    startedAt: timestamp('started_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index('walk_speed_segments_walk_idx').on(t.walkId, t.startedAt)],
+);
+
 export const achievements = pgTable(
   'achievements',
   {
@@ -126,5 +147,6 @@ export const hintsMeta = pgTable('hints_meta', {
 export type User = typeof users.$inferSelect;
 export type Treadmill = typeof treadmills.$inferSelect;
 export type Walk = typeof walks.$inferSelect;
+export type WalkSpeedSegment = typeof walkSpeedSegments.$inferSelect;
 export type Achievement = typeof achievements.$inferSelect;
 export type HintRow = typeof hintsCache.$inferSelect;

@@ -80,6 +80,50 @@ export function calcDistanceKm(speedKmh: number, durationSec: number): number {
   return Math.round(((speedKmh * durationSec) / 3600) * 100) / 100;
 }
 
+/** Отрезок постоянной скорости: `startedAt` — момент, с которого она действует. */
+interface SpeedSegmentLike {
+  speedKmh: number;
+  startedAt: string;
+}
+
+/**
+ * Дистанция по отрезкам скорости (п. 6.3): каждый отрезок идёт до начала
+ * следующего, последний — до `endMs`.
+ *
+ * Смена скорости не переписывает пройденное: 10 минут при 6 км/ч остаются
+ * километром, даже если дальше человек сбросил темп до 3. Округление одно, в
+ * самом конце — иначе на десятке смен накапливалась бы ошибка в сотых.
+ */
+export function calcSegmentedDistanceKm(
+  segments: readonly SpeedSegmentLike[],
+  endMs: number,
+): number {
+  let km = 0;
+
+  for (let i = 0; i < segments.length; i += 1) {
+    const startMs = new Date(segments[i].startedAt).getTime();
+    const next = segments[i + 1];
+    const stopMs = next === undefined ? endMs : new Date(next.startedAt).getTime();
+    if (!Number.isFinite(startMs) || !Number.isFinite(stopMs)) continue;
+
+    // Отрицательная длительность возможна только при рассинхроне часов — не вычитаем.
+    const seconds = Math.max(0, (Math.min(stopMs, endMs) - startMs) / 1000);
+    km += (segments[i].speedKmh * seconds) / 3600;
+  }
+
+  return Math.round(km * 100) / 100;
+}
+
+/** Больше — уже не подпись, а строка данных: сворачиваем до «откуда → куда». */
+const SPEED_TRAIL_MAX = 4;
+
+/** `4 км/ч`, `4 → 6 → 5 км/ч`, а на длинной череде смен — `4 → … → 3 км/ч`. */
+export function formatSpeedTrail(speeds: readonly number[]): string {
+  if (speeds.length === 0) return '—';
+  if (speeds.length <= SPEED_TRAIL_MAX) return `${speeds.join(' → ')} км/ч`;
+  return `${speeds[0]} → … → ${speeds[speeds.length - 1]} км/ч`;
+}
+
 /** Фактическая средняя скорость: км / часы. `0`, если времени нет. */
 export function avgSpeedKmh(totalKm: number, totalDurationSec: number): number {
   if (totalDurationSec <= 0) return 0;

@@ -23,9 +23,9 @@ import {
 } from '@/lib/config';
 import {
   avgSpeedKmh,
-  calcDistanceKm,
   formatDurationHuman,
   formatKm,
+  formatSpeedTrail,
   parseDecimalInput,
 } from '@/lib/format';
 import type { FinishWalkResultDto } from '@/lib/types';
@@ -40,8 +40,13 @@ import type { FinishWalkResultDto } from '@/lib/types';
 interface FinishWalkDialogProps {
   open: boolean;
   walkId: string;
-  /** Заявленная на старте скорость — показывается, но не редактируется. */
-  speedKmh: number;
+  /**
+   * Скорости прогулки по порядку: одна, если её не меняли (п. 6.3).
+   * Показываются, но не редактируются — правят итоговую дистанцию.
+   */
+  speedTrail: number[];
+  /** Расчётная дистанция по отрезкам скорости на момент нажатия «End walk». */
+  calculatedKm: number;
   /** Длительность, зафиксированная в момент нажатия «End walk». */
   durationSec: number;
   /** Esc / клик вне модалки: прогулка остаётся активной, данные не теряются. */
@@ -57,12 +62,14 @@ function errorMessage(error: unknown): string {
 export function FinishWalkDialog({
   open,
   walkId,
-  speedKmh,
+  speedTrail,
+  calculatedKm,
   durationSec,
   onClose,
   onFinished,
 }: FinishWalkDialogProps) {
-  const calculated = calcDistanceKm(speedKmh, durationSec);
+  const calculated = calculatedKm;
+  const speedLabel = formatSpeedTrail(speedTrail);
   const [value, setValue] = useState(() => formatKm(calculated));
   const [submitting, setSubmitting] = useState(false);
   const [failure, setFailure] = useState<string | null>(null);
@@ -148,7 +155,7 @@ export function FinishWalkDialog({
         <DialogHeader>
           <DialogTitle className="text-[16px] leading-relaxed">Завершить прогулку</DialogTitle>
           <DialogDescription className="font-sans">
-            Длительность {formatDurationHuman(durationSec)} · скорость {speedKmh} км/ч
+            Длительность {formatDurationHuman(durationSec)} · скорость {speedLabel}
           </DialogDescription>
         </DialogHeader>
 
@@ -183,7 +190,7 @@ export function FinishWalkDialog({
           />
 
           <p id={hintId} className="text-sm text-text-dim">
-            рассчитано по {speedKmh} км/ч — поправьте, если на дорожке другое число
+            рассчитано по {speedLabel} — поправьте, если на дорожке другое число
           </p>
 
           {inputError !== undefined ? (

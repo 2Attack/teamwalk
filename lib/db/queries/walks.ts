@@ -1,9 +1,15 @@
-import { and, asc, desc, eq } from 'drizzle-orm';
+import { and, asc, desc, eq, inArray, sql } from 'drizzle-orm';
 
 import { DELETE_WINDOW_MINUTES } from '@/lib/config';
 import { db } from '@/lib/db';
-import { treadmills, users, walks } from '@/lib/db/schema';
-import type { ActiveWalkDto, TreadmillDto, WalkDto, WalkStatus } from '@/lib/types';
+import { treadmills, users, walkSpeedSegments, walks } from '@/lib/db/schema';
+import type {
+  ActiveWalkDto,
+  TreadmillDto,
+  WalkDto,
+  WalkSpeedSegmentDto,
+  WalkStatus,
+} from '@/lib/types';
 
 /**
  * Запросы зоны WALKS. Ни один из них не предполагает, что активная прогулка
@@ -15,6 +21,7 @@ interface ActiveRow {
   userId: string;
   treadmillId: string;
   treadmillName: string;
+  treadmillMaxSpeedKmh: number;
   startedAt: Date;
   speedKmh: number;
   userName: string;
@@ -40,6 +47,7 @@ const activeColumns = {
   userId: walks.userId,
   treadmillId: walks.treadmillId,
   treadmillName: treadmills.name,
+  treadmillMaxSpeedKmh: treadmills.maxSpeedKmh,
   startedAt: walks.startedAt,
   speedKmh: walks.speedKmh,
   userName: users.name,
@@ -60,14 +68,53 @@ const walkColumns = {
   status: walks.status,
 };
 
-function toActiveWalk(row: ActiveRow): ActiveWalkDto {
+/**
+ * Смены скорости для перечисленных прогулок (п. 6.3).
+ *
+ * Стартовый отрезок в таблице не хранится — он собирается из `walks`, поэтому
+ * прогулка без единой смены скорости не даёт здесь ни одной строки, а старые
+ * записи работают без бэкфилла.
+ */
+async function loadSpeedChanges(walkIds: string[]): Promise<Map<string, WalkSpeedSegmentDto[]>> {
+  const byWalk = new Map<string, WalkSpeedSegmentDto[]>();
+  if (walkIds.length === 0) return byWalk;
+
+  const rows = await db
+    .select({
+      walkId: walkSpeedSegments.walkId,
+      speedKmh: walkSpeedSegments.speedKmh,
+      startedAt: walkSpeedSegments.startedAt,
+    })
+    .from(walkSpeedSegments)
+    .where(inArray(walkSpeedSegments.walkId, walkIds))
+    .orderBy(asc(walkSpeedSegments.startedAt));
+
+  for (const row of rows) {
+    const list = byWalk.get(row.walkId) ?? [];
+    list.push({ speedKmh: Number(row.speedKmh), startedAt: row.startedAt.toISOString() });
+    byWalk.set(row.walkId, list);
+  }
+
+  return byWalk;
+}
+
+function toActiveWalk(row: ActiveRow, changes: WalkSpeedSegmentDto[] = []): ActiveWalkDto {
+  // Первый отрезок — скорость старта; дальше идут смены в порядке времени.
+  const speedSegments: WalkSpeedSegmentDto[] = [
+    { speedKmh: Number(row.speedKmh), startedAt: row.startedAt.toISOString() },
+    ...changes,
+  ];
+
   return {
     id: row.id,
     userId: row.userId,
     treadmillId: row.treadmillId,
     treadmillName: row.treadmillName,
+    treadmillMaxSpeedKmh: Number(row.treadmillMaxSpeedKmh),
     startedAt: row.startedAt.toISOString(),
-    speedKmh: Number(row.speedKmh),
+    // Наружу отдаём текущую скорость, а не стартовую: её показывают на экране.
+    speedKmh: speedSegments[speedSegments.length - 1].speedKmh,
+    speedSegments,
     user: {
       id: row.userId,
       name: row.userName,
@@ -110,7 +157,22 @@ export async function getActiveWalk(userId: string): Promise<ActiveWalkDto | nul
     .where(and(eq(walks.userId, userId), eq(walks.status, 'active')))
     .limit(1);
 
-  return rows[0] ? toActiveWalk(rows[0]) : null;
+  if (!rows[0]) return null;
+  return toActiveWalk(rows[0], (await loadSpeedChanges([rows[0].id])).get(rows[0].id));
+}
+
+/** Активная прогулка по её id — для экрана прогулки и смены скорости. */
+export async function getActiveWalkById(walkId: string): Promise<ActiveWalkDto | null> {
+  const rows = await db
+    .select(activeColumns)
+    .from(walks)
+    .innerJoin(treadmills, eq(treadmills.id, walks.treadmillId))
+    .innerJoin(users, eq(users.id, walks.userId))
+    .where(and(eq(walks.id, walkId), eq(walks.status, 'active')))
+    .limit(1);
+
+  if (!rows[0]) return null;
+  return toActiveWalk(rows[0], (await loadSpeedChanges([walkId])).get(walkId));
 }
 
 /** Все активные прогулки: по одной на занятую дорожку (п. 7.2). */
@@ -123,7 +185,9 @@ export async function listActiveWalks(): Promise<ActiveWalkDto[]> {
     .where(eq(walks.status, 'active'))
     .orderBy(asc(walks.startedAt));
 
-  return rows.map(toActiveWalk);
+  // Один запрос на все прогулки сразу, а не N+1 по каждой.
+  const changes = await loadSpeedChanges(rows.map((row) => row.id));
+  return rows.map((row) => toActiveWalk(row, changes.get(row.id)));
 }
 
 /** История участника — свежие сверху. */
@@ -187,7 +251,15 @@ export async function listActiveTreadmills(): Promise<TreadmillDto[]> {
       sortOrder: treadmills.sortOrder,
       walkId: walks.id,
       startedAt: walks.startedAt,
-      speedKmh: walks.speedKmh,
+      // Текущая скорость: последняя смена, а при её отсутствии — скорость старта.
+      // Коррелированный подзапрос вместо ещё одного join: строка на дорожку одна.
+      speedKmh: sql<number | null>`coalesce((
+        select seg.speed_kmh
+        from walk_speed_segments seg
+        where seg.walk_id = ${walks.id}
+        order by seg.started_at desc
+        limit 1
+      ), ${walks.speedKmh})`,
       userId: users.id,
       userName: users.name,
       userAvatarId: users.avatarId,

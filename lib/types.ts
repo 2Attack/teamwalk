@@ -29,6 +29,13 @@ export interface TreadmillDto {
   busy: TreadmillBusyDto | null;
 }
 
+/** Отрезок постоянной скорости внутри прогулки (п. 6.3). */
+export interface WalkSpeedSegmentDto {
+  speedKmh: number;
+  /** ISO — момент, с которого действует эта скорость. */
+  startedAt: string;
+}
+
 export interface ActiveWalkDto {
   id: string;
   userId: string;
@@ -36,7 +43,15 @@ export interface ActiveWalkDto {
   treadmillName: string;
   /** ISO. Источник истины для таймера: клиент считает `Date.now() − startedAt`. */
   startedAt: string;
+  /** Текущая скорость — последний отрезок из `speedSegments`. */
   speedKmh: number;
+  /** Потолок дорожки: выше него «+» на экране прогулки не поднимает (п. 6.9.3). */
+  treadmillMaxSpeedKmh: number;
+  /**
+   * Все отрезки скорости по возрастанию времени; первый начинается в `startedAt`.
+   * По ним считается набежавшая дистанция: смена скорости не переписывает прошлое.
+   */
+  speedSegments: WalkSpeedSegmentDto[];
   user: UserDto;
 }
 
@@ -51,6 +66,7 @@ export interface WalkDto {
   endedAt: string | null;
   durationSec: number | null;
   distanceKm: number | null;
+  /** Скорость старта: даже если её меняли на ходу, это число не переписывается. */
   speedKmh: number;
   status: WalkStatus;
   /** Можно ли ещё удалить запись (15-минутное окно, п. 7.7). */

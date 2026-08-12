@@ -8,6 +8,7 @@ import { Avatar } from '@/components/Avatar';
 import { DialogShell } from '@/components/DialogShell';
 import { FinishWalkDialog } from '@/components/FinishWalkDialog';
 import { HintTicker } from '@/components/HintTicker';
+import { SpeedControl } from '@/components/SpeedControl';
 import { WalkSuccess } from '@/components/WalkSuccess';
 import { WalkTimer } from '@/components/WalkTimer';
 import { WalkerSprite } from '@/components/WalkerSprite';
@@ -29,7 +30,7 @@ import {
   useUserStats,
 } from '@/lib/client/api';
 import { LAST_USER_STORAGE_KEY, SHORT_WALK_CANCEL_SEC } from '@/lib/config';
-import { formatTimeOfDay } from '@/lib/format';
+import { calcSegmentedDistanceKm, formatTimeOfDay } from '@/lib/format';
 import type { ActiveWalkDto, FinishWalkResultDto, StatsDto, WalkDto } from '@/lib/types';
 
 /**
@@ -151,12 +152,25 @@ export default function WalkPage({ params }: { params: Promise<{ id: string }> }
     refreshInterval: 30_000,
   });
 
-  const walk: ActiveWalkDto | null =
+  const server: ActiveWalkDto | null =
     matched ?? stats?.activeWalks.find((item) => item.id === id) ?? null;
+
+  // Ответ на смену скорости приходит раньше, чем SWR перечитает прогулку.
+  // Отрезки только добавляются, поэтому «свежее» — та версия, где их больше;
+  // как только SWR догоняет, снова побеждают серверные данные.
+  const [changed, setChanged] = useState<ActiveWalkDto | null>(null);
+  const walk: ActiveWalkDto | null =
+    server !== null &&
+    changed !== null &&
+    changed.id === server.id &&
+    changed.speedSegments.length > server.speedSegments.length
+      ? changed
+      : server;
 
   const { data: userStats } = useUserStats(walk?.userId ?? null);
   const [mode, setMode] = useState<DialogMode>('none');
   const [durationSec, setDurationSec] = useState(0);
+  const [calculatedKm, setCalculatedKm] = useState(0);
   const [result, setResult] = useState<FinishWalkResultDto | null>(null);
   const [cancelling, setCancelling] = useState(false);
   const [cancelError, setCancelError] = useState<string | null>(null);
@@ -181,8 +195,12 @@ export default function WalkPage({ params }: { params: Promise<{ id: string }> }
   const accidental = mode === 'accidental';
 
   const openFinish = () => {
+    const now = Date.now();
     const seconds = elapsedSeconds(walk.startedAt);
     setDurationSec(seconds);
+    // Дистанцию фиксируем тем же нажатием, что и время: считать её в модалке
+    // значило бы дать ей идти дальше, пока человек правит число.
+    setCalculatedKm(calcSegmentedDistanceKm(walk.speedSegments, now));
     setMode(seconds < SHORT_WALK_CANCEL_SEC ? 'accidental' : 'finish');
   };
 
@@ -220,13 +238,24 @@ export default function WalkPage({ params }: { params: Promise<{ id: string }> }
       <WalkTimer
         startedAt={walk.startedAt}
         speedKmh={walk.speedKmh}
+        speedSegments={walk.speedSegments}
         bestDayKm={userStats?.personalRecord.bestDayKm ?? null}
       />
 
       {/* Ходок стоит на «полотне»: две линии вместо рамки — панель здесь спорила бы
-          с панелью хинтов, а спрайт должен читаться как единственная живая деталь. */}
-      <div className="flex justify-center border-y-[3px] border-border-dim py-4">
+          с панелью хинтов, а спрайт должен читаться как единственная живая деталь.
+          Регулятор скорости стоит здесь же: темп ходока меняется вместе с ним. */}
+      <div className="flex flex-col items-center gap-4 border-y-[3px] border-border-dim py-4">
         <WalkerSprite speedKmh={walk.speedKmh} size={96} />
+        <SpeedControl
+          walkId={walk.id}
+          speedKmh={walk.speedKmh}
+          maxSpeedKmh={walk.treadmillMaxSpeedKmh}
+          onChanged={setChanged}
+          // В открытой модалке завершения дистанция уже зафиксирована: смена
+          // скорости под ней разошлась бы с числом, которое человек правит.
+          disabled={mode !== 'none'}
+        />
       </div>
 
       {/* variant="walk": интервал 10 с и крупный шрифт — фразу читают с дорожки (п. 6.6.10). */}
@@ -259,7 +288,8 @@ export default function WalkPage({ params }: { params: Promise<{ id: string }> }
       <FinishWalkDialog
         open={mode === 'finish'}
         walkId={walk.id}
-        speedKmh={walk.speedKmh}
+        speedTrail={walk.speedSegments.map((segment) => segment.speedKmh)}
+        calculatedKm={calculatedKm}
         durationSec={durationSec}
         onClose={() => setMode('none')}
         onFinished={(finished) => {

@@ -5,7 +5,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { Progress } from '@/components/ui/8bit/progress';
 import { Icon } from '@/components/ui/icon';
 import { cn } from '@/lib/cn';
-import { calcDistanceKm, formatDuration, formatKm } from '@/lib/format';
+import { calcSegmentedDistanceKm, formatDuration, formatKm } from '@/lib/format';
+import type { WalkSpeedSegmentDto } from '@/lib/types';
 
 /**
  * Таймер активной прогулки (п. 6.3).
@@ -51,17 +52,32 @@ export function useElapsedSeconds(startedAt: string): number {
 interface WalkTimerProps {
   /** ISO-время старта, полученное с сервера. */
   startedAt: string;
-  /** Заявленная скорость — по ней растёт счётчик дистанции. */
+  /** Текущая скорость — её и подписываем под счётчиком. */
   speedKmh: number;
+  /**
+   * Отрезки скорости с сервера. Дистанция растёт по ним, а не по одной скорости:
+   * смена темпа на ходу не переписывает уже пройденное (п. 6.3).
+   */
+  speedSegments: WalkSpeedSegmentDto[];
   /** Личный рекорд дня, км. `null` — рекорда ещё нет. */
   bestDayKm?: number | null;
   className?: string;
 }
 
-export function WalkTimer({ startedAt, speedKmh, bestDayKm, className }: WalkTimerProps) {
+export function WalkTimer({
+  startedAt,
+  speedKmh,
+  speedSegments,
+  bestDayKm,
+  className,
+}: WalkTimerProps) {
   const seconds = useElapsedSeconds(startedAt);
+  // Конец берём от того же `seconds`, а не от `Date.now()`: иначе счётчик
+  // дистанции жил бы по своим часам и мог разойтись с таймером на секунду.
+  const endMs = new Date(startedAt).getTime() + seconds * 1000;
   // Та же функция, что предзаполняет модалку завершения, — значения совпадают.
-  const distanceKm = calcDistanceKm(speedKmh, seconds);
+  const distanceKm = calcSegmentedDistanceKm(speedSegments, endMs);
+  const speedChanged = speedSegments.length > 1;
   const hasRecord = typeof bestDayKm === 'number' && bestDayKm > 0;
   const beatsRecord = hasRecord && distanceKm > bestDayKm;
   // 8bitcn Progress считает шкалу в процентах, поэтому долю считаем здесь.
@@ -83,7 +99,10 @@ export function WalkTimer({ startedAt, speedKmh, bestDayKm, className }: WalkTim
           {formatKm(distanceKm)} км
         </p>
         {/* Подпись читают — обычный sans. */}
-        <p className="mt-2 text-sm text-text-dim">набежало при {speedKmh} км/ч</p>
+        {/* После смены темпа «при 6 км/ч» врало бы: часть пути пройдена иначе. */}
+        <p className="mt-2 text-sm text-text-dim">
+          {speedChanged ? `набежало · сейчас ${speedKmh} км/ч` : `набежало при ${speedKmh} км/ч`}
+        </p>
       </div>
 
       {hasRecord ? (

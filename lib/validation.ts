@@ -57,6 +57,11 @@ export const startWalkSchema = z.object({
   treadmillId: uuidSchema.optional(),
 });
 
+/** Смена скорости на ходу (п. 6.3): границы те же, что на старте. */
+export const changeSpeedSchema = z.object({
+  speedKmh: speedSchema,
+});
+
 /** Дистанция: 0.01–50.00, шаг 0.01. Точка и запятая принимаются на уровне UI. */
 export const distanceSchema = z
   .number()

@@ -34,6 +34,10 @@ export const ICON_PATHS = {
   plus: [
     'M13 11h7v2h-7v7h-2v-7H4v-2h7V4h2v7Z',
   ],
+  /** pixelarticons: minus */
+  minus: [
+    'M4 11h16v2H4z',
+  ],
   /** pixelarticons: play */
   play: [
     'M15 11h-2V9h2zm0 4h-2v-2h2zm-2 2h-2v-2h2zm0-8h-2V7h2zm-2-2H9V5h2zM9 21H7V3h2zm6-8h2v-2h-2zm-6 4h2v2H9z',
