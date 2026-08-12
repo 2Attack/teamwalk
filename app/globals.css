@@ -1,0 +1,266 @@
+@import 'tailwindcss';
+@import 'tw-animate-css';
+@import 'shadcn/tailwind.css';
+
+@custom-variant dark (&:is(.dark *));
+
+/*
+  Тема приложения. Единственный источник цвета — токены shadcn/8bitcn ниже;
+  собственные имена (`bg-panel`, `citrus`, `text-dim`…) оставлены как
+  псевдонимы поверх них, иначе тему пришлось бы «раскатывать» правкой всех
+  вызовов `bg-bg-panel` / `text-citrus` по компонентам.
+
+  Псевдоним — это `var(--…)`, а не значение: подстановка происходит в рантайме,
+  поэтому смена класса темы на <html> уводит за собой и псевдонимы. Важно, что
+  класс висит именно на <html> (см. app/layout.tsx): `@theme` печатает
+  псевдонимы в `:root`, и на этом же элементе их `var()` разрешается в нужную
+  ветку темы. Класс `dark` на внутреннем <div> псевдонимы бы не переключил.
+*/
+@theme {
+  /*
+    Цвета медалей — вне темы. Золото/серебро/бронза и «пройдено» на маршруте
+    опознаются по самому цвету, поэтому в светлой и тёмной теме они одинаковы.
+  */
+  --color-lime: #a3e635;
+  --color-silver: #c0c0c0;
+  --color-bronze: #b87333;
+
+  --color-bg-deep: var(--background);
+  --color-bg-panel: var(--card);
+  --color-border-dim: var(--border);
+  --color-citrus: var(--primary);
+  --color-text-main: var(--foreground);
+  --color-text-dim: var(--muted-foreground);
+
+  --font-pixel: var(--font-pixel-family), 'Press Start 2P', monospace;
+  --font-ui: var(--font-ui-family), 'Inter', system-ui, sans-serif;
+}
+
+:root {
+  color-scheme: light;
+
+  --radius: 0.65rem;
+  --background: oklch(0.95 0.01 60);
+  --foreground: oklch(0.2 0.02 40);
+  --card: oklch(0.92 0.015 55);
+  --card-foreground: oklch(0.2 0.02 40);
+  --popover: oklch(0.95 0.01 60);
+  --popover-foreground: oklch(0.2 0.02 40);
+  --primary: oklch(0.65 0.15 55);
+  --primary-foreground: oklch(0.98 0 0);
+  --secondary: oklch(0.85 0.03 50);
+  --secondary-foreground: oklch(0.25 0.02 40);
+  --muted: oklch(0.88 0.02 55);
+  --muted-foreground: oklch(0.45 0.03 45);
+  --accent: oklch(0.7 0.12 45);
+  --accent-foreground: oklch(0.98 0 0);
+  --destructive: oklch(0.55 0.2 25);
+  --border: oklch(0.78 0.03 50);
+  --input: oklch(0.78 0.03 50);
+  --ring: oklch(0.65 0.15 55);
+}
+
+.dark {
+  color-scheme: dark;
+
+  --radius: 0.65rem;
+  --background: oklch(0.15 0.02 40);
+  --foreground: oklch(0.92 0.03 55);
+  --card: oklch(0.18 0.02 42);
+  --card-foreground: oklch(0.92 0.03 55);
+  --popover: oklch(0.15 0.02 40);
+  --popover-foreground: oklch(0.92 0.03 55);
+  --primary: oklch(0.7 0.15 55);
+  --primary-foreground: oklch(0.12 0.01 40);
+  --secondary: oklch(0.25 0.03 45);
+  --secondary-foreground: oklch(0.88 0.03 55);
+  --muted: oklch(0.22 0.02 42);
+  --muted-foreground: oklch(0.6 0.04 50);
+  --accent: oklch(0.65 0.12 45);
+  --accent-foreground: oklch(0.98 0 0);
+  /*
+    Ровно из темы. На `--card` это 3.5:1 — ниже 4.5:1, которые ТЗ требует от
+    текста (п. 6.7.7): для рамки и заливки хватает, для сообщения об ошибке
+    мелким кеглем — нет. Осветление до ~oklch(0.68 0.16 25) даёт 4.5:1.
+  */
+  --destructive: oklch(0.55 0.2 25);
+  --border: oklch(0.3 0.03 45);
+  --input: oklch(0.3 0.03 45);
+  --ring: oklch(0.7 0.15 55);
+}
+
+@theme inline {
+  --font-sans: var(--font-ui);
+  --font-heading: var(--font-pixel);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  /*
+    Радиус из темы. Видимой геометрии он почти не меняет: и компоненты 8bitcn,
+    и наши панели гасят скругление своим `rounded-none` / `border-radius: 0` —
+    пиксельная рамка со скруглением несовместима (п. 6.7.1).
+  */
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+html,
+body {
+  font-family: var(--font-ui);
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  /*
+    Тонкая пиксельная сетка на фоне — читается как «экран консоли».
+    Цвет линии берётся из темы (раньше был вшит цитрусовый #ff8a00), иначе
+    сетка осталась бы оранжевой на любой смене палитры.
+  */
+  --grid-line: color-mix(in oklab, var(--color-citrus) 3.5%, transparent);
+  background-image:
+    linear-gradient(var(--grid-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
+  background-size: 32px 32px;
+}
+
+/*
+  Пиксельный шрифт только на числах, метках и заголовках (п. 6.7.1).
+  Класс `.retro` приходит из 8bitcn — переопределяем его на наш шрифт,
+  подключённый через next/font с кириллическим subset: их вариант тянет
+  Press Start 2P с CDN Google и без кириллицы.
+*/
+.font-pixel,
+.retro {
+  font-family: var(--font-pixel);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0;
+  line-height: 1.5;
+}
+
+/* ── Пиксельная геометрия: нулевое скругление, рамка 3px, тень без blur ── */
+.pixel-panel {
+  border-radius: 0;
+  border: 3px solid var(--color-border-dim);
+  background: var(--color-bg-panel);
+  box-shadow: 4px 4px 0 0 #000;
+}
+
+.pixel-panel-accent {
+  border-color: var(--color-citrus);
+}
+
+.pixel-btn {
+  border-radius: 0;
+  border: 3px solid currentColor;
+  box-shadow: 4px 4px 0 0 #000;
+  transition:
+    transform 80ms steps(2),
+    box-shadow 80ms steps(2);
+  touch-action: manipulation;
+}
+
+.pixel-btn:active:not(:disabled) {
+  /* Кнопка «вдавливается» в свою тень. */
+  transform: translate(4px, 4px);
+  box-shadow: none;
+}
+
+.pixel-btn:disabled {
+  opacity: 0.45;
+  box-shadow: 2px 2px 0 0 #000;
+  cursor: not-allowed;
+}
+
+/* Фокус виден всегда: тач-таргеты и клавиатура равноправны (п. 8). */
+:where(a, button, input, select, textarea, [tabindex]):focus-visible {
+  outline: 3px solid var(--color-citrus);
+  outline-offset: 2px;
+}
+
+img.pixel,
+.pixelated {
+  image-rendering: pixelated;
+}
+
+/* ── Анимации: только transform/opacity, шаги без интерполяции (п. 6.7.6) ── */
+@keyframes walk-cycle {
+  from {
+    background-position-x: 0;
+  }
+  to {
+    background-position-x: -256px;
+  }
+}
+
+@keyframes pixel-blink {
+  0%,
+  49% {
+    opacity: 1;
+  }
+  50%,
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes pixel-pulse {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-2px);
+  }
+}
+
+.animate-blink {
+  animation: pixel-blink 1s steps(1) infinite;
+}
+
+.animate-pixel-pulse {
+  animation: pixel-pulse 1.2s steps(3) infinite;
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border-dim) transparent;
+}
+
+/* prefers-reduced-motion глушит всё, включая спрайт и посимвольный вывод (п. 6.7.7). */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

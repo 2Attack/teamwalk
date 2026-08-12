@@ -1,0 +1,23 @@
+/*
+  @import Google Fonts из библиотеки снят: Press Start 2P подключён через
+  next/font с кириллическим subset (app/layout.tsx), а вариант с CDN кириллицу
+  не содержит. Правило .retro переопределено в app/globals.css.
+
+  Осторожно: `npx shadcn add @8bitcn/<name>` перезаписывает этот файл целиком
+  и возвращает @import обратно — после каждой установки его нужно снять снова.
+*/
+
+.retro {
+  font-family:
+    "Press Start 2P",
+    system-ui,
+    -apple-system,
+    sans-serif;
+  line-height: 1.5;
+  letter-spacing: 0.5px;
+}
+
+.pixelated {
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+}
