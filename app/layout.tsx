@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next';
 import { Inter, Press_Start_2P } from 'next/font/google';
 
+import { KeepScreenAwake } from '@/components/KeepScreenAwake';
 import { APP_NAME } from '@/lib/config';
 import { cn } from '@/lib/cn';
 
@@ -28,6 +29,18 @@ const ui = Inter({
 export const metadata: Metadata = {
   title: `${APP_NAME} — трекер ходьбы`,
   description: 'Корпоративный трекер ходьбы на беговой дорожке',
+  /*
+    iOS манифест игнорирует и режим установки читает из своих мета-тегов: без
+    `capable` ярлык на домашнем экране открывался бы обычной вкладкой Safari с
+    адресной строкой. `title` задаёт подпись под ярлыком, а `black-translucent`
+    пускает фон приложения под системную шторку — у нас под неё уходит тёмный
+    `--background`, и стык не виден.
+  */
+  appleWebApp: {
+    capable: true,
+    title: APP_NAME,
+    statusBarStyle: 'black-translucent',
+  },
 };
 
 export const viewport: Viewport = {
@@ -42,7 +55,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     /* `dark` статичен: приложение живёт в тёмном углу опенспейса и светлой темы
        в MVP не имеет — класс нужен, чтобы работали dark:-варианты 8bitcn. */
     <html lang="ru" className={cn('dark', pixel.variable, ui.variable)}>
-      <body className="min-h-dvh antialiased">{children}</body>
+      <body className="min-h-dvh antialiased">
+        <KeepScreenAwake />
+        {children}
+      </body>
     </html>
   );
 }
