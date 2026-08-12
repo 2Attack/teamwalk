@@ -8,6 +8,10 @@ import { join } from 'node:path';
 import { neon, neonConfig } from '@neondatabase/serverless';
 import { config } from 'dotenv';
 
+// Порядок как у Next.js в dev: локальная база из `.env.development.local`
+// перекрывает боевую из `.env.local`. dotenv не перетирает уже заданные
+// переменные, поэтому первый найденный DATABASE_URL и побеждает.
+config({ path: '.env.development.local', quiet: true });
 config({ path: '.env.local', quiet: true });
 config({ path: '.env', quiet: true });
 

@@ -37,7 +37,27 @@ docker run -d --name cw-neon-proxy -p 4444:4444 \
   ghcr.io/timowilhelm/local-neon-http-proxy:main
 ```
 
-Затем в `.env.local`:
+Свежие версии прокси перед каждым запросом спрашивают у «control plane» список
+разрешённых IP и без этой таблицы отвечают 500 `Control plane request failed`.
+Таблицу заводим руками один раз; `db` — имя эндпоинта, то есть первая метка
+хоста `db.localtest.me`:
+
+```bash
+docker exec -i cw-pg psql -U postgres -d citruswalk <<'SQL'
+create schema if not exists neon_control_plane;
+create table if not exists neon_control_plane.endpoints (
+  endpoint_id varchar(255) primary key,
+  allowed_ips varchar(255)
+);
+insert into neon_control_plane.endpoints (endpoint_id, allowed_ips)
+values ('db', '0.0.0.0/0') on conflict (endpoint_id) do nothing;
+SQL
+```
+
+Затем — `.env.development.local` (а не `.env.local`: тот перезаписывает
+`vercel env pull`, и боевые креды лучше не трогать). В dev этот файл имеет
+приоритет, `next build` с NODE_ENV=production в него не заглядывает, а чтобы
+вернуться на облачную базу, файл достаточно удалить:
 
 ```
 DATABASE_URL=postgres://postgres:postgres@db.localtest.me:4444/citruswalk?sslmode=require
@@ -45,6 +65,9 @@ DATABASE_URL=postgres://postgres:postgres@db.localtest.me:4444/citruswalk?sslmod
 
 Хост `localtest.me` — единственный признак, по которому код переключает драйвер на
 локальный эндпоинт; в проде ветка не срабатывает.
+
+Дальше как обычно: `npm run db:migrate` (скрипт читает те же файлы и в том же
+порядке) и `npm run dev`.
 
 ## Скрипты
 
