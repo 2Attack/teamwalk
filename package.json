@@ -8,8 +8,9 @@
     "start": "next start",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "gen:assets": "node scripts/gen-avatars.mjs && node scripts/gen-icons.mjs",
+    "gen:assets": "node scripts/gen-avatars.mjs && node scripts/gen-icons.mjs && node scripts/gen-app-icons.mjs",
     "gen:icons": "node scripts/gen-icons.mjs",
+    "gen:icons:app": "node scripts/gen-app-icons.mjs",
     "db:migrate": "node --experimental-strip-types scripts/db-migrate.ts",
     "db:push": "drizzle-kit push"
   },
@@ -46,6 +47,7 @@
     "dotenv": "^17.4.2",
     "drizzle-kit": "^0.31.10",
     "pixelarticons": "^2.2.0",
+    "sharp": "0.35.3",
     "tailwindcss": "^4",
     "typescript": "^5",
     "vitest": "^4.1.10"
