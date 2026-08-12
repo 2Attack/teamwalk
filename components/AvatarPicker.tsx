@@ -10,13 +10,10 @@
  */
 import * as React from 'react';
 
-import { AVATARS, avatarLabel, randomAvatarId } from '@/lib/avatars';
+import { AVATARS, avatarLabel } from '@/lib/avatars';
 import { cn } from '@/lib/cn';
 
 import { Avatar } from './Avatar';
-// Кнопка — из 8bitcn, как везде в проекте: база shadcn рисует её без пиксельной
-// рамки, и «Случайный» выбивался из ряда остальных кнопок модалки.
-import { Button } from './ui/8bit/button';
 
 /** Сетка 6×4 по ТЗ; на 360px ячейка ужимается примерно до 48px и остаётся тач-таргетом. */
 const COLUMNS = 6;
@@ -43,10 +40,16 @@ export function AvatarPicker({
   const refs = React.useRef(new Map<string, HTMLButtonElement>());
   const takenSet = React.useMemo(() => new Set(taken), [taken]);
 
+  /**
+   * Фокус едет за выбором: иначе стрелки после первого шага перестают работать,
+   * а Safari вдобавок не отдаёт кнопке фокус по клику. Подскроливания это больше
+   * не вызывает — фокус всегда уходит на ячейку, по которой только что кликнули
+   * или до которой дошли стрелками, то есть заведомо видимую. Рывок был у кнопки
+   * «Случайный», которая кидала выбор в произвольную ячейку сетки; кнопки нет.
+   */
   const select = React.useCallback(
     (id: string) => {
       onChange(id);
-      // Фокус едет за выбором — иначе стрелки после первого шага перестают работать.
       refs.current.get(id)?.focus();
     },
     [onChange],
@@ -131,22 +134,11 @@ export function AvatarPicker({
         })}
       </div>
 
-      <div className="flex items-center justify-between gap-3">
-        <p className="min-w-0 flex-1 truncate text-sm text-text-dim">{avatarLabel(value)}</p>
-        <Button
-          type="button"
-          variant="secondary"
-          onClick={() => select(randomAvatarId(taken))}
-          aria-label="Выбрать случайного свободного персонажа"
-          // Эмодзи-кубик убран: он рисуется системным шрифтом и рядом с пиксельным
-          // набором выглядит чужим (п. 6.7.4), а подходящей иконки «случайно» в
-          // наборе нет — смысл несёт текст и aria-label.
-          // min-h-11 — тач-таргет: у `size="sm"` было 28 px.
-          className="min-h-11 shrink-0 px-3 text-xs"
-        >
-          Случайный
-        </Button>
-      </div>
+      {/* Подпись выбранного пресета. Кнопки «Случайный» здесь больше нет:
+          случайный свободный аватар и так подставляется при открытии
+          «Нового участника» (см. AddUserDialog), а выбрать другой можно прямо
+          в сетке. */}
+      <p className="truncate text-sm text-text-dim">{avatarLabel(value)}</p>
     </div>
   );
 }
