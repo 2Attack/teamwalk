@@ -20,7 +20,7 @@ npm run db:migrate   # применяет drizzle/*.sql по порядку, и�
 npm run gen:assets   # перегенерация статики: аватары, спрайты, иконки
 ```
 
-Нужен `DATABASE_URL` (Neon) в `.env.local`. Локальная БД без облака — docker-связка «Postgres + neon-http-proxy», описана в README (включая обязательную таблицу `neon_control_plane.endpoints`); её `DATABASE_URL` кладётся в `.env.development.local`, драйвер переключается на локальный эндпоинт по хосту `localtest.me`. LLM-ключи (`GEMINI_API_KEY`, `GROQ_API_KEY`) опциональны — без них хинты крутят статический каталог.
+Нужен `DATABASE_URL` (Neon) в `.env.local`. Локальная БД без облака — docker-связка «Postgres + neon-http-proxy», описана в README (включая обязательную таблицу `neon_control_plane.endpoints`); её `DATABASE_URL` кладётся в `.env.development.local`, драйвер переключается на локальный эндпоинт по хосту `localtest.me`. LLM-креды опциональны: локально — `AI_GATEWAY_API_KEY` (Vercel AI Gateway), на деплоях Vercel — автоматический `VERCEL_OIDC_TOKEN`; без них хинты крутят статический каталог.
 
 ## Git-флоу
 
@@ -39,7 +39,7 @@ npm run gen:assets   # перегенерация статики: аватары
 - **Конкурентность держит БД.** Два partial unique index'а: одна активная прогулка на участника и одна на дорожку. API переводит ошибку `23505` в `409 WALK_ALREADY_ACTIVE` / `409 TREADMILL_BUSY`.
 - **Серии, рекорды, позиция на маршруте не хранятся** — вычисляются из `walks` на лету.
 - **«Зависшие» прогулки** закрывает `lib/walks/autoclose.ts` лениво при обращении к API — cron не используется (Hobby-план Vercel).
-- **LLM никогда не в горячем пути.** Пул хинтов в `hints_cache`, отдаётся сразу, регенерируется в фоне (stale-while-revalidate под строкой-мьютексом). Деградация: Gemini → Groq → прошлый пул → статический каталог. В LLM уходит обезличенный снапшот (слоты `u1…uN`), имена подставляются на нашей стороне.
+- **LLM никогда не в горячем пути.** Пул хинтов в `hints_cache`, отдаётся сразу, регенерируется в фоне (stale-while-revalidate под строкой-мьютексом). Деградация: AI Gateway (AI SDK, модель в `AI_GATEWAY_MODEL`) → прошлый пул → статический каталог. В LLM уходит обезличенный снапшот (слоты `u1…uN`), имена подставляются на нашей стороне.
 - **Время** — всегда через `lib/time.ts` (`Europe/Moscow`, «офисные дни» `YYYY-MM-DD`, рабочие дни без производственного календаря). Не считать даты руками.
 
 Слои: `app/api/**` (Route Handlers) → `lib/db/queries/*` (агрегации) и `lib/game/*` (серии/достижения/прогресс) → `lib/db/schema.ts`. Клиент ходит только через SWR-хуки и `apiSend` из `lib/client/api.ts`. Все DTO — в `lib/types.ts`, Zod-схемы — в `lib/validation.ts`, константы — в `lib/config.ts`.
