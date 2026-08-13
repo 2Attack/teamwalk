@@ -1,38 +1,32 @@
+import { generateObject } from 'ai';
+
 import { HINTS_LLM_TIMEOUT_MS } from '@/lib/config';
 import type { LlmHint } from '@/lib/validation';
-import { llmHintsSchema } from '@/lib/validation';
+import { llmHintSchema } from '@/lib/validation';
 
 import { SYSTEM_PROMPT, buildUserPrompt } from './prompt';
 import type { HintSnapshot } from './snapshot';
 
 /**
- * Вызовы LLM без SDK — обычный `fetch` (п. 6.6.1 ТЗ).
+ * Единственный LLM-провайдер — Vercel AI Gateway через AI SDK (`ai`).
+ * Строка `provider/model` роутится через Gateway автоматически; фолбэки между
+ * провайдерами и ретраи на снятых моделях Gateway делает на своей стороне,
+ * поэтому перебор моделей-кандидатов, живший здесь раньше, больше не нужен.
  *
- * Модели задаются здесь и только здесь: бесплатные тарифы снимают модели без
- * предупреждения (задокументированный случай — внезапные 404 на захардкоженной
- * модели), поэтому имя выносится в env-переменную, а падение вызова обязано
- * деградировать до резерва и статики, а не ронять страницу.
+ * Экономика: наценки на токены нет (list price), $5/мес бесплатных кредитов
+ * покрывают наш объём с большим запасом (~250 генераций/мес ≈ $0.3 на Grok).
+ *
+ * Дефолт — Grok non-reasoning: жанр «шутливые подписи» ему ближе всех дешёвых
+ * моделей, а отсутствие «размышлений» снимает проблему сожранного ими бюджета
+ * токенов. Резкость тона страхует постфильтр (`filter.ts`) — как и всегда.
+ *
+ * Модель выносится в env: тарифы снимают модели без предупреждения, и падение
+ * вызова обязано деградировать до прошлого пула и статики (п. 8), а не ронять
+ * страницу.
  */
-/**
- * Не одна модель, а список кандидатов по порядку. Проверено на живом ключе:
- * `gemini-2.5-flash` присутствует в каталоге `ListModels`, но на `generateContent`
- * отвечает «no longer available to new users» — то есть проверить доступность
- * заранее нельзя, только попыткой. Первым идёт скользящий алиас: он переживает
- * исчезновение конкретных версий, ради которого этот перебор и заведён.
- */
-export const GEMINI_MODELS: readonly string[] = process.env.GEMINI_MODEL
-  ? [process.env.GEMINI_MODEL]
-  : ['gemini-flash-latest', 'gemini-3.6-flash', 'gemini-2.5-flash'];
+export const GATEWAY_MODEL = process.env.AI_GATEWAY_MODEL ?? 'xai/grok-4.1-fast-non-reasoning';
 
-export const GROQ_MODEL = process.env.GROQ_MODEL ?? 'llama-3.3-70b-versatile';
-
-const GEMINI_URL = 'https://generativelanguage.googleapis.com/v1beta/models';
-const GROQ_URL = 'https://api.groq.com/openai/v1/chat/completions';
-
-/** Одна повторная попытка на провайдера, затем переключение на резерв (п. 8). */
-const ATTEMPTS_PER_PROVIDER = 2;
-
-export type ProviderName = 'gemini' | 'groq';
+export type ProviderName = 'gateway';
 
 export interface LlmResult {
   provider: ProviderName;
@@ -41,203 +35,74 @@ export interface LlmResult {
   latencyMs: number;
 }
 
-/** Схема структурированного вывода Gemini — подмножество OpenAPI. */
-const GEMINI_RESPONSE_SCHEMA = {
-  type: 'ARRAY',
-  items: {
-    type: 'OBJECT',
-    properties: {
-      text: { type: 'STRING' },
-      tone: { type: 'STRING', enum: ['praise', 'tease', 'neutral', 'tip'] },
-      subject: { type: 'STRING', nullable: true },
-    },
-    required: ['text', 'tone'],
-    propertyOrdering: ['text', 'tone', 'subject'],
-  },
-} as const;
-
-/** `fetch` с жёстким таймаутом: висящий запрос к LLM не должен держать функцию. */
-async function fetchJson(url: string, init: RequestInit): Promise<unknown> {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), HINTS_LLM_TIMEOUT_MS);
-  try {
-    const response = await fetch(url, { ...init, signal: controller.signal });
-    if (!response.ok) {
-      const body = await response.text().catch(() => '');
-      throw new Error(`HTTP ${response.status} ${body.slice(0, 200)}`);
-    }
-    return await response.json();
-  } finally {
-    clearTimeout(timer);
-  }
-}
-
 /**
- * Ответ, не прошедший Zod, отбрасывается целиком — чинить JSON регулярками
- * запрещено (п. 6.6.3): проще потерять одну генерацию, чем показать мусор.
+ * AI SDK сам находит креды: `AI_GATEWAY_API_KEY` либо `VERCEL_OIDC_TOKEN`
+ * (последний Vercel подставляет на деплоях автоматически). Без обоих подсистема
+ * молча живёт на статическом каталоге — та же деградация, что была без ключей.
  */
-function parseHints(raw: unknown): LlmHint[] {
-  const payload =
-    Array.isArray(raw) || raw === null || typeof raw !== 'object'
-      ? raw
-      : ((raw as Record<string, unknown>).hints ?? raw);
-  return llmHintsSchema.parse(payload);
-}
-
-/** Модель, ответившая последней успешно, — чтобы не перебирать список каждый раз. */
-let lastGoodGeminiModel: string | null = null;
-
-async function callGemini(snapshot: HintSnapshot): Promise<LlmHint[]> {
-  const candidates = lastGoodGeminiModel
-    ? [lastGoodGeminiModel, ...GEMINI_MODELS.filter((m) => m !== lastGoodGeminiModel)]
-    : GEMINI_MODELS;
-
-  let lastError: unknown;
-  for (const model of candidates) {
-    try {
-      const hints = await callGeminiModel(snapshot, model);
-      lastGoodGeminiModel = model;
-      return hints;
-    } catch (error) {
-      lastError = error;
-      // Модель снята с раздачи или переименована — пробуем следующую.
-      const message = error instanceof Error ? error.message : '';
-      if (!/HTTP (400|403|404)/.test(message)) throw error;
-      console.warn('[hints] модель недоступна, пробуем следующую', { model });
-    }
-  }
-  throw lastError instanceof Error ? lastError : new Error('Gemini: все модели недоступны');
-}
-
-async function callGeminiModel(snapshot: HintSnapshot, model: string): Promise<LlmHint[]> {
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) throw new Error('GEMINI_API_KEY is not set');
-
-  const json = (await fetchJson(`${GEMINI_URL}/${model}:generateContent`, {
-    method: 'POST',
-    // Ключ уходит заголовком, а не query-параметром: URL попадает в логи целиком.
-    headers: { 'content-type': 'application/json', 'x-goog-api-key': apiKey },
-    body: JSON.stringify({
-      systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] },
-      contents: [{ role: 'user', parts: [{ text: buildUserPrompt(snapshot) }] }],
-      generationConfig: {
-        responseMimeType: 'application/json',
-        responseSchema: GEMINI_RESPONSE_SCHEMA,
-        temperature: 1.1,
-        /*
-          Бюджет считается вместе с «размышлениями» модели: на живом ключе из
-          2048 токенов 1778 уходило в них, ответ обрывался на середине JSON.
-          `thinkingConfig` здесь не задаём — старые модели из списка кандидатов
-          его не принимают и отвечают 400. 12 фраз укладываются в ~800 токенов,
-          так что запас взят с большим избытком: при 24 генерациях в сутки это
-          доли процента бесплатного лимита.
-        */
-        maxOutputTokens: 8192,
-      },
-    }),
-  })) as {
-    candidates?: Array<{ content?: { parts?: Array<{ text?: string }> }; finishReason?: string }>;
-  };
-
-  const candidate = json.candidates?.[0];
-  if (candidate?.finishReason === 'MAX_TOKENS') {
-    // Иначе это выглядело бы как «битый JSON» и уводило диагностику не туда.
-    throw new Error(`Gemini (${model}): ответ обрезан по лимиту токенов`);
-  }
-
-  const text = candidate?.content?.parts?.[0]?.text;
-  if (!text) throw new Error('Gemini: пустой ответ');
-  return parseHints(JSON.parse(text));
-}
-
-async function callGroq(snapshot: HintSnapshot): Promise<LlmHint[]> {
-  const apiKey = process.env.GROQ_API_KEY;
-  if (!apiKey) throw new Error('GROQ_API_KEY is not set');
-
-  const json = (await fetchJson(GROQ_URL, {
-    method: 'POST',
-    headers: { 'content-type': 'application/json', authorization: `Bearer ${apiKey}` },
-    body: JSON.stringify({
-      model: GROQ_MODEL,
-      // json_object требует объект верхнего уровня — просим массив под ключом hints.
-      response_format: { type: 'json_object' },
-      temperature: 1.1,
-      max_tokens: 2048,
-      messages: [
-        { role: 'system', content: SYSTEM_PROMPT },
-        {
-          role: 'user',
-          content: `${buildUserPrompt(snapshot)}\n\nОтветь объектом вида {"hints": [ ... ]}.`,
-        },
-      ],
-    }),
-  })) as { choices?: Array<{ message?: { content?: string } }> };
-
-  const content = json.choices?.[0]?.message?.content;
-  if (!content) throw new Error('Groq: пустой ответ');
-  return parseHints(JSON.parse(content));
-}
-
-interface Provider {
-  name: ProviderName;
-  model: string;
-  enabled: boolean;
-  run: (snapshot: HintSnapshot) => Promise<LlmHint[]>;
-}
-
-function providers(): Provider[] {
-  return [
-    {
-      name: 'gemini',
-      // Для логов: какая модель реально ответила, знает только callGemini.
-      model: lastGoodGeminiModel ?? GEMINI_MODELS.join('|'),
-      enabled: Boolean(process.env.GEMINI_API_KEY),
-      run: callGemini,
-    },
-    {
-      name: 'groq',
-      model: GROQ_MODEL,
-      enabled: Boolean(process.env.GROQ_API_KEY),
-      run: callGroq,
-    },
-  ];
+function gatewayEnabled(): boolean {
+  return Boolean(process.env.AI_GATEWAY_API_KEY || process.env.VERCEL_OIDC_TOKEN);
 }
 
 /**
- * Gemini → (ошибка/квота) → Groq → (ошибка) → `null`.
+ * Gateway → (ошибка/квота/пусто) → `null`.
  * `null` означает «пул не обновляем», а не «сломались»: вызывающий код остаётся
  * на предыдущем пуле либо на статике.
  */
 export async function requestHints(snapshot: HintSnapshot): Promise<LlmResult | null> {
-  for (const provider of providers()) {
-    if (!provider.enabled) {
-      console.info('[hints] llm skip', { provider: provider.name, reason: 'no api key' });
-      continue;
-    }
-
-    for (let attempt = 1; attempt <= ATTEMPTS_PER_PROVIDER; attempt += 1) {
-      const startedAt = Date.now();
-      try {
-        const hints = await provider.run(snapshot);
-        const latencyMs = Date.now() - startedAt;
-        console.info('[hints] llm ok', {
-          provider: provider.name,
-          model: provider.model,
-          latencyMs,
-          received: hints.length,
-        });
-        return { provider: provider.name, model: provider.model, hints, latencyMs };
-      } catch (error) {
-        console.warn('[hints] llm fail', {
-          provider: provider.name,
-          model: provider.model,
-          attempt,
-          latencyMs: Date.now() - startedAt,
-          error: error instanceof Error ? error.message : String(error),
-        });
-      }
-    }
+  if (!gatewayEnabled()) {
+    console.info('[hints] llm skip', { provider: 'gateway', reason: 'no credentials' });
+    return null;
   }
 
-  return null;
+  const startedAt = Date.now();
+  try {
+    const { object } = await generateObject({
+      model: GATEWAY_MODEL,
+      output: 'array',
+      // Схема ответа — та же Zod-схема, которой раньше валидировали руками:
+      // ответ, не прошедший её, отбрасывается целиком, чинить JSON запрещено (п. 6.6.3).
+      schema: llmHintSchema,
+      system: SYSTEM_PROMPT,
+      prompt: buildUserPrompt(snapshot),
+      temperature: 1.1,
+      /*
+        У «думающих» моделей бюджет считается вместе с размышлениями: на живом
+        ключе Gemini из 2048 токенов 1778 уходило в них, ответ обрывался на
+        середине JSON. Дефолтный Grok non-reasoning не думает, но модель
+        задаётся env-переменной — запас держим под любую из каталога.
+      */
+      maxOutputTokens: 8192,
+      // Одна повторная попытка (п. 8), дальше — прошлый пул и статика.
+      maxRetries: 1,
+      abortSignal: AbortSignal.timeout(HINTS_LLM_TIMEOUT_MS),
+    });
+
+    const latencyMs = Date.now() - startedAt;
+    if (object.length === 0) {
+      console.warn('[hints] llm fail', {
+        provider: 'gateway',
+        model: GATEWAY_MODEL,
+        latencyMs,
+        error: 'пустой ответ',
+      });
+      return null;
+    }
+
+    console.info('[hints] llm ok', {
+      provider: 'gateway',
+      model: GATEWAY_MODEL,
+      latencyMs,
+      received: object.length,
+    });
+    return { provider: 'gateway', model: GATEWAY_MODEL, hints: object, latencyMs };
+  } catch (error) {
+    console.warn('[hints] llm fail', {
+      provider: 'gateway',
+      model: GATEWAY_MODEL,
+      latencyMs: Date.now() - startedAt,
+      error: error instanceof Error ? error.message : String(error),
+    });
+    return null;
+  }
 }

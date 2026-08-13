@@ -3,8 +3,10 @@ import { and, eq, sql } from 'drizzle-orm';
 import { HINTS_NEWCOMER_DAYS, TZ } from '@/lib/config';
 import { db } from '@/lib/db';
 import { users, walks } from '@/lib/db/schema';
+import { catchupDays, nextMilestone, rankChanges } from '@/lib/hints/enrich';
+import type { MilestoneInfo } from '@/lib/hints/enrich';
 import { positionOnRoute } from '@/lib/hints/route';
-import { diffOfficeDays, toOfficeDay } from '@/lib/time';
+import { diffOfficeDays, periodStart, toOfficeDay } from '@/lib/time';
 
 /**
  * Обезличенный снапшот для LLM (п. 6.6.2 ТЗ).
@@ -24,12 +26,27 @@ export interface HintSnapshotParticipant {
   streak_days?: number;
   days_since_last: number | null;
   usual_speed: number | null;
+  /** Отставание от соседа сверху по рейтингу; у лидера отсутствует. */
+  gap_ahead_km?: number;
+  /** Километры с понедельника. */
+  km_week: number;
+  /** Изменение места за неделю: +2 — поднялся на два. Ноль опускается. */
+  rank_change?: number;
+  /** Личный рекорд одной прогулки. Ноль (не ходил) опускается. */
+  best_walk_km?: number;
 }
 
 export interface HintSnapshot {
   team_total_km: number;
+  team_km_week: number;
   /** Арифметику по маршруту делаем мы: на числах LLM ошибается охотнее всего. */
   route_position: { passed: string; next: string | null; km_left: number };
+  /** Ближайший круглый рубеж команды — готовый сюжет «кто добьёт». */
+  next_milestone: MilestoneInfo;
+  /** Рекордный день команды за всю историю; отсутствует, пока прогулок нет. */
+  record_day?: { day: string; km: number };
+  /** «u2 догонит u1 через N рабочих дней при темпе этой недели» — если догоняет. */
+  catchup?: { chaser: string; leader: string; days: number };
   participants: HintSnapshotParticipant[];
 }
 
@@ -55,6 +72,8 @@ interface AggregatedUser {
   totalKm: number;
   walksCount: number;
   usualSpeed: number | null;
+  kmWeek: number;
+  bestWalkKm: number;
   /** Офисные даты прогулок, по убыванию. */
   days: string[];
 }
@@ -64,7 +83,7 @@ interface AggregatedUser {
  * место в рейтинге должно оставаться настоящим, иначе шутки про «второго»
  * будут врать. Исключение происходит уже после расчёта рангов.
  */
-async function loadUsers(): Promise<AggregatedUser[]> {
+async function loadUsers(weekStart: Date): Promise<AggregatedUser[]> {
   // TZ — константа из конфига, не пользовательский ввод: `sql.raw` здесь безопасен,
   // а параметр-плейсхолдер в `at time zone` Postgres не может вывести по типу.
   const officeDay = sql.raw(`at time zone '${TZ}'`);
@@ -80,6 +99,8 @@ async function loadUsers(): Promise<AggregatedUser[]> {
       // Обычная скорость = самая частая, а не средняя: «ходит на 6 км/ч» звучит
       // осмысленно только если это реальная кнопка на дорожке.
       usualSpeed: sql<number | null>`mode() within group (order by ${walks.speedKmh})`,
+      kmWeek: sql<string>`coalesce(sum(${walks.distanceKm}) filter (where ${walks.startedAt} >= ${weekStart}), 0)`,
+      bestWalkKm: sql<string>`coalesce(max(${walks.distanceKm}), 0)`,
       days: sql<
         string | null
       >`string_agg(distinct to_char(${walks.startedAt} ${officeDay}, 'YYYY-MM-DD'), ',')`,
@@ -96,11 +117,32 @@ async function loadUsers(): Promise<AggregatedUser[]> {
     totalKm: Number(row.totalKm),
     walksCount: Number(row.walksCount),
     usualSpeed: row.usualSpeed === null ? null : Number(row.usualSpeed),
+    kmWeek: Number(row.kmWeek),
+    bestWalkKm: Number(row.bestWalkKm),
     days: (row.days ?? '')
       .split(',')
       .filter(Boolean)
       .sort((a, b) => b.localeCompare(a)),
   }));
+}
+
+/** Рекордный день команды за всю историю — офисная дата и суммарные километры. */
+async function loadRecordDay(): Promise<{ day: string; km: number } | null> {
+  const officeDay = sql.raw(`at time zone '${TZ}'`);
+  const rows = await db
+    .select({
+      day: sql<string>`to_char(${walks.startedAt} ${officeDay}, 'YYYY-MM-DD')`,
+      km: sql<string>`sum(${walks.distanceKm})`,
+    })
+    .from(walks)
+    .where(eq(walks.status, 'finished'))
+    .groupBy(sql`1`)
+    .orderBy(sql`2 desc`)
+    .limit(1);
+
+  const row = rows[0];
+  if (!row) return null;
+  return { day: row.day, km: Math.round(Number(row.km) * 100) / 100 };
 }
 
 /**
@@ -121,9 +163,13 @@ async function loadStreakDays(userIds: string[]): Promise<Map<string, number>> {
 }
 
 export async function buildSnapshot(): Promise<SnapshotResult> {
-  const all = await loadUsers();
+  const all = await loadUsers(periodStart('week'));
   const today = toOfficeDay();
-  const streaks = await loadStreakDays(all.map((user) => user.id));
+  const [streaks, recordDay] = await Promise.all([
+    loadStreakDays(all.map((user) => user.id)),
+    loadRecordDay(),
+  ]);
+  const changes = rankChanges(all);
 
   // Ранг считается по всем участникам, включая отказавшихся от хинтов.
   const ranked = [...all]
@@ -166,26 +212,57 @@ export async function buildSnapshot(): Promise<SnapshotResult> {
       walks: user.walksCount,
       days_since_last: lastDay ? diffOfficeDays(today, lastDay) : null,
       usual_speed: user.usualSpeed,
+      km_week: Math.round(user.kmWeek * 100) / 100,
     };
     if (streak > 0) participant.streak_days = streak;
+
+    // Отставание — от реального соседа по рейтингу (он может быть opt-out:
+    // числа обезличены, слота у него нет, утечки не происходит).
+    const ahead = ranked[entry.rank - 2];
+    if (ahead) {
+      participant.gap_ahead_km = Math.round((ahead.user.totalKm - user.totalKm) * 100) / 100;
+    }
+
+    const change = changes.get(user.id) ?? 0;
+    if (change !== 0) participant.rank_change = change;
+    if (user.bestWalkKm > 0) {
+      participant.best_walk_km = Math.round(user.bestWalkKm * 100) / 100;
+    }
     return participant;
   });
 
   const teamTotalKm = Math.round(all.reduce((sum, u) => sum + u.totalKm, 0) * 100) / 100;
+  const teamKmWeek = Math.round(all.reduce((sum, u) => sum + u.kmWeek, 0) * 100) / 100;
   const position = positionOnRoute(teamTotalKm);
 
-  return {
-    snapshot: {
-      team_total_km: teamTotalKm,
-      route_position: {
-        passed: position.passed.city,
-        next: position.next?.city ?? null,
-        km_left: position.kmLeft,
-      },
-      participants,
+  const snapshot: HintSnapshot = {
+    team_total_km: teamTotalKm,
+    team_km_week: teamKmWeek,
+    route_position: {
+      passed: position.passed.city,
+      next: position.next?.city ?? null,
+      km_left: position.kmLeft,
     },
-    slotToUserId,
-    slotToName,
-    newcomerSlots,
+    next_milestone: nextMilestone(teamTotalKm),
+    participants,
   };
+  if (recordDay) snapshot.record_day = recordDay;
+
+  // Сюжет о погоне — только про верхнюю пару видимых участников: у обоих
+  // должны быть слоты, иначе имя в шутку подставить некому.
+  const [leader, chaser] = visible;
+  const leaderSlot = participants[selected.indexOf(leader)]?.slot;
+  const chaserSlot = participants[selected.indexOf(chaser)]?.slot;
+  if (leader && chaser && leaderSlot && chaserSlot) {
+    const days = catchupDays(
+      leader.user.totalKm - chaser.user.totalKm,
+      chaser.user.kmWeek,
+      leader.user.kmWeek,
+    );
+    if (days !== null) {
+      snapshot.catchup = { chaser: chaserSlot, leader: leaderSlot, days };
+    }
+  }
+
+  return { snapshot, slotToUserId, slotToName, newcomerSlots };
 }

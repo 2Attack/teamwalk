@@ -8,7 +8,7 @@
 ## Стек
 
 Next.js (App Router) · TypeScript strict · React 19 · Tailwind CSS 4 · Drizzle ORM ·
-Neon Postgres (HTTP-драйвер) · Zod · SWR · Motion · Gemini Flash с фолбэком на Groq.
+Neon Postgres (HTTP-драйвер) · Zod · SWR · Motion · Vercel AI Gateway (AI SDK).
 
 Иконки — [pixelarticons](https://pixelarticons.com) (MIT), портреты — DiceBear `pixel-art`.
 Оба набора попадают в репозиторий на этапе генерации, в рантайме сторонних запросов нет.
@@ -100,8 +100,8 @@ long polling: `npm run dev:tg` (рядом с работающим `npm run dev`
 | Переменная | Обязательна | Назначение |
 |---|---|---|
 | `DATABASE_URL` | да | Neon Postgres, pooled connection |
-| `GEMINI_API_KEY` | нет | Основной провайдер хинтов (Google AI Studio, карта не нужна) |
-| `GROQ_API_KEY` | нет | Резервный провайдер |
+| `AI_GATEWAY_API_KEY` | нет | Vercel AI Gateway — LLM-провайдер хинтов; на деплоях Vercel заменяется автоматическим `VERCEL_OIDC_TOKEN` |
+| `AI_GATEWAY_MODEL` | нет | Модель Gateway, по умолчанию `xai/grok-4.1-fast-non-reasoning` |
 | `HINTS_ENABLED` | нет | `false` → только статический каталог фраз, без обращений к LLM |
 | `HINTS_TTL_MINUTES` | нет | Период регенерации пула, по умолчанию 60 |
 | `TELEGRAM_BOT_TOKEN` | нет | Бот от @BotFather; без него Telegram-подсистема выключена целиком (п. 6.10 ТЗ) |
@@ -145,7 +145,9 @@ Telegram на превью выключен (нет переменных бот�
    Портреты рисует DiceBear (стиль `pixel-art`), но только на этапе `npm run gen:assets`:
    в рантайме к `api.dicebear.com` обращений нет, иначе одна страница рейтинга тянула бы
    десяток сторонних запросов и без сети приложение осталось бы без аватаров.
-4. Ключ Google AI Studio → `GEMINI_API_KEY` (опционально `GROQ_API_KEY`).
+4. LLM: включить AI Gateway в настройках проекта — на деплое AI SDK
+   авторизуется через `VERCEL_OIDC_TOKEN` сам; локально нужен `AI_GATEWAY_API_KEY`
+   (Dashboard → AI Gateway → API Keys). Без кредов хинты крутят статику.
 5. Миграции: `npm run db:migrate` локально с продовым `DATABASE_URL`.
 6. Деплой из `main`, preview-деплои для остальных веток.
 
@@ -162,7 +164,7 @@ Cron не используется: «зависшие» прогулки зак
   `409 WALK_ALREADY_ACTIVE` / `409 TREADMILL_BUSY`.
 - **LLM никогда не в горячем пути.** Пул хинтов лежит в `hints_cache`, отдаётся
   немедленно и регенерируется в фоне (stale-while-revalidate) под строкой-мьютексом.
-  Цепочка деградации: Gemini → Groq → прошлый пул → статический каталог.
+  Цепочка деградации: AI Gateway → прошлый пул → статический каталог.
 - **Персональные данные не покидают периметр.** В LLM уходит обезличенный снапшот со
   слотами `u1…uN`; реальные имена подставляются на нашей стороне.
 - **Серии, рекорды и позиция на маршруте не хранятся** — вычисляются из `walks`, поэтому
