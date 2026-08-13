@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import { use, useEffect, useState } from 'react';
 import useSWR from 'swr';
 
+import { AchievementIcons } from '@/components/AchievementIcons';
 import { DialogShell } from '@/components/DialogShell';
 import { FinishWalkDialog } from '@/components/FinishWalkDialog';
 import { HintTicker } from '@/components/HintTicker';
@@ -268,7 +269,9 @@ export default function WalkPage({ params }: { params: Promise<{ id: string }> }
           Старт в {formatTimeOfDay(walk.startedAt)} · {walk.treadmillName}
         </p>
         <PlayerProfileCard
-          className="max-w-none"
+          // Компактный вариант: базовый Card читает все припуски из
+          // --card-spacing — 12px вместо 16px убирают лишний воздух.
+          className="max-w-none [--card-spacing:0.75rem]"
           playerName={walk.user.name}
           avatarSrc={avatarSrc(walk.user.avatarId)}
           avatarFallback={walk.user.name.charAt(0).toUpperCase()}
@@ -279,6 +282,8 @@ export default function WalkPage({ params }: { params: Promise<{ id: string }> }
           showHealth={false}
           showMana={false}
           showExperience={false}
+          // Полученные ачивки — строкой под именем, с тултипами (п. 6.8.3).
+          belowName={<AchievementIcons achievements={userStats?.achievements ?? []} />}
         />
       </header>
 

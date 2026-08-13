@@ -1,0 +1,4 @@
+<!-- Ранняя пташка: воробей в профиль, клювом вправо; пустой пиксель — глаз. Сетка 24×24. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+  <path d="M11 4h6v2h-6zM11 6h2v2h-2zM15 6h2v2h-2zM17 7h3v2h-3zM5 8h4v2H5zM9 8h8v2H9zM8 10h9v2H8zM9 12h7v2H9zM10 14h5v2h-5zM10 16h2v2h-2zM13 16h2v2h-2z"/>
+</svg>

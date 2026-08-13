@@ -67,6 +67,34 @@ export const ICON_PATHS = {
   calendar: [
     'M5 4h14v2H5zm0 16h14v2H5zM3 10h2v10H3zm0-4h2v2H3zm16 0h2v2h-2zm0 4h2v10h-2zM3 8h18v2H3zm12-6h2v2h-2zM7 2h2v2H7zm4 10h6v2h-6zm-4 4h6v2H7z',
   ],
+  /** свой, scripts/icons/bird.svg */
+  bird: [
+    'M11 4h6v2h-6zM11 6h2v2h-2zM15 6h2v2h-2zM17 7h3v2h-3zM5 8h4v2H5zM9 8h8v2H9zM8 10h9v2H8zM9 12h7v2H9zM10 14h5v2h-5zM10 16h2v2h-2zM13 16h2v2h-2z',
+  ],
+  /** свой, scripts/icons/calendar-check.svg */
+  calendarCheck: [
+    'M7 3h2v4H7zM15 3h2v4h-2zM4 5h16v4H4zM4 9h2v10H4zM18 9h2v10h-2zM4 19h16v2H4zM7 13h2v2H7zM9 15h2v2H9zM11 13h2v2h-2zM13 11h2v2h-2z',
+  ],
+  /** свой, scripts/icons/ember.svg */
+  ember: [
+    'M11 3h2v2h-2zM10 5h4v2h-4zM9 7h6v2H9zM8 9h8v2H8zM8 11h3v2H8zM13 11h3v2h-3zM9 13h6v2H9zM5 17h14v2H5zM7 19h2v2H7zM15 19h2v2h-2z',
+  ],
+  /** свой, scripts/icons/lightning.svg */
+  lightning: [
+    'M14 3h4v2h-4zM13 5h4v2h-4zM12 7h4v2h-4zM10 9h8v2h-8zM8 11h8v2H8zM9 13h4v2H9zM8 15h3v2H8zM7 17h2v2H7zM6 19h2v2H6z',
+  ],
+  /** свой, scripts/icons/medal.svg */
+  medal: [
+    'M7 3h4v5H7zM13 3h4v5h-4zM9 8h6v2H9zM7 10h2v4H7zM15 10h2v4h-2zM9 14h6v2H9zM11 11h2v2h-2z',
+  ],
+  /** свой, scripts/icons/milestone.svg */
+  milestone: [
+    'M6 3h12v2H6zM6 5h2v4H6zM16 5h2v4h-2zM6 9h12v2H6zM11 6h2v2h-2zM11 11h2v8h-2zM8 19h8v2H8z',
+  ],
+  /** свой, scripts/icons/owl.svg */
+  owl: [
+    'M5 4h3v2H5zM16 4h3v2h-3zM5 6h14v3H5zM5 9h2v3H5zM10 9h4v3h-4zM17 9h2v3h-2zM5 12h14v4H5zM7 16h3v2H7zM14 16h3v2h-3z',
+  ],
 } as const;
 
 export type IconName = keyof typeof ICON_PATHS;

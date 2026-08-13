@@ -33,6 +33,8 @@ export interface PlayerStats {
 
 export interface PlayerProfileCardProps {
   className?: string;
+  /** Адаптация: строка под именем — например, ряд ачивок. */
+  belowName?: React.ReactNode;
   playerName: string;
   avatarSrc?: string;
   avatarFallback?: string;
@@ -60,6 +62,7 @@ export interface PlayerProfileCardProps {
 
 export default function PlayerProfileCard({
   className,
+  belowName,
   playerName,
   avatarSrc,
   avatarFallback,
@@ -100,7 +103,8 @@ export default function PlayerProfileCard({
     // Адаптация под п. 6.7.1: font="normal" на карточке — подпись-«класс»
     // читают обычным sans; пиксельные — имя-заголовок и бейдж уровня.
     <Card font="normal" className={cn("w-full max-w-md", className)} {...props}>
-      <CardHeader className="pb-4">
+      {/* Адаптация: нижний отступ шапки нужен только перед барами. */}
+      <CardHeader className={hasBars ? "pb-4" : "pb-0"}>
         <div className="flex items-center gap-4">
           <Avatar className="size-16" variant="pixel" font="retro">
             <AvatarImage src={avatarSrc} alt={playerName} />
@@ -110,7 +114,7 @@ export default function PlayerProfileCard({
           </Avatar>
 
           <div className="flex-1 min-w-0">
-            <div className="space-y-2">
+            <div className="space-y-1">
               <div className="flex flex-col gap-1 md:flex-row md:items-center md:gap-2 justify-between">
                 {/* Имя — заголовок карточки, пиксельный допустим (п. 6.7.1);
                     font-pixel подключён с кириллическим subset. */}
@@ -138,6 +142,8 @@ export default function PlayerProfileCard({
                   </span>
                 )}
               </div>
+              {/* Адаптация: строка под именем — ряд ачивок и т. п. */}
+              {belowName}
             </div>
           </div>
         </div>

@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from 'react';
 
 import { Badge } from '@/components/ui/8bit/badge';
 import { Icon } from '@/components/ui/icon';
+import { achievementIcon } from '@/lib/achievement-icons';
 import type { AchievementDto } from '@/lib/types';
 
 interface AchievementToastProps {
@@ -72,7 +73,8 @@ export function AchievementToast({ achievements, onDismiss }: AchievementToastPr
             exit={reduced ? { opacity: 0 } : { opacity: 0, y: 12, scale: 0.98 }}
             transition={{ duration: reduced ? 0 : 0.28, ease: 'easeOut' }}
           >
-            <Icon name="trophy" size={24} className="mt-0.5" />
+            {/* У каждой ачивки своя пиксельная иконка (п. 6.8.3). */}
+            <Icon name={achievementIcon(current.code)} size={24} className="mt-0.5" />
 
             <div className="min-w-0 flex-1">
               {/* Метка — слой идентичности, поэтому пиксельный шрифт бейджа (п. 6.7.1). */}

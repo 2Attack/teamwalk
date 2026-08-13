@@ -16,7 +16,7 @@
  * Запуск: `npm run gen:icons`.
  */
 
-import { readFileSync, writeFileSync } from 'node:fs';
+import { readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -61,31 +61,45 @@ const MAP = {
   calendar: 'calendar-range',
 };
 
+/**
+ * Самодельные иконки — `scripts/icons/*.svg`: та же сетка 24×24 и блочный
+ * стиль, что у pixelarticons, но нарисованы под конкретные роли (ачивки,
+ * п. 6.8.3). Имя в коде — camelCase от имени файла. Исходники лежат рядом
+ * со скриптом, итог всё равно попадает только в сгенерированный файл.
+ */
+const CUSTOM_DIR = join(ROOT, 'scripts', 'icons');
+
 /** pixelarticons рисует иконку одним-двумя <path>; берём их в порядке следования. */
-function extractPaths(file) {
-  const svg = readFileSync(join(SRC, `${file}.svg`), 'utf8');
-  const paths = [...svg.matchAll(/<path[^>]*\sd="([^"]+)"/g)].map((m) => m[1]);
-  if (paths.length === 0) throw new Error(`В ${file}.svg не найдено ни одного <path d>`);
+function extractPaths(svgText, label) {
+  const paths = [...svgText.matchAll(/<path[^>]*\sd="([^"]+)"/g)].map((m) => m[1]);
+  if (paths.length === 0) throw new Error(`В ${label} не найдено ни одного <path d>`);
   return paths;
 }
 
 /** Все иконки набора — 24×24; смешивать сетки нельзя, иначе разъедется толщина штриха. */
-function assertViewBox(file) {
-  const svg = readFileSync(join(SRC, `${file}.svg`), 'utf8');
-  if (!svg.includes('viewBox="0 0 24 24"')) {
-    throw new Error(`${file}.svg не на сетке 24×24 — набор должен быть однородным`);
+function assertViewBox(svgText, label) {
+  if (!svgText.includes('viewBox="0 0 24 24"')) {
+    throw new Error(`${label} не на сетке 24×24 — набор должен быть однородным`);
   }
 }
 
 const entries = Object.entries(MAP).map(([name, file]) => {
-  assertViewBox(file);
-  return [name, file, extractPaths(file)];
+  const svg = readFileSync(join(SRC, `${file}.svg`), 'utf8');
+  assertViewBox(svg, `${file}.svg`);
+  return [name, `pixelarticons: ${file}`, extractPaths(svg, `${file}.svg`)];
 });
 
+for (const file of readdirSync(CUSTOM_DIR).filter((f) => f.endsWith('.svg')).sort()) {
+  const name = file.replace(/\.svg$/, '').replace(/-([a-z])/g, (_, c) => c.toUpperCase());
+  const svg = readFileSync(join(CUSTOM_DIR, file), 'utf8');
+  assertViewBox(svg, `scripts/icons/${file}`);
+  entries.push([name, `свой, scripts/icons/${file}`, extractPaths(svg, `scripts/icons/${file}`)]);
+}
+
 const body = entries
-  .map(([name, file, paths]) => {
+  .map(([name, source, paths]) => {
     const list = paths.map((d) => `\n    '${d}',`).join('');
-    return `  /** pixelarticons: ${file} */\n  ${name}: [${list}\n  ],`;
+    return `  /** ${source} */\n  ${name}: [${list}\n  ],`;
   })
   .join('\n');
 

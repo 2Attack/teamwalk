@@ -17,6 +17,7 @@ import {
   CardTitle,
 } from '@/components/ui/8bit/card';
 import { Icon } from '@/components/ui/icon';
+import { achievementIcon } from '@/lib/achievement-icons';
 import { apiSend, revalidateAfterWalk, useHints } from '@/lib/client/api';
 import { DELETE_WINDOW_MINUTES } from '@/lib/config';
 import { formatDuration, formatKm, plural } from '@/lib/format';
@@ -190,7 +191,8 @@ export function WalkSuccess({ result }: { result: FinishWalkResultDto }) {
                   <li key={achievement.code} className="space-y-2">
                     <div className="px-1.5">
                       <Badge font="normal" className="h-7">
-                        <Icon name="star" size={16} />
+                        {/* У каждой ачивки своя пиксельная иконка (п. 6.8.3). */}
+                        <Icon name={achievementIcon(achievement.code)} size={16} />
                         {achievement.title}
                       </Badge>
                     </div>
