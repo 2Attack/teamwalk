@@ -52,8 +52,6 @@ export function useElapsedSeconds(startedAt: string): number {
 interface WalkTimerProps {
   /** ISO-время старта, полученное с сервера. */
   startedAt: string;
-  /** Текущая скорость — её и подписываем под счётчиком. */
-  speedKmh: number;
   /**
    * Отрезки скорости с сервера. Дистанция растёт по ним, а не по одной скорости:
    * смена темпа на ходу не переписывает уже пройденное (п. 6.3).
@@ -66,7 +64,6 @@ interface WalkTimerProps {
 
 export function WalkTimer({
   startedAt,
-  speedKmh,
   speedSegments,
   bestDayKm,
   className,
@@ -77,7 +74,6 @@ export function WalkTimer({
   const endMs = new Date(startedAt).getTime() + seconds * 1000;
   // Та же функция, что предзаполняет модалку завершения, — значения совпадают.
   const distanceKm = calcSegmentedDistanceKm(speedSegments, endMs);
-  const speedChanged = speedSegments.length > 1;
   const hasRecord = typeof bestDayKm === 'number' && bestDayKm > 0;
   const beatsRecord = hasRecord && distanceKm > bestDayKm;
   // 8bitcn Progress считает шкалу в процентах, поэтому долю считаем здесь.
@@ -94,16 +90,11 @@ export function WalkTimer({
         {formatDuration(seconds)}
       </p>
 
-      <div>
-        <p className="font-pixel text-[24px] leading-none tabular-nums text-citrus sm:text-[32px]">
-          {formatKm(distanceKm)} км
-        </p>
-        {/* Подпись читают — обычный sans. */}
-        {/* После смены темпа «при 6 км/ч» врало бы: часть пути пройдена иначе. */}
-        <p className="mt-2 text-sm text-text-dim">
-          {speedChanged ? `набежало · сейчас ${speedKmh} км/ч` : `набежало при ${speedKmh} км/ч`}
-        </p>
-      </div>
+      {/* Подписи про скорость нет сознательно: текущий темп показывает
+          регулятор ниже, а дублирование только шумело. */}
+      <p className="font-pixel text-[24px] leading-none tabular-nums text-citrus sm:text-[32px]">
+        {formatKm(distanceKm)} км
+      </p>
 
       {hasRecord ? (
         <div className="w-full px-1.5">

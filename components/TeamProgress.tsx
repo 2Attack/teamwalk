@@ -7,19 +7,28 @@ import { Progress } from '@/components/ui/8bit/progress';
 import { Skeleton } from '@/components/ui/8bit/skeleton';
 import { useTeamProgress } from '@/lib/client/api';
 import { cn } from '@/lib/cn';
+import { formatKm } from '@/lib/format';
 import type { TeamProgressDto } from '@/lib/types';
 
 interface TeamProgressProps {
   className?: string;
 }
 
-/** Километры маршрута — целыми: «310 км» читается быстрее, чем «310.00 км». */
+/** Остаток до города — целыми: расстояния маршрута ориентировочные (п. 6.6.8). */
 function routeKm(km: number): string {
   return Math.round(Math.max(0, km)).toLocaleString('ru-RU');
 }
 
+/** Жёсткий контур в четыре стороны — пиксельная обводка без blur (п. 6.7.6). */
+const PERCENT_OUTLINE = {
+  textShadow:
+    '1px 1px 0 var(--background), -1px -1px 0 var(--background), ' +
+    '1px -1px 0 var(--background), -1px 1px 0 var(--background)',
+} as const;
+
 function ProgressBar({ ratio, label }: { ratio: number; label: string }) {
   const safeRatio = Math.min(1, Math.max(0, ratio));
+  const percent = Math.round(safeRatio * 100);
   return (
     /*
       `variant="retro"` из 8bitcn: полоса набирается двадцатью квадратами, свой
@@ -27,25 +36,36 @@ function ProgressBar({ ratio, label }: { ratio: number; label: string }) {
       квадрат зажигается примерно каждые 5 % пути; полоса и раньше двигалась
       редко (только на финише прогулки), так что ступенька заметнее плавности.
       Анимации нет вовсе — п. 6.7.6 требует именно мгновенной смены состояния.
-      Пиксельная рамка полосы — из самой библиотеки.
+      Пиксельная рамка полосы — из самой библиотеки. Проценты — поверх полосы:
+      цифра со «своим» контуром читается и на лаймовых, и на пустых сегментах.
     */
-    <Progress
-      value={Math.round(safeRatio * 100)}
-      aria-label={label}
-      variant="retro"
-      progressBg="bg-lime"
-      font="normal"
-      className="h-6"
-    />
+    <div className="relative">
+      <Progress
+        value={percent}
+        aria-label={`${label} — ${percent}%`}
+        variant="retro"
+        progressBg="bg-lime"
+        font="normal"
+        className="h-6"
+      />
+      <span
+        aria-hidden
+        className="pointer-events-none absolute inset-0 flex items-center justify-center retro text-[10px] leading-none text-text-main"
+        style={PERCENT_OUTLINE}
+      >
+        {percent}%
+      </span>
+    </div>
   );
 }
 
 function ProgressBody({ data }: { data: TeamProgressDto }) {
   const { totalKm, passed, next, kmLeft, progressRatio } = data;
 
+  // Пройденное — без округления: команда честно заработала каждую сотку.
   const caption = next
-    ? `${routeKm(totalKm)} км пройдено, до ${next.city} ${routeKm(kmLeft)} км`
-    : `${routeKm(totalKm)} км пройдено — маршрут пройден целиком`;
+    ? `${formatKm(totalKm)} км пройдено, до ${next.city} ${routeKm(kmLeft)} км`
+    : `${formatKm(totalKm)} км пройдено — маршрут пройден целиком`;
 
   return (
     <>

@@ -16,8 +16,11 @@ import type { ActiveWalkDto } from '@/lib/types';
  * Ряд `SpeedPicker` остаётся на старте, где скорость выбирают с нуля.
  *
  * Значение на экране меняется сразу, не дожидаясь ответа: человек сверяет его с
- * табло дорожки. Если запрос не прошёл — возвращаемся к тому, что знает сервер,
- * и говорим об этом: молча разойтись с дорожкой хуже, чем показать ошибку.
+ * табло дорожки. Пока запрос в пути, обе кнопки заблокированы, а на нажатой
+ * мигают часы — на медленной сети видно, что смена уехала на сервер, и лишние
+ * отрезки от нетерпеливых нажатий не плодятся. Если запрос не прошёл —
+ * возвращаемся к тому, что знает сервер, и говорим об этом: молча разойтись
+ * с дорожкой хуже, чем показать ошибку.
  */
 
 interface SpeedControlProps {
@@ -41,8 +44,10 @@ export function SpeedControl({
   /** Оптимистичное значение; `null` — показываем серверное. */
   const [draft, setDraft] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
-  /** Куда хотим прийти. Обновляется нажатиями, пока запрос в пути. */
-  const target = useRef<number | null>(null);
+  /** Запрос в пути: кнопки заблокированы, на нажатой мигают часы. */
+  const [pending, setPending] = useState(false);
+  const [pendingDelta, setPendingDelta] = useState<-1 | 1 | null>(null);
+  // Страховка от двойного вызова до перерисовки: state обновляется асинхронно.
   const sending = useRef(false);
 
   const min = MIN_SPEED_KMH;
@@ -51,50 +56,38 @@ export function SpeedControl({
 
   // Сервер догнал оптимистичное значение — локальная подмена больше не нужна.
   useEffect(() => {
-    if (draft !== null && draft === speedKmh && target.current === null) setDraft(null);
+    if (draft !== null && draft === speedKmh && !sending.current) setDraft(null);
   }, [draft, speedKmh]);
 
-  /**
-   * Отправка с очередью: пока ответ в пути, новые нажатия только двигают цель.
-   * Три быстрых нажатия «+» дают один-два отрезка вместо трёх — история смен
-   * остаётся читаемой, а лишние отрезки нулевой длины не появляются вовсе.
-   */
-  async function flush() {
-    if (sending.current) return;
+  async function send(value: number) {
     sending.current = true;
+    setPending(true);
     try {
-      while (target.current !== null) {
-        const value = target.current;
-        try {
-          const walk = await apiSend<ActiveWalkDto>('POST', `/api/walks/${walkId}/speed`, {
-            speedKmh: value,
-          });
-          // Цель могли сдвинуть, пока шёл запрос, — тогда идём на второй круг.
-          if (target.current === value) target.current = null;
-          onChanged(walk);
-        } catch (err: unknown) {
-          target.current = null;
-          setDraft(null);
-          setError(
-            err instanceof Error && err.message
-              ? err.message
-              : 'Не вышло сменить скорость — проверьте связь',
-          );
-          break;
-        }
-      }
+      const walk = await apiSend<ActiveWalkDto>('POST', `/api/walks/${walkId}/speed`, {
+        speedKmh: value,
+      });
+      onChanged(walk);
+    } catch (err: unknown) {
+      setDraft(null);
+      setError(
+        err instanceof Error && err.message
+          ? err.message
+          : 'Не вышло сменить скорость — проверьте связь',
+      );
     } finally {
       sending.current = false;
+      setPending(false);
+      setPendingDelta(null);
     }
   }
 
-  function bump(delta: number) {
+  function bump(delta: -1 | 1) {
     const next = Math.min(max, Math.max(min, shown + delta));
-    if (next === shown || disabled) return;
+    if (next === shown || disabled || sending.current) return;
     setDraft(next);
     setError(null);
-    target.current = next;
-    void flush();
+    setPendingDelta(delta);
+    void send(next);
   }
 
   return (
@@ -104,11 +97,15 @@ export function SpeedControl({
           type="button"
           variant="outline"
           aria-label="Сбросить скорость на 1 км/ч"
-          disabled={disabled || shown <= min}
+          disabled={disabled || pending || shown <= min}
           onClick={() => bump(-1)}
           className="h-auto min-h-14 w-16 px-0"
         >
-          <Icon name="minus" size={16} />
+          {pendingDelta === -1 ? (
+            <Icon name="clock" size={16} className="animate-blink" />
+          ) : (
+            <Icon name="minus" size={16} />
+          )}
         </Button>
 
         {/* Число — «идентичность», поэтому пиксельный шрифт (п. 6.7.1).
@@ -125,11 +122,15 @@ export function SpeedControl({
           type="button"
           variant="outline"
           aria-label="Прибавить скорость на 1 км/ч"
-          disabled={disabled || shown >= max}
+          disabled={disabled || pending || shown >= max}
           onClick={() => bump(1)}
           className="h-auto min-h-14 w-16 px-0"
         >
-          <Icon name="plus" size={16} />
+          {pendingDelta === 1 ? (
+            <Icon name="clock" size={16} className="animate-blink" />
+          ) : (
+            <Icon name="plus" size={16} />
+          )}
         </Button>
       </div>
 

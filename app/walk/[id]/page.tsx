@@ -4,7 +4,6 @@ import { useRouter } from 'next/navigation';
 import { use, useEffect, useState } from 'react';
 import useSWR from 'swr';
 
-import { Avatar } from '@/components/Avatar';
 import { DialogShell } from '@/components/DialogShell';
 import { FinishWalkDialog } from '@/components/FinishWalkDialog';
 import { HintTicker } from '@/components/HintTicker';
@@ -22,7 +21,10 @@ import {
   DialogTitle,
 } from '@/components/ui/8bit/dialog';
 import { Icon } from '@/components/ui/icon';
-import { Skeleton } from '@/components/ui/8bit/skeleton';
+import LoadingScreenBlock from '@/components/ui/8bit/blocks/loading-screen';
+import PlayerProfileCard from '@/components/ui/8bit/blocks/player-profile-card';
+import { avatarSrc } from '@/lib/avatars';
+import { STATIC_HINTS } from '@/lib/hints/registry';
 import {
   apiGet,
   apiSend,
@@ -95,18 +97,48 @@ function elapsedSeconds(startedAt: string): number {
   return Math.max(0, Math.floor((Date.now() - new Date(startedAt).getTime()) / 1000));
 }
 
-/** Загрузка — не голый текст: та же пиксельная геометрия, что и на самом экране. */
+/** Цвета кубков топ-3 — те же, что на подиуме лидерборда. */
+const RANK_TROPHY_COLOR: Record<number, string> = {
+  1: 'text-citrus',
+  2: 'text-silver',
+  3: 'text-bronze',
+};
+
+/**
+ * Содержимое бейджа карточки — по образцу StreakBadge: иконка 16 + число
+ * tabular-nums, раскладку делает сам Badge. Топ-3 — кубок, дальше просто #N.
+ */
+function rankBadge(rank: number | null): React.ReactNode {
+  if (rank === null) return undefined;
+  if (RANK_TROPHY_COLOR[rank] === undefined) {
+    return <span className="tabular-nums">#{rank}</span>;
+  }
+  return (
+    <>
+      <Icon name="trophy" size={16} />
+      <span className="tabular-nums">#{rank}</span>
+    </>
+  );
+}
+
+/**
+ * Загрузка — игровой загрузочный экран 8bitcn (блок loading-screen):
+ * прогресс-бар и ротация советов из статического каталога хинтов — та же
+ * метафора, что у ленты (п. 6.6). Прогресс декоративный: реального процента
+ * у SWR-запроса нет, а экран живёт доли секунды.
+ */
+const LOADING_TIPS = STATIC_HINTS.map((hint) => hint.text);
+
 function LoadingScreen() {
   return (
-    <main className="mx-auto flex min-h-dvh w-full max-w-lg flex-col justify-center gap-6 px-4 py-8">
-      <p className="text-center font-pixel text-[16px] leading-none text-text-dim">
-        ЗАГРУЗКА<span className="animate-blink">_</span>
-      </p>
-      <div className="pixel-panel flex flex-col items-center gap-4 p-4">
-        <Skeleton className="h-12 w-2/3" />
-        <Skeleton className="h-6 w-1/2" />
-        <Skeleton className="h-24 w-24" />
-      </div>
+    <main className="mx-auto flex min-h-dvh w-full max-w-lg flex-col justify-center px-4 py-8">
+      <LoadingScreenBlock
+        title="ЗАГРУЗКА"
+        tips={LOADING_TIPS}
+        autoProgress
+        autoProgressDuration={2000}
+        tipInterval={4000}
+      />
     </main>
   );
 }
@@ -225,15 +257,29 @@ export default function WalkPage({ params }: { params: Promise<{ id: string }> }
 
   return (
     <main className="mx-auto flex min-h-dvh w-full max-w-lg flex-col gap-6 px-4 pt-6 pb-2">
-      {/* Имя и дорожку читают — обычный sans (п. 6.7.1). */}
-      <header className="pixel-panel flex items-center gap-3 p-3">
-        <Avatar avatarId={walk.user.avatarId} name={walk.user.name} size={48} />
-        <div className="min-w-0">
-          <p className="truncate text-base text-text-main">{walk.user.name}</p>
-          <p className="truncate text-sm text-text-dim">
-            Старт в {formatTimeOfDay(walk.startedAt)} · {walk.treadmillName}
-          </p>
-        </div>
+      {/* Карточка игрока — блок 8bitcn player-profile-card. Бейдж — место
+          в недельном рейтинге; топ-3 получает кубок в цвет подиума (п. 6.2),
+          без единой прогулки за неделю бейджа нет. Бары HP/XP выключены —
+          прогресс к рекорду уже показывает таймер. */}
+      <header className="flex flex-col gap-3 px-1.5">
+        {/* Строка старта — над карточкой, по центру; короткая метка,
+            пиксельный шрифт уместен (п. 6.7.1). */}
+        <p className="text-center font-pixel text-[10px] leading-relaxed text-text-dim">
+          Старт в {formatTimeOfDay(walk.startedAt)} · {walk.treadmillName}
+        </p>
+        <PlayerProfileCard
+          className="max-w-none"
+          playerName={walk.user.name}
+          avatarSrc={avatarSrc(walk.user.avatarId)}
+          avatarFallback={walk.user.name.charAt(0).toUpperCase()}
+          badge={rankBadge(userStats?.rank ?? null)}
+          badgeVariant={userStats?.rank != null && userStats.rank <= 3 ? 'outline' : 'default'}
+          badgeClassName={userStats?.rank != null ? RANK_TROPHY_COLOR[userStats.rank] : undefined}
+          showLevel={userStats?.rank != null}
+          showHealth={false}
+          showMana={false}
+          showExperience={false}
+        />
       </header>
 
       {/* Приглашение привязать Telegram — через минуту после старта, над таймером;
@@ -242,7 +288,6 @@ export default function WalkPage({ params }: { params: Promise<{ id: string }> }
 
       <WalkTimer
         startedAt={walk.startedAt}
-        speedKmh={walk.speedKmh}
         speedSegments={walk.speedSegments}
         bestDayKm={userStats?.personalRecord.bestDayKm ?? null}
       />
