@@ -1,6 +1,6 @@
 import { and, desc, eq, inArray, isNull, lt, ne, notExists, or, sql } from 'drizzle-orm';
 
-import { NOTIFY_WINDOW_END_HOUR, NOTIFY_WINDOW_START_HOUR } from '@/lib/config';
+import { FREE_WINDOW_END_HOUR, FREE_WINDOW_START_HOUR } from '@/lib/config';
 import { db } from '@/lib/db';
 import { hintsCache, notificationLog, telegramLinks, treadmills, walks } from '@/lib/db/schema';
 import type { TelegramLink } from '@/lib/db/schema';
@@ -168,10 +168,11 @@ export async function notifyTreadmillFreed(input: {
   try {
     if (!telegramEnabled()) return;
 
+    // Окно шире, чем у напоминаний (п. 6.10.4): пока люди в офисе — шлём.
     const now = new Date();
     if (isWeekend(toOfficeDay(now))) return;
     const hour = officeHour(now);
-    if (hour < NOTIFY_WINDOW_START_HOUR || hour >= NOTIFY_WINDOW_END_HOUR) return;
+    if (hour < FREE_WINDOW_START_HOUR || hour >= FREE_WINDOW_END_HOUR) return;
 
     if (!(await tryDedup(input.freedByUserId, 'free', `free:${input.walkId}`))) return;
 

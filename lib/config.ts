@@ -79,11 +79,19 @@ export const REMIND_BACKOFF_COOLDOWN_WORKDAYS = 5;
 export const REMIND_SILENCE_AFTER = 6;
 
 /**
- * Окно отправки напоминаний, дайджеста и «дорожка освободилась»: рабочие дни,
- * [11:00, 17:00) МСК. Через env переопределяется для локальных прогонов.
+ * Окно отправки напоминаний и дайджеста: рабочие дни, [11:00, 17:00) МСК.
+ * Через env переопределяется для локальных прогонов.
  */
 export const NOTIFY_WINDOW_START_HOUR = Number(process.env.NOTIFY_WINDOW_START_HOUR ?? 11);
 export const NOTIFY_WINDOW_END_HOUR = Number(process.env.NOTIFY_WINDOW_END_HOUR ?? 17);
+
+/**
+ * Окно «дорожка освободилась» — шире (п. 6.10.4): у напоминаний узкое окно
+ * защищает от «упрёка на ночь», а освобождение полезно, пока люди физически
+ * в офисе — примерно с 9 до 19.
+ */
+export const FREE_WINDOW_START_HOUR = Number(process.env.FREE_WINDOW_START_HOUR ?? 9);
+export const FREE_WINDOW_END_HOUR = Number(process.env.FREE_WINDOW_END_HOUR ?? 19);
 
 /** Ключ в localStorage для последнего выбранного участника (п. 6.2). */
 export const LAST_USER_STORAGE_KEY = 'teamwalk:lastUserId';
