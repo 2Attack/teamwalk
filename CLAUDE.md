@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Что это
 
-CitrusWalk — внутренний трекер ходьбы на беговой дорожке (Next.js App Router, TypeScript strict, React 19, Tailwind 4, Drizzle + Neon Postgres HTTP-драйвер, Zod, SWR). Требования — в `CitrusWalk_TZ.md` (в коде и доках ссылки вида «п. 6.7.1» указывают на его пункты). Авторизации нет намеренно — модель доверия «свои люди».
+TeamWalk — внутренний трекер ходьбы на беговой дорожке (Next.js App Router, TypeScript strict, React 19, Tailwind 4, Drizzle + Neon Postgres HTTP-драйвер, Zod, SWR). Требования — в `TeamWalk_TZ.md` (в коде и доках ссылки вида «п. 6.7.1» указывают на его пункты). Авторизации нет намеренно — модель доверия «свои люди».
 
 **Язык:** интерфейс и комментарии — русский; типы и имена — английские.
 

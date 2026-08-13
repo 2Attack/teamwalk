@@ -2,7 +2,7 @@ import type { NextConfig } from 'next';
 
 const nextConfig: NextConfig = {
   // Файлы-инструкции для ИИ-агентов Next генерирует сам; в репозитории они не нужны —
-  // источник истины по проекту это CitrusWalk_TZ.md и docs/CONTRACT.md.
+  // источник истины по проекту это TeamWalk_TZ.md и docs/CONTRACT.md.
   agentRules: false,
 
   // Аватары и спрайты неизменяемы: имя файла = версия, менять их незачем.

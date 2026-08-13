@@ -1,9 +1,9 @@
-# CitrusWalk
+# TeamWalk
 
 Внутренний трекер ходьбы на беговой дорожке: кто, когда и сколько прошёл, рейтинг,
 серии, достижения и лента шутливых хинтов, собранных из реальных данных.
 
-Реализация по `CitrusWalk_TZ.md`. Авторизации нет — модель доверия «свои люди».
+Реализация по `TeamWalk_TZ.md`. Авторизации нет — модель доверия «свои люди».
 
 ## Стек
 
@@ -30,10 +30,10 @@ Neon отдаёт SQL по HTTP, поэтому обычный Postgres драй
 офлайн поднимается связка «Postgres + HTTP-прокси Neon»:
 
 ```bash
-docker run -d --name cw-pg -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=citruswalk \
+docker run -d --name cw-pg -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=teamwalk \
   -p 5433:5432 postgres:16-alpine
 docker run -d --name cw-neon-proxy -p 4444:4444 \
-  -e PG_CONNECTION_STRING=postgres://postgres:postgres@host.docker.internal:5433/citruswalk \
+  -e PG_CONNECTION_STRING=postgres://postgres:postgres@host.docker.internal:5433/teamwalk \
   ghcr.io/timowilhelm/local-neon-http-proxy:main
 ```
 
@@ -43,7 +43,7 @@ docker run -d --name cw-neon-proxy -p 4444:4444 \
 хоста `db.localtest.me`:
 
 ```bash
-docker exec -i cw-pg psql -U postgres -d citruswalk <<'SQL'
+docker exec -i cw-pg psql -U postgres -d teamwalk <<'SQL'
 create schema if not exists neon_control_plane;
 create table if not exists neon_control_plane.endpoints (
   endpoint_id varchar(255) primary key,
@@ -60,7 +60,7 @@ SQL
 вернуться на облачную базу, файл достаточно удалить:
 
 ```
-DATABASE_URL=postgres://postgres:postgres@db.localtest.me:4444/citruswalk?sslmode=require
+DATABASE_URL=postgres://postgres:postgres@db.localtest.me:4444/teamwalk?sslmode=require
 ```
 
 Хост `localtest.me` — единственный признак, по которому код переключает драйвер на

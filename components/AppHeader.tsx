@@ -19,7 +19,7 @@ export function AppHeader() {
   return (
     <header className="flex flex-wrap items-end justify-between gap-x-4 gap-y-3 border-b-[3px] border-border-dim pb-4">
       <h1 className="font-pixel text-base leading-none sm:text-2xl">
-        <span className="text-citrus">Citrus</span>
+        <span className="text-citrus">Team</span>
         <span className="text-text-main">Walk</span>
         <span className="sr-only"> — {APP_NAME}</span>
       </h1>

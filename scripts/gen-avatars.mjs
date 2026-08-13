@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Генератор статических пиксельных ассетов CitrusWalk (зона ASSETS, п. 6.5 и 6.7 ТЗ).
+ * Генератор статических пиксельных ассетов TeamWalk (зона ASSETS, п. 6.5 и 6.7 ТЗ).
  *
  * Что делает:
  *   1. `public/avatars/pixel-01..24.svg` — 24 портрета DiceBear, стиль `pixel-art`.

@@ -4,7 +4,6 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
 import { AppHeader } from '@/components/AppHeader';
-import { HintTicker } from '@/components/HintTicker';
 import { Leaderboard } from '@/components/Leaderboard';
 import { PeriodTabs } from '@/components/PeriodTabs';
 import { Podium } from '@/components/Podium';
@@ -63,7 +62,8 @@ export default function HomePage() {
   return (
     <main className="mx-auto w-full max-w-3xl space-y-6 px-4 py-6 sm:space-y-8 sm:px-6 sm:py-8">
       <AppHeader />
-      <HintTicker userId={userId} />
+      {/* Хинт-лента с главной снята: она осталась на экране прогулки,
+          где человек реально смотрит в экран минутами (п. 6.6). */}
       <TeamProgress />
 
       {error ? (

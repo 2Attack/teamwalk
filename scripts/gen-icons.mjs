@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Генератор иконочного набора CitrusWalk (п. 6.7.4 ТЗ: один набор, без иконочных
+ * Генератор иконочного набора TeamWalk (п. 6.7.4 ТЗ: один набор, без иконочных
  * шрифтов).
  *
  * Источник — pixelarticons (https://pixelarticons.com, MIT, пакет `pixelarticons`):
