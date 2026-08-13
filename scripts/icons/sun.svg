@@ -1,0 +1,4 @@
+<!-- Обеденный странник: солнце в зените, лучи во все стороны. Сетка 24×24. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+  <path d="M8 8h8v8H8zM11 3h2v3h-2zM11 18h2v3h-2zM3 11h3v2H3zM18 11h3v2h-3zM5 5h2v2H5zM17 5h2v2h-2zM5 17h2v2H5zM17 17h2v2h-2z"/>
+</svg>

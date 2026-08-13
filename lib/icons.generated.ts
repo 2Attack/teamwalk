@@ -67,9 +67,28 @@ export const ICON_PATHS = {
   calendar: [
     'M5 4h14v2H5zm0 16h14v2H5zM3 10h2v10H3zm0-4h2v2H3zm16 0h2v2h-2zm0 4h2v10h-2zM3 8h18v2H3zm12-6h2v2h-2zM7 2h2v2H7zm4 10h6v2h-6zm-4 4h6v2H7z',
   ],
+  /** pixelarticons: settings-cog-2 */
+  gear: [
+    'M18 2h2v2h-2zM4 2h2v2H4zm16 20h-2v-2h2zM4 22h2v-2H4zM20 4h2v2h-2zM6 4h4v2H6zm12 16h-4v-2h4zM6 20h4v-2H6zM18 6h2v4h-2zM4 6h2v4H4zm16 12h-2v-4h2zM4 18h2v-4H4zM14 4h4v2h-4zM2 4h2v2H2zm20 16h-2v-2h2zM2 20h2v-2H2z',
+    'M8 2h2v4H8zm0 20h2v-4H8z',
+    'M8 2h8v2H8zm0 20h8v-2H8zM2 8h2v8H2zm20 8h-2V8h2z',
+    'M20 8h2v4h-2zM10 8h4v2h-4zm-2 2h2v4H8zm2 4h4v2h-4zm4-4h2v4h-2z',
+  ],
+  /** pixelarticons: send */
+  send: [
+    'M4 19h4v2H2v-8h2v6Zm8 0H8v-2h4v2Zm4-2h-4v-2h4v2Zm4-2h-4v-2h4v2Zm-10-2H4v-2h6v2Zm12 0h-2v-2h2v2ZM8 5H4v6H2V3h6v2Zm12 6h-4V9h4v2Zm-4-2h-4V7h4v2Zm-4-2H8V5h4v2Z',
+  ],
+  /** pixelarticons: car */
+  car: [
+    'M4 13h6v2H4zm10 0h6v2h-6zM4 17h6v2H4zm10 0h6v2h-6zM2 15h4v2H2zm6 0h8v2H8zm10 0h4v2h-4zm4-4h2v4h-2zm-6-4h2v2h-2zM4 5h12v2H4zm-4 6h2v4H0zm12-2h10v2H12zM2 7h2v4H2zm8 0h2v2h-2z',
+  ],
   /** свой, scripts/icons/bird.svg */
   bird: [
     'M11 4h6v2h-6zM11 6h2v2h-2zM15 6h2v2h-2zM17 7h3v2h-3zM5 8h4v2H5zM9 8h8v2H9zM8 10h9v2H8zM9 12h7v2H9zM10 14h5v2h-5zM10 16h2v2h-2zM13 16h2v2h-2z',
+  ],
+  /** свой, scripts/icons/boot.svg */
+  boot: [
+    'M8 3h6v8H8zM8 11h12v4H8zM14 9h4v2h-4zM6 15h14v3H6zM6 18h2v2H6zM10 18h2v2h-2zM14 18h2v2h-2zM18 18h2v2h-2z',
   ],
   /** свой, scripts/icons/calendar-check.svg */
   calendarCheck: [
@@ -78,6 +97,22 @@ export const ICON_PATHS = {
   /** свой, scripts/icons/ember.svg */
   ember: [
     'M11 3h2v2h-2zM10 5h4v2h-4zM9 7h6v2H9zM8 9h8v2H8zM8 11h3v2H8zM13 11h3v2h-3zM9 13h6v2H9zM5 17h14v2H5zM7 19h2v2H7zM15 19h2v2h-2z',
+  ],
+  /** свой, scripts/icons/flames.svg */
+  flames: [
+    'M13 3h2v2h-2zM12 5h4v2h-4zM11 7h6v2h-6zM6 9h2v2H6zM5 11h4v4H5zM10 9h8v6h-8zM6 15h13v3H6zM8 18h9v2H8z',
+  ],
+  /** свой, scripts/icons/footprint.svg */
+  footprint: [
+    'M8 3h8v2H8zM6 5h12v4H6zM7 9h10v2H7zM8 14h8v2H8zM9 16h6v2H9z',
+  ],
+  /** свой, scripts/icons/gauge-max.svg */
+  gaugeMax: [
+    'M8 4h8v2H8zM5 6h3v2H5zM16 6h3v2h-3zM4 8h2v6H4zM18 8h2v6h-2zM4 14h16v2H4zM12 10h5v2h-5zM10 12h4v2h-4z',
+  ],
+  /** свой, scripts/icons/gauge.svg */
+  gauge: [
+    'M8 4h8v2H8zM5 6h3v2H5zM16 6h3v2h-3zM4 8h2v6H4zM18 8h2v6h-2zM4 14h16v2H4zM11 7h2v6h-2zM9 12h6v2H9z',
   ],
   /** свой, scripts/icons/lightning.svg */
   lightning: [
@@ -94,6 +129,26 @@ export const ICON_PATHS = {
   /** свой, scripts/icons/owl.svg */
   owl: [
     'M5 4h3v2H5zM16 4h3v2h-3zM5 6h14v3H5zM5 9h2v3H5zM10 9h4v3h-4zM17 9h2v3h-2zM5 12h14v4H5zM7 16h3v2H7zM14 16h3v2h-3z',
+  ],
+  /** свой, scripts/icons/signpost.svg */
+  signpost: [
+    'M4 4h12v6H4zM16 5h2v4h-2zM18 6h2v2h-2zM11 10h2v9h-2zM8 19h8v2H8z',
+  ],
+  /** свой, scripts/icons/stones.svg */
+  stones: [
+    'M9 5h6v4H9zM7 11h10v4H7zM5 17h14v4H5z',
+  ],
+  /** свой, scripts/icons/sun.svg */
+  sun: [
+    'M8 8h8v8H8zM11 3h2v3h-2zM11 18h2v3h-2zM3 11h3v2H3zM18 11h3v2h-3zM5 5h2v2H5zM17 5h2v2h-2zM5 17h2v2H5zM17 17h2v2h-2z',
+  ],
+  /** свой, scripts/icons/sunset.svg */
+  sunset: [
+    'M9 6h6v2H9zM8 8h8v4H8zM11 2h2v2h-2zM4 4h2v2H4zM18 4h2v2h-2zM3 12h18v2H3zM6 16h4v2H6zM14 16h4v2h-4z',
+  ],
+  /** свой, scripts/icons/tally.svg */
+  tally: [
+    'M5 4h2v14H5zM9 4h2v14H9zM13 4h2v14h-2zM17 4h2v14h-2zM3 15h4v2H3zM7 12h4v2H7zM11 9h4v2h-4zM15 6h4v2h-4z',
   ],
 } as const;
 

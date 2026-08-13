@@ -212,6 +212,11 @@ export function farewellText(): string {
   ]);
 }
 
+/** Ачивка, начисленная вне финиша (например, «На связи» при привязке). */
+export function achievementUnlockedText(title: string): string {
+  return `🏅 Новое достижение: «${title}»`;
+}
+
 /** Повторный или просроченный токен привязки (п. 6.10.3). */
 export function staleTokenText(): string {
   return pick([

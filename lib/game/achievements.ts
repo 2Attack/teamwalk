@@ -1,9 +1,9 @@
-import { and, eq, sql } from 'drizzle-orm';
+import { and, eq, isNull, sql } from 'drizzle-orm';
 
 import { TZ } from '../config';
 import { db } from '../db';
-import { achievements, walks } from '../db/schema';
-import { addOfficeDays, officeDayStart, toOfficeDay } from '../time';
+import { achievements, treadmills, walkSpeedSegments, walks } from '../db/schema';
+import { addOfficeDays, officeDayStart, officeWeekday, toOfficeDay } from '../time';
 import type { AchievementDto } from '../types';
 
 import { getStreak } from './streak';
@@ -17,22 +17,49 @@ import { getStreak } from './streak';
  */
 
 export const ACHIEVEMENTS: ReadonlyArray<{ code: string; title: string; description: string }> = [
+  { code: 'first_walk', title: 'Первый шаг', description: 'Первая завершённая прогулка' },
   { code: 'early_bird', title: 'Ранняя пташка', description: 'Прогулка начата до 9:00' },
   { code: 'night_owl', title: 'Сова', description: 'Прогулка начата после 18:00' },
+  { code: 'lunch_walker', title: 'Обеденный странник', description: 'Прогулка начата между 12:00 и 14:00' },
+  { code: 'friday_closer', title: 'Пятничный', description: 'Финиш в пятницу после 17:00' },
   { code: 'marathon', title: 'Марафон', description: 'Одна прогулка дольше часа' },
+  { code: 'zen', title: 'Дзен', description: '30 минут на скорости не выше 2 км/ч' },
+  { code: 'long_haul', title: 'Дальний рейс', description: '5 км за одну прогулку' },
+  { code: 'gearbox', title: 'Коробка передач', description: 'Три смены скорости за одну прогулку' },
+  { code: 'cruise', title: 'Круиз-контроль', description: '10 прогулок без единой смены скорости' },
   { code: 'five_days', title: 'Пятидневка', description: '5 рабочих дней подряд' },
+  { code: 'ten_day_streak', title: 'Двухнедельник', description: 'Серия 10 рабочих дней' },
+  { code: 'ten_walks', title: 'Десятка', description: '10 завершённых прогулок' },
+  { code: 'fifty_walks', title: 'Полсотни ходок', description: '50 завершённых прогулок' },
   { code: 'stayer', title: 'Стайер', description: '10 прогулок на скорости 7+ км/ч' },
+  { code: 'full_throttle', title: 'Полный газ', description: '10 минут на потолке дорожки' },
+  { code: 'fifty_km', title: 'Полтинник', description: '50 км суммарно' },
   { code: 'first_hundred', title: 'Первая сотня', description: '100 км суммарно' },
   { code: 'warm_treadmill', title: 'Дорожка не остыла', description: 'Две прогулки в один день' },
+  { code: 'connected', title: 'На связи', description: 'Привязан Telegram-бот' },
 ];
 
 /** Пороги условий. Значения смысловые, а не настроечные, поэтому живут рядом с каталогом. */
 const EARLY_BIRD_BEFORE_HOUR = 9;
 const NIGHT_OWL_FROM_HOUR = 18;
+const LUNCH_FROM_HOUR = 12;
+const LUNCH_TO_HOUR = 14;
+const FRIDAY_WEEKDAY = 5;
+const FRIDAY_FROM_HOUR = 17;
 const MARATHON_MIN_SEC = 3600;
+const ZEN_MIN_SEC = 1800;
+const ZEN_MAX_SPEED_KMH = 2;
+const LONG_HAUL_KM = 5;
+const GEARBOX_CHANGES = 3;
+const CRUISE_WALKS = 10;
 const FIVE_DAYS_STREAK = 5;
+const TEN_DAY_STREAK = 10;
+const TEN_WALKS = 10;
+const FIFTY_WALKS = 50;
 const STAYER_SPEED_KMH = 7;
 const STAYER_WALKS = 10;
+const FULL_THROTTLE_MIN_SEC = 600;
+const FIFTY_KM = 50;
 const FIRST_HUNDRED_KM = 100;
 const SAME_DAY_WALKS = 2;
 
@@ -71,9 +98,10 @@ export async function awardAchievements(userId: string, walkId: string): Promise
   const dayStart = officeDayStart(day).toISOString();
   const nextDayStart = officeDayStart(addOfficeDays(day, 1)).toISOString();
 
-  const [totals, streak] = await Promise.all([
+  const [totals, streak, cruiseRow, segments, treadmillRow] = await Promise.all([
     db
       .select({
+        walksCount: sql<number>`count(*)`.mapWith(Number),
         fastWalks: sql<number>`count(*) filter (where ${walks.speedKmh} >= ${STAYER_SPEED_KMH})`.mapWith(
           Number,
         ),
@@ -89,16 +117,72 @@ export async function awardAchievements(userId: string, walkId: string): Promise
     // Серию считаем на день прогулки, а не на «сейчас»: прогулка, начатая в 23:50
     // и закрытая после полуночи, должна проверяться по своему офисному дню.
     getStreak(userId, walk.startedAt),
+    // «Круиз-контроль»: прогулки без единой смены скорости — left join вместо
+    // коррелированного exists в filter: тот drizzle собирает неверно.
+    db
+      .select({ steadyWalks: sql<number>`count(*)`.mapWith(Number) })
+      .from(walks)
+      .leftJoin(walkSpeedSegments, eq(walkSpeedSegments.walkId, walks.id))
+      .where(
+        and(
+          eq(walks.userId, userId),
+          eq(walks.status, 'finished'),
+          isNull(walkSpeedSegments.id),
+        ),
+      )
+      .then((rows) => rows[0]),
+    // Отрезки текущей прогулки: число смен и весь диапазон скоростей.
+    db
+      .select({ speedKmh: walkSpeedSegments.speedKmh })
+      .from(walkSpeedSegments)
+      .where(eq(walkSpeedSegments.walkId, walkId)),
+    db
+      .select({ maxSpeedKmh: treadmills.maxSpeedKmh })
+      .from(treadmills)
+      .where(eq(treadmills.id, walk.treadmillId))
+      .limit(1)
+      .then((rows) => rows[0]),
   ]);
 
   const hour = officeHour(walk.startedAt);
+  const finishAt = walk.endedAt ?? walk.startedAt;
+  const finishHour = officeHour(finishAt);
+  const finishWeekday = officeWeekday(toOfficeDay(finishAt));
+  const durationSec = walk.durationSec ?? 0;
+  const distanceKm = Number(walk.distanceKm ?? 0);
+  // Все скорости прогулки: стартовая — в `walks`, смены — отдельными отрезками.
+  const speeds = [walk.speedKmh, ...segments.map((segment) => segment.speedKmh)];
+  const maxSpeed = Math.max(...speeds);
+  const minSpeed = Math.min(...speeds);
+  const treadmillCeiling = treadmillRow?.maxSpeedKmh ?? 0;
+
   const earned: string[] = [];
 
+  earned.push('first_walk'); // Первая — она же любая: дубль отсечёт unique-индекс.
   if (hour < EARLY_BIRD_BEFORE_HOUR) earned.push('early_bird');
   if (hour >= NIGHT_OWL_FROM_HOUR) earned.push('night_owl');
-  if ((walk.durationSec ?? 0) > MARATHON_MIN_SEC) earned.push('marathon');
+  if (hour >= LUNCH_FROM_HOUR && hour < LUNCH_TO_HOUR) earned.push('lunch_walker');
+  if (finishWeekday === FRIDAY_WEEKDAY && finishHour >= FRIDAY_FROM_HOUR) {
+    earned.push('friday_closer');
+  }
+  if (durationSec > MARATHON_MIN_SEC) earned.push('marathon');
+  if (durationSec >= ZEN_MIN_SEC && maxSpeed <= ZEN_MAX_SPEED_KMH) earned.push('zen');
+  if (distanceKm >= LONG_HAUL_KM) earned.push('long_haul');
+  if (segments.length >= GEARBOX_CHANGES) earned.push('gearbox');
+  if ((cruiseRow?.steadyWalks ?? 0) >= CRUISE_WALKS) earned.push('cruise');
   if (streak.days >= FIVE_DAYS_STREAK) earned.push('five_days');
+  if (streak.days >= TEN_DAY_STREAK) earned.push('ten_day_streak');
+  if ((totals?.walksCount ?? 0) >= TEN_WALKS) earned.push('ten_walks');
+  if ((totals?.walksCount ?? 0) >= FIFTY_WALKS) earned.push('fifty_walks');
   if ((totals?.fastWalks ?? 0) >= STAYER_WALKS) earned.push('stayer');
+  if (
+    durationSec >= FULL_THROTTLE_MIN_SEC &&
+    treadmillCeiling > 0 &&
+    minSpeed >= treadmillCeiling
+  ) {
+    earned.push('full_throttle');
+  }
+  if ((totals?.totalKm ?? 0) >= FIFTY_KM) earned.push('fifty_km');
   if ((totals?.totalKm ?? 0) >= FIRST_HUNDRED_KM) earned.push('first_hundred');
   if ((totals?.sameDayWalks ?? 0) >= SAME_DAY_WALKS) earned.push('warm_treadmill');
 

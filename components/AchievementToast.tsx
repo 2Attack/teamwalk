@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Badge } from '@/components/ui/8bit/badge';
 import { Icon } from '@/components/ui/icon';
 import { achievementIcon } from '@/lib/achievement-icons';
+import { playFanfare } from '@/lib/client/sound';
 import type { AchievementDto } from '@/lib/types';
 
 interface AchievementToastProps {
@@ -48,6 +49,13 @@ export function AchievementToast({ achievements, onDismiss }: AchievementToastPr
     const timer = window.setTimeout(() => setQueue((prev) => prev.slice(1)), TOAST_MS);
     return () => window.clearTimeout(timer);
   }, [queue]);
+
+  // Фанфара на каждую показанную награду (п. 6.8.3): очередь двигается —
+  // звучит новая. Жест уже был (финиш нажимали руками), автоплей разрешён.
+  const headCode = queue[0]?.code;
+  useEffect(() => {
+    if (headCode !== undefined) playFanfare();
+  }, [headCode]);
 
   useEffect(() => {
     if (queue.length === 0 && wasShownRef.current) {

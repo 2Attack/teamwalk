@@ -6,6 +6,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/8bit/alert'
 import { Button } from '@/components/ui/8bit/button';
 import { Icon } from '@/components/ui/icon';
 import { apiSend, useTelegramStatus } from '@/lib/client/api';
+import { playChirp } from '@/lib/client/sound';
 import { TG_NUDGE_AFTER_SEC } from '@/lib/config';
 import type { TelegramLinkTokenDto } from '@/lib/types';
 
@@ -13,46 +14,6 @@ interface TelegramNudgeProps {
   userId: string;
   /** ISO старта прогулки — от него отсчитывается минута до показа. */
   startedAt: string;
-}
-
-/**
- * Короткий 8-битный чирп при появлении панели (п. 6.10.2): две прямоугольные
- * ноты, негромко, ~0.2 с. Синтез Web Audio API — без аудиофайлов и внешних
- * запросов. Если AudioContext заблокирован или API нет — молчим без ошибок
- * в консоли; из фоновой вкладки не звучим: сигнал оттуда пугает, а не приглашает.
- */
-function playChirp(): void {
-  if (document.hidden) return;
-  try {
-    const Ctor: typeof AudioContext | undefined =
-      window.AudioContext ??
-      (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
-    if (!Ctor) return;
-
-    const ctx = new Ctor();
-    const gain = ctx.createGain();
-    gain.gain.value = 0.04;
-    gain.connect(ctx.destination);
-
-    const note = (freqHz: number, atSec: number, durSec: number) => {
-      const osc = ctx.createOscillator();
-      osc.type = 'square';
-      osc.frequency.value = freqHz;
-      osc.connect(gain);
-      osc.start(ctx.currentTime + atSec);
-      osc.stop(ctx.currentTime + atSec + durSec);
-    };
-
-    note(660, 0, 0.09);
-    note(880, 0.09, 0.11);
-
-    // Контекст одноразовый: дожидаемся хвоста второй ноты и закрываем.
-    window.setTimeout(() => {
-      void ctx.close().catch(() => undefined);
-    }, 350);
-  } catch {
-    // Автоплей заблокирован или API урезан — панель работает и без звука.
-  }
 }
 
 /**

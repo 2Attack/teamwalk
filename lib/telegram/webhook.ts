@@ -2,14 +2,21 @@ import { and, eq, sql } from 'drizzle-orm';
 
 import { APP_NAME } from '@/lib/config';
 import { db } from '@/lib/db';
-import { telegramUpdates, treadmills, users, walks } from '@/lib/db/schema';
+import { achievements, telegramUpdates, treadmills, users, walks } from '@/lib/db/schema';
 import type { TelegramLink } from '@/lib/db/schema';
 
 import { answerCallbackQuery, editMessageReplyMarkup, sendMessage } from './client';
 import { consumeLinkToken, getLinkByChat, setMutedUntil, togglePref, unlinkByChat, upsertLink } from './links';
 import type { PrefKey } from './links';
 import { notifyTreadmillFreed, wereAllTreadmillsBusy } from './notify';
-import { farewellText, helpText, relinkedText, staleTokenText, welcomeText } from './texts';
+import {
+  achievementUnlockedText,
+  farewellText,
+  helpText,
+  relinkedText,
+  staleTokenText,
+  welcomeText,
+} from './texts';
 
 /**
  * Обработка одного апдейта Telegram (п. 6.10.3 ТЗ). Никогда не бросает:
@@ -87,6 +94,17 @@ async function handleStart(chatId: number, token: string | null): Promise<void> 
     await sendMessage(displacedChatId, relinkedText(name));
   }
   await sendMessage(chatId, welcomeText(name));
+
+  // «На связи» (п. 6.8.3) — единственная ачивка вне транзакции финиша:
+  // начисляется здесь, а поздравление приходит в свежепривязанный чат.
+  const unlocked = await db
+    .insert(achievements)
+    .values({ userId, code: 'connected' })
+    .onConflictDoNothing()
+    .returning({ code: achievements.code });
+  if (unlocked.length > 0) {
+    await sendMessage(chatId, achievementUnlockedText('На связи'));
+  }
 }
 
 async function handleMessage(chatId: number, text: string): Promise<void> {
