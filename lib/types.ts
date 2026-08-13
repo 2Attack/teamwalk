@@ -2,9 +2,9 @@
  * DTO API — общий контракт между Route Handlers и UI.
  * Всё, что уходит клиенту, описано здесь; числа уже числа, даты — ISO-строки.
  */
-import type { HintTone, Period } from './validation';
+import type { HintTone, Period, PeriodSelection } from './validation';
 
-export type { HintTone, Period };
+export type { HintTone, Period, PeriodSelection };
 
 export interface UserDto {
   id: string;
@@ -120,7 +120,7 @@ export interface LeaderboardRowDto {
 }
 
 export interface LeaderboardDto {
-  period: Period;
+  period: Period | 'custom';
   rows: LeaderboardRowDto[];
   /** Всегда за всё время, независимо от периода (п. 5.3). */
   teamTotalKm: number;

@@ -7,7 +7,7 @@ import type {
   AchievementDto,
   HintsResponseDto,
   LeaderboardDto,
-  Period,
+  PeriodSelection,
   StatsDto,
   TeamProgressDto,
   TreadmillDto,
@@ -86,8 +86,12 @@ export function useActiveWalk(userId: string | null) {
   );
 }
 
-export function useLeaderboard(period: Period) {
-  return useSWR<LeaderboardDto>(`/api/leaderboard?period=${period}`, apiGet, LIVE);
+export function useLeaderboard(selection: PeriodSelection) {
+  const key =
+    selection.period === 'custom'
+      ? `/api/leaderboard?period=custom&from=${selection.from}&to=${selection.to}`
+      : `/api/leaderboard?period=${selection.period}`;
+  return useSWR<LeaderboardDto>(key, apiGet, LIVE);
 }
 
 export function useStats() {

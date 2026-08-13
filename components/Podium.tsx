@@ -8,10 +8,10 @@ import { Skeleton } from '@/components/ui/8bit/skeleton';
 import { useLeaderboard } from '@/lib/client/api';
 import { cn } from '@/lib/cn';
 import { formatKm } from '@/lib/format';
-import type { LeaderboardRowDto, Period } from '@/lib/types';
+import type { LeaderboardRowDto, PeriodSelection } from '@/lib/types';
 
 interface PodiumProps {
-  period: Period;
+  period: PeriodSelection;
   currentUserId?: string | null;
 }
 

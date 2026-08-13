@@ -14,7 +14,7 @@ import { Button } from '@/components/ui/8bit/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/8bit/card';
 import { useActiveWalk, useUsers } from '@/lib/client/api';
 import { LAST_USER_STORAGE_KEY } from '@/lib/config';
-import type { Period } from '@/lib/types';
+import type { PeriodSelection } from '@/lib/types';
 
 /**
  * Главная (п. 6.1): шапка → лента хинтов → прогресс команды → блок старта →
@@ -27,7 +27,7 @@ export default function HomePage() {
   const router = useRouter();
   const { data: users, error, isLoading, mutate: reloadUsers } = useUsers();
 
-  const [period, setPeriod] = useState<Period>('week');
+  const [period, setPeriod] = useState<PeriodSelection>({ period: 'week' });
   const [userId, setUserId] = useState<string | null>(null);
   /** До первого эффекта localStorage не читаем — иначе разъедется гидратация. */
   const [restored, setRestored] = useState(false);

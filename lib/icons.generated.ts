@@ -63,6 +63,10 @@ export const ICON_PATHS = {
   chevronDown: [
     'M13 16h-2v-2h2v2Zm-2-2H9v-2h2v2Zm4 0h-2v-2h2v2Zm-6-2H7v-2h2v2Zm8 0h-2v-2h2v2ZM7 10H5V8h2v2Zm12 0h-2V8h2v2Z',
   ],
+  /** pixelarticons: calendar-range */
+  calendar: [
+    'M5 4h14v2H5zm0 16h14v2H5zM3 10h2v10H3zm0-4h2v2H3zm16 0h2v2h-2zm0 4h2v10h-2zM3 8h18v2H3zm12-6h2v2h-2zM7 2h2v2H7zm4 10h6v2h-6zm-4 4h6v2H7z',
+  ],
 } as const;
 
 export type IconName = keyof typeof ICON_PATHS;

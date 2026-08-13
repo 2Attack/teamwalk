@@ -48,7 +48,7 @@
 export async function closeStaleWalks(): Promise<number>;
 
 // lib/db/queries/leaderboard.ts — владелец: LEADERBOARD
-export async function getLeaderboard(period: Period): Promise<LeaderboardDto>;
+export async function getLeaderboard(selection: PeriodSelection): Promise<LeaderboardDto>;
 export async function getUserRank(userId: string, period?: Period): Promise<number | null>;
 export async function getTeamTotalKm(): Promise<number>;
 

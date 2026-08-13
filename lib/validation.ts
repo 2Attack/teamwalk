@@ -78,6 +78,44 @@ export const finishWalkSchema = z.object({
 export const periodSchema = z.enum(['week', 'month', 'all']).default('week');
 export type Period = z.infer<typeof periodSchema>;
 
+/**
+ * Офисный день `YYYY-MM-DD` — граница произвольного периода рейтинга.
+ * Несуществующие даты ловятся раунд-трипом по компонентам: `Date.parse`
+ * не годится — V8 молча перекатывает `2026-02-31` в 3 марта.
+ */
+export const officeDaySchema = z
+  .string()
+  .regex(/^\d{4}-\d{2}-\d{2}$/, { message: 'Дата — в формате ГГГГ-ММ-ДД' })
+  .refine(
+    (v) => {
+      const [y, m, d] = v.split('-').map(Number);
+      const date = new Date(Date.UTC(y, m - 1, d));
+      return (
+        date.getUTCFullYear() === y && date.getUTCMonth() === m - 1 && date.getUTCDate() === d
+      );
+    },
+    { message: 'Несуществующая дата' },
+  );
+
+/**
+ * Выбор периода рейтинга: предустановленный или произвольный диапазон офисных
+ * дней (обе границы включительно). Одна схема на клиент и API (п. 3 ТЗ).
+ */
+export const periodSelectionSchema = z.union([
+  z
+    .object({
+      period: z.literal('custom'),
+      from: officeDaySchema,
+      to: officeDaySchema,
+    })
+    .refine((v) => v.from <= v.to, {
+      message: 'Начало периода позже его конца',
+      path: ['from'],
+    }),
+  z.object({ period: periodSchema }),
+]);
+export type PeriodSelection = z.infer<typeof periodSelectionSchema>;
+
 /** Ответ LLM с хинтами (п. 6.6.3). */
 export const hintToneSchema = z.enum(['praise', 'tease', 'neutral', 'tip']);
 

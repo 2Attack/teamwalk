@@ -1,12 +1,12 @@
-import { and, asc, desc, eq, gte, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, gte, lt, sql } from 'drizzle-orm';
 
 import { db } from '@/lib/db';
 import { users, walks } from '@/lib/db/schema';
 import { getStreakDaysBulk } from '@/lib/game/streak';
 import { avgSpeedKmh } from '@/lib/format';
-import { periodStart } from '@/lib/time';
+import { officeRange, periodStart } from '@/lib/time';
 import type { LeaderboardDto, LeaderboardRowDto } from '@/lib/types';
-import type { Period } from '@/lib/validation';
+import type { Period, PeriodSelection } from '@/lib/validation';
 
 /**
  * Агрегации рейтинга (п. 5.3 ТЗ).
@@ -50,12 +50,21 @@ interface AggregateRow {
   lastWalkAt: string | null;
 }
 
+/** Границы периода: у предустановленных верхней нет, у произвольного — обе. */
+function selectionBounds(selection: PeriodSelection): { since: Date; until: Date | null } {
+  if (selection.period === 'custom') {
+    const { since, until } = officeRange(selection.from, selection.to);
+    return { since, until };
+  }
+  return { since: periodStart(selection.period), until: null };
+}
+
 /**
  * Строки рейтинга уже в нужном порядке (п. 7.8):
  * дистанция desc → общее время asc → имя asc.
  */
-async function aggregate(period: Period): Promise<AggregateRow[]> {
-  const since = periodStart(period);
+async function aggregate(selection: PeriodSelection): Promise<AggregateRow[]> {
+  const { since, until } = selectionBounds(selection);
 
   return db
     .select({
@@ -74,6 +83,7 @@ async function aggregate(period: Period): Promise<AggregateRow[]> {
         eq(walks.userId, users.id),
         eq(walks.status, 'finished'),
         gte(walks.startedAt, since),
+        ...(until ? [lt(walks.startedAt, until)] : []),
       ),
     )
     .groupBy(users.id, users.name, users.avatarId)
@@ -94,8 +104,8 @@ async function safeStreaks(userIds: string[]): Promise<Map<string, number>> {
   }
 }
 
-export async function getLeaderboard(period: Period): Promise<LeaderboardDto> {
-  const aggregated = await aggregate(period);
+export async function getLeaderboard(selection: PeriodSelection): Promise<LeaderboardDto> {
+  const aggregated = await aggregate(selection);
   const [streaks, teamTotalKm] = await Promise.all([
     safeStreaks(aggregated.map((row) => row.id)),
     // Всегда за всё время: иначе полоса маршрута еженедельно откатывалась бы (п. 5.3).
@@ -120,12 +130,12 @@ export async function getLeaderboard(period: Period): Promise<LeaderboardDto> {
     };
   });
 
-  return { period, rows, teamTotalKm };
+  return { period: selection.period, rows, teamTotalKm };
 }
 
 /** Позиция участника в рейтинге за период; `null`, если такого участника нет. */
 export async function getUserRank(userId: string, period: Period = 'week'): Promise<number | null> {
-  const aggregated = await aggregate(period);
+  const aggregated = await aggregate({ period });
   const index = aggregated.findIndex((row) => row.id === userId);
   return index === -1 ? null : index + 1;
 }

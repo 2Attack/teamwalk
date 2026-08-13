@@ -74,6 +74,14 @@ export function periodStart(period: 'week' | 'month' | 'all', now: Date = new Da
   return officeDayStart(addOfficeDays(today, -backToMonday));
 }
 
+/**
+ * Границы произвольного периода `[from; to]` из офисных дат (обе включительно):
+ * старт — полночь `from`, конец — эксклюзивная полночь дня после `to`.
+ */
+export function officeRange(from: string, to: string): { since: Date; until: Date } {
+  return { since: officeDayStart(from), until: officeDayStart(addOfficeDays(to, 1)) };
+}
+
 /** `YYYY-MM` текущего офисного месяца — для лимита заморозок. */
 export function officeMonth(date: Date = new Date()): string {
   return toOfficeDay(date).slice(0, 7);

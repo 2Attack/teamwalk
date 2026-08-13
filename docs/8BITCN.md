@@ -22,6 +22,8 @@ components/Avatar.tsx  ← наш рендер пресета аватара
 | `@/components/ui/8bit/progress` | `Progress` | `value`, `font` |
 | `@/components/ui/8bit/table` | `Table, TableHeader, TableBody, TableFooter, TableHead, TableRow, TableCell, TableCaption` | `font`, `variant` |
 | `@/components/ui/8bit/tabs` | `Tabs, TabsList, TabsTrigger, TabsContent` | `font`; управляется `value` / `onValueChange` |
+| `@/components/ui/8bit/calendar` | `Calendar` | обёртка `react-day-picker`; шевроны — свои пиксельные SVG, `font`; для произвольного периода рейтинга |
+| `@/components/ui/8bit/popover` | `Popover, PopoverTrigger, PopoverContent` | база на Base UI: триггер принимает `render`, а не `asChild`; переустановка затирает правку — см. комментарий в файле |
 | `@/components/ui/8bit/alert` | `Alert, AlertTitle, AlertDescription` | `variant: default \| destructive`, `font`; «уши» по углам рамки |
 | `@/components/ui/8bit/avatar` | `Avatar, AvatarImage, AvatarFallback` | `variant: pixel \| retro \| default`, `font` |
 

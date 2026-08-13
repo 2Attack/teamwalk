@@ -1,26 +1,85 @@
 'use client';
 
+import { useState } from 'react';
+import { ru } from 'date-fns/locale';
+import type { DateRange } from 'react-day-picker';
+
+import { Button } from '@/components/ui/8bit/button';
+import { Calendar } from '@/components/ui/8bit/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/8bit/popover';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/8bit/tabs';
+import { Icon } from '@/components/ui/icon';
 import { cn } from '@/lib/cn';
-import type { Period } from '@/lib/types';
+import { addOfficeDays, toOfficeDay } from '@/lib/time';
+import type { Period, PeriodSelection } from '@/lib/types';
 
 interface PeriodTabsProps {
-  value: Period;
-  onChange: (p: Period) => void;
+  value: PeriodSelection;
+  onChange: (s: PeriodSelection) => void;
   className?: string;
 }
 
-const TABS: ReadonlyArray<{ value: Period; label: string; short: string }> = [
+interface DayRange {
+  from: string;
+  to: string;
+}
+
+const TABS: ReadonlyArray<{ value: Period | 'custom'; label: string; short: string }> = [
   { value: 'week', label: 'Неделя', short: 'Нед.' },
   { value: 'month', label: 'Месяц', short: 'Мес.' },
   // На 360 px «Всё время» пиксельным шрифтом (16 px = 16 px на символ) не влезает.
   { value: 'all', label: 'Всё время', short: 'Всё' },
+  { value: 'custom', label: 'Период', short: 'Даты' },
 ];
+
+/** Стартовый произвольный период — последние 7 офисных дней включая сегодня. */
+function defaultRange(): DayRange {
+  const today = toOfficeDay();
+  return { from: addOfficeDays(today, -6), to: today };
+}
+
+/**
+ * Офисная дата → `Date` для календаря: локальная полночь того же календарного
+ * дня. Через `officeDayStart` нельзя — календарь живёт в зоне устройства, и
+ * московская полночь западнее Москвы отобразилась бы предыдущим днём.
+ */
+function dayToDate(day: string): Date {
+  const [y, m, d] = day.split('-').map(Number);
+  return new Date(y, m - 1, d);
+}
+
+/** Выбранный в календаре день → `YYYY-MM-DD` из локальных полей, без сдвига зоны. */
+function dateToDay(date: Date): string {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
+const dayLabelFmt = new Intl.DateTimeFormat('ru-RU', { day: 'numeric', month: 'short' });
+const dayLabelWithYearFmt = new Intl.DateTimeFormat('ru-RU', {
+  day: 'numeric',
+  month: 'short',
+  year: 'numeric',
+});
+
+/** Метка кнопки: «5 авг. — 13 авг.»; год дописывается, только если он не текущий. */
+function formatRangeLabel(range: DayRange): string {
+  const currentYear = String(new Date().getFullYear());
+  const fmt = (day: string) =>
+    (day.startsWith(currentYear) ? dayLabelFmt : dayLabelWithYearFmt).format(dayToDate(day));
+  return range.from === range.to ? fmt(range.from) : `${fmt(range.from)} — ${fmt(range.to)}`;
+}
 
 /**
  * Переключатель периода рейтинга (п. 6.2, 6.8.2) на `Tabs` из 8bitcn.
  * Паттерн tablist целиком отдан библиотеке: `role="tablist"`, roving tabindex и
  * ходьба стрелками/Home/End приходят из Base UI, поэтому своих обработчиков нет.
+ *
+ * Четвёртая вкладка «Период» — произвольный диапазон дат: под вкладками
+ * появляется кнопка с текущими границами, по ней — range-календарь в поповере.
+ * Каждый клик по календарю сразу уходит в `onChange`: рейтинг за спиной
+ * поповера обновляется живьём, отдельной кнопки «Применить» нет.
  *
  * Панелей (`TabsContent`) нет намеренно: содержимое вкладки — пьедестал и таблица,
  * которые лежат в разметке страницы рядом и следуют одному периоду. Состояние
@@ -28,10 +87,33 @@ const TABS: ReadonlyArray<{ value: Period; label: string; short: string }> = [
  * «Неделя» — вкладка по умолчанию, но дефолт задаёт родитель, а не этот компонент.
  */
 export function PeriodTabs({ value, onChange, className }: PeriodTabsProps) {
+  // Последний выбранный диапазон переживает уход на другие вкладки:
+  // вернувшись на «Период», участник видит свои даты, а не сброс к дефолту.
+  const [lastRange, setLastRange] = useState<DayRange>(defaultRange);
+
+  const applyRange = (range: DayRange) => {
+    setLastRange(range);
+    onChange({ period: 'custom', ...range });
+  };
+
+  const handleTabChange = (next: string) => {
+    if (next === 'custom') applyRange(lastRange);
+    else onChange({ period: next as Period });
+  };
+
+  const handleSelect = (selected: DateRange | undefined) => {
+    // Клик, снявший выделение, диапазон не меняет: пустого периода не бывает.
+    if (!selected?.from) return;
+    const from = dateToDay(selected.from);
+    const to = dateToDay(selected.to ?? selected.from);
+    // Библиотека упорядочивает границы сама, но контракт API — `from <= to`.
+    applyRange(from <= to ? { from, to } : { from: to, to: from });
+  };
+
   return (
     <Tabs
-      value={value}
-      onValueChange={(next) => onChange(next as Period)}
+      value={value.period}
+      onValueChange={handleTabChange}
       /*
         Пиксельные «уши» рамки 8bitcn вылезают на 6 px за габарит списка со всех
         сторон (inset-0 с -m-1.5), поэтому вокруг оставлен ровно такой отступ.
@@ -73,6 +155,48 @@ export function PeriodTabs({ value, onChange, className }: PeriodTabsProps) {
           </TabsTrigger>
         ))}
       </TabsList>
+
+      {value.period === 'custom' && (
+        <Popover>
+          {/*
+            Base UI (стиль `base-nova` в components.json) подставляет свой
+            элемент через `render`, а не через `asChild` как Radix.
+          */}
+          <PopoverTrigger
+            render={
+              <Button
+                type="button"
+                variant="outline"
+                // Даты — цифры и сокращения месяцев: sans, иначе кириллица
+                // «авг.» пиксельным шрифтом без кириллицы рассыпается (п. 6.7.1).
+                font="normal"
+                aria-label="Изменить даты периода"
+                className="mt-3 min-h-11 gap-2 px-3 text-sm tabular-nums"
+              />
+            }
+          >
+            <Icon name="calendar" size={16} />
+            {formatRangeLabel(value)}
+          </PopoverTrigger>
+
+          <PopoverContent font="normal" className="w-auto p-0" aria-label="Выбор периода">
+            <Calendar
+              mode="range"
+              locale={ru}
+              font="normal"
+              numberOfMonths={1}
+              defaultMonth={dayToDate(value.to)}
+              selected={{ from: dayToDate(value.from), to: dayToDate(value.to) }}
+              onSelect={handleSelect}
+              // Будущих прогулок не бывает — дни после сегодняшнего закрыты.
+              disabled={{ after: new Date() }}
+              // Рамку рисует поповер: собственные «уши» календаря внутри панели
+              // дали бы вторую рамку в рамке (тот же приём, что у Command).
+              className="border-y-0 [&>div.absolute]:hidden"
+            />
+          </PopoverContent>
+        </Popover>
+      )}
     </Tabs>
   );
 }

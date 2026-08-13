@@ -18,10 +18,10 @@ import { Skeleton } from '@/components/ui/8bit/skeleton';
 import { useLeaderboard } from '@/lib/client/api';
 import { cn } from '@/lib/cn';
 import { formatKm } from '@/lib/format';
-import type { LeaderboardRowDto, Period } from '@/lib/types';
+import type { LeaderboardRowDto, Period, PeriodSelection } from '@/lib/types';
 
 interface LeaderboardProps {
-  period: Period;
+  period: PeriodSelection;
   currentUserId?: string | null;
 }
 
@@ -30,6 +30,12 @@ const PERIOD_LABEL: Record<Period, string> = {
   month: 'месяц',
   all: 'всё время',
 };
+
+/** Подпись периода для скрытого заголовка таблицы. */
+function periodLabel(selection: PeriodSelection): string {
+  if (selection.period === 'custom') return `период с ${selection.from} по ${selection.to}`;
+  return PERIOD_LABEL[selection.period];
+}
 
 /**
  * Мобильная раскладка: `tr` становится flex-карточкой, а не страницей с горизонтальным
@@ -186,7 +192,7 @@ export function Leaderboard({ period, currentUserId }: LeaderboardProps) {
         )}
       >
         <TableCaption className="sr-only">
-          {`Таблица лидеров за ${PERIOD_LABEL[period]}: место, участник, дистанция в километрах, число прогулок, серия и средняя скорость`}
+          {`Таблица лидеров за ${periodLabel(period)}: место, участник, дистанция в километрах, число прогулок, серия и средняя скорость`}
         </TableCaption>
         <TableHeader className="max-sm:hidden">
           <TableRow role="row" className="transition-none">
