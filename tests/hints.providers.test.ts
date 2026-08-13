@@ -46,6 +46,7 @@ describe('requestHints: Gateway через AI SDK', () => {
   beforeEach(() => {
     vi.stubEnv('AI_GATEWAY_API_KEY', 'gw-key');
     vi.stubEnv('VERCEL_OIDC_TOKEN', '');
+    vi.stubEnv('VERCEL', '');
   });
 
   afterEach(() => {
@@ -87,6 +88,17 @@ describe('requestHints: Gateway через AI SDK', () => {
   it('VERCEL_OIDC_TOKEN достаточно вместо API-ключа', async () => {
     vi.stubEnv('AI_GATEWAY_API_KEY', '');
     vi.stubEnv('VERCEL_OIDC_TOKEN', 'oidc-token');
+    const { requestHints, generateObject } = await load();
+    generateObject.mockResolvedValueOnce({ object: [HINT] } as never);
+
+    const result = await requestHints(SNAPSHOT);
+
+    expect(result?.provider).toBe('gateway');
+  });
+
+  it('на Vercel пробуем и без env-кредов: OIDC-токен приходит заголовком в рантайме', async () => {
+    vi.stubEnv('AI_GATEWAY_API_KEY', '');
+    vi.stubEnv('VERCEL', '1');
     const { requestHints, generateObject } = await load();
     generateObject.mockResolvedValueOnce({ object: [HINT] } as never);
 
