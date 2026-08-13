@@ -3,7 +3,7 @@
 import { Icon } from '@/components/ui/icon';
 import { Skeleton } from '@/components/ui/8bit/skeleton';
 import { useStats } from '@/lib/client/api';
-import { APP_NAME } from '@/lib/config';
+import { APP_NAME, IS_VERCEL_PREVIEW } from '@/lib/config';
 import { formatKm } from '@/lib/format';
 
 /**
@@ -21,6 +21,8 @@ export function AppHeader() {
       <h1 className="font-pixel text-base leading-none sm:text-2xl">
         <span className="text-citrus">Team</span>
         <span className="text-text-main">Walk</span>
+        {/* Метка тестового окружения — чтобы шапку превью не спутать с продом. */}
+        {IS_VERCEL_PREVIEW && <span className="text-text-dim"> — PREVIEW</span>}
         <span className="sr-only"> — {APP_NAME}</span>
       </h1>
 

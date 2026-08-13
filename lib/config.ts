@@ -2,6 +2,14 @@
 
 export const APP_NAME = process.env.NEXT_PUBLIC_APP_NAME ?? 'TeamWalk';
 
+/*
+ * Превью-деплой Vercel. `NEXT_PUBLIC_VERCEL_ENV` инлайнится на сборке и потому
+ * работает и в клиентских компонентах (серверный `VERCEL_ENV` — запасной путь,
+ * в браузерный бандл он не попадает и там остаётся undefined).
+ */
+export const IS_VERCEL_PREVIEW =
+  (process.env.NEXT_PUBLIC_VERCEL_ENV ?? process.env.VERCEL_ENV) === 'preview';
+
 /** Часовой пояс офиса. Границы суток серии и недели считаются по нему (п. 6.8.5). */
 export const TZ = 'Europe/Moscow';
 

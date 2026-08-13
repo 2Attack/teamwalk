@@ -2,7 +2,7 @@ import { SpeedInsights } from '@vercel/speed-insights/next';
 import type { Metadata, Viewport } from 'next';
 import { Inter, Press_Start_2P } from 'next/font/google';
 
-import { APP_NAME } from '@/lib/config';
+import { APP_NAME, IS_VERCEL_PREVIEW } from '@/lib/config';
 import { cn } from '@/lib/cn';
 
 import './globals.css';
@@ -26,15 +26,13 @@ const ui = Inter({
   display: 'swap',
 });
 
-/*
-  На превью-деплоях Vercel (`VERCEL_ENV === 'preview'`) заголовок помечается
-  «PREVIEW», чтобы вкладку с тестовым окружением нельзя было спутать с продом.
-  Переменная известна на этапе сборки, поэтому обычного условия достаточно.
-*/
-const isVercelPreview = process.env.VERCEL_ENV === 'preview';
-
 export const metadata: Metadata = {
-  title: isVercelPreview ? `${APP_NAME} — PREVIEW` : `${APP_NAME} — трекер ходьбы`,
+  /*
+    На превью-деплоях Vercel заголовок помечается «PREVIEW», чтобы вкладку с
+    тестовым окружением нельзя было спутать с продом (шапка помечается так же —
+    см. AppHeader).
+  */
+  title: IS_VERCEL_PREVIEW ? `${APP_NAME} — PREVIEW` : `${APP_NAME} — трекер ходьбы`,
   description: 'Корпоративный трекер ходьбы на беговой дорожке',
   /*
     iOS манифест игнорирует и режим установки читает из своих мета-тегов: без
