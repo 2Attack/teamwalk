@@ -113,6 +113,27 @@ long polling: `npm run dev:tg` (рядом с работающим `npm run dev`
 Без ключей LLM приложение полностью работоспособно: лента крутит статические фразы.
 Без токена бота — тоже: уведомления просто выключены.
 
+## Стейдж
+
+Стейдж — ветка `staging` со стабильным доменом **teamwalk-staging.vercel.app**
+(домен привязан к ветке; кастомные окружения на Hobby-плане недоступны, поэтому
+это Preview-деплой с постоянным адресом). Своя БД — ветка боевой базы в Neon,
+её `DATABASE_URL` лежит в Preview-окружении Vercel. Telegram — отдельный
+стейдж-бот: у одного бота может быть только один webhook.
+
+Процесс выкатки:
+
+```bash
+git checkout staging && git merge main && git push   # 1. выкатить на стейдж
+DATABASE_URL=<staging-url> npm run db:migrate        # 2. миграции на стейдж-БД
+# 3. проверить на teamwalk-staging.vercel.app
+git checkout main && git merge staging && git push   # 4. выкатить на прод
+DATABASE_URL=<prod-url> npm run db:migrate           # 5. миграции на прод-БД
+```
+
+Крон на стейдже не работает (Vercel запускает его только на production) —
+напоминания там разносит ленивый фолбэк при обращениях к API.
+
 ## Развёртывание на Vercel
 
 1. Репозиторий на GitHub → импорт в Vercel.
