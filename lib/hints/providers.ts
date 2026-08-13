@@ -36,12 +36,16 @@ export interface LlmResult {
 }
 
 /**
- * AI SDK сам находит креды: `AI_GATEWAY_API_KEY` либо `VERCEL_OIDC_TOKEN`
- * (последний Vercel подставляет на деплоях автоматически). Без обоих подсистема
- * молча живёт на статическом каталоге — та же деградация, что была без ключей.
+ * AI SDK сам находит креды: `AI_GATEWAY_API_KEY`, `VERCEL_OIDC_TOKEN` (локально
+ * после `vercel env pull`), а на деплоях Vercel OIDC-токен приходит заголовком
+ * запроса, не env-переменной — поэтому на Vercel (`VERCEL=1`) пробуем всегда
+ * и отдаём поиск кредов SDK. Без кредов вызов упадёт и подсистема живёт на
+ * статическом каталоге — та же деградация, что была без ключей.
  */
 function gatewayEnabled(): boolean {
-  return Boolean(process.env.AI_GATEWAY_API_KEY || process.env.VERCEL_OIDC_TOKEN);
+  return Boolean(
+    process.env.AI_GATEWAY_API_KEY || process.env.VERCEL_OIDC_TOKEN || process.env.VERCEL,
+  );
 }
 
 /**
