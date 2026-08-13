@@ -1,3 +1,4 @@
+import { Analytics } from '@vercel/analytics/next';
 import { SpeedInsights } from '@vercel/speed-insights/next';
 import type { Metadata, Viewport } from 'next';
 import { Inter, Press_Start_2P } from 'next/font/google';
@@ -62,6 +63,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="ru" className={cn('dark', pixel.variable, ui.variable)}>
       <body className="min-h-dvh antialiased">
         {children}
+        {/* Vercel Analytics: просмотры страниц и посетители. */}
+        <Analytics />
         {/* Vercel Speed Insights: метрики Web Vitals с прода (наш бюджет — п. 8 ТЗ). */}
         <SpeedInsights />
       </body>

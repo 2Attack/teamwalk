@@ -12,7 +12,7 @@
     "gen:assets": "node scripts/gen-avatars.mjs && node scripts/gen-icons.mjs && node scripts/gen-app-icons.mjs",
     "gen:icons": "node scripts/gen-icons.mjs",
     "gen:icons:app": "node scripts/gen-app-icons.mjs",
-    "db:migrate": "node --experimental-strip-types scripts/db-migrate.ts",
+    "db:migrate": "node --experimental-strip-types scripts/db-migrate.mts",
     "db:push": "drizzle-kit push"
   },
   "dependencies": {
@@ -20,6 +20,7 @@
     "@date-fns/tz": "^1.5.0",
     "@neondatabase/serverless": "^1.1.0",
     "@radix-ui/react-progress": "^1.1.16",
+    "@vercel/analytics": "^2.0.1",
     "@vercel/functions": "^3.9.3",
     "@vercel/speed-insights": "^2.0.0",
     "ai": "^7.0.65",
