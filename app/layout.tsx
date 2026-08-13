@@ -26,8 +26,15 @@ const ui = Inter({
   display: 'swap',
 });
 
+/*
+  На превью-деплоях Vercel (`VERCEL_ENV === 'preview'`) заголовок помечается
+  «PREVIEW», чтобы вкладку с тестовым окружением нельзя было спутать с продом.
+  Переменная известна на этапе сборки, поэтому обычного условия достаточно.
+*/
+const isVercelPreview = process.env.VERCEL_ENV === 'preview';
+
 export const metadata: Metadata = {
-  title: `${APP_NAME} — трекер ходьбы`,
+  title: isVercelPreview ? `${APP_NAME} — PREVIEW` : `${APP_NAME} — трекер ходьбы`,
   description: 'Корпоративный трекер ходьбы на беговой дорожке',
   /*
     iOS манифест игнорирует и режим установки читает из своих мета-тегов: без
