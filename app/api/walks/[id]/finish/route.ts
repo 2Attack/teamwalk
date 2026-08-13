@@ -11,7 +11,11 @@ import { awardAchievements } from '@/lib/game/achievements';
 import { getPersonalRecord, getTeamProgress } from '@/lib/game/progress';
 import { getStreak } from '@/lib/game/streak';
 import { ROUTE, positionOnRoute } from '@/lib/hints/route';
-import { notifyWalkFinished } from '@/lib/telegram/notify';
+import {
+  notifyTreadmillFreed,
+  notifyWalkFinished,
+  wereAllTreadmillsBusy,
+} from '@/lib/telegram/notify';
 import type { FinishWalkResultDto, TeamProgressDto, WalkDto } from '@/lib/types';
 import { finishWalkSchema, uuidSchema } from '@/lib/validation';
 
@@ -90,6 +94,11 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       'getUserRank.previous',
     );
 
+    // «Все ли дорожки заняты» — тоже до апдейта: после освобождения переход
+    // «всё занято → свободно» уже не увидеть (п. 6.10.4). При выключенном
+    // Telegram вернёт false без запроса к БД.
+    const wasFullHouse = await wereAllTreadmillsBusy();
+
     // Атомарно: длительность считает сервер, статус меняется только у активной.
     const updated = await db
       .update(walks)
@@ -123,6 +132,19 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     // после ответа клиенту и только при свежем завершении; идемпотентные повторы
     // POST выше сюда не доходят, дедупликацию по `finish:<walkId>` держит notify.
     waitUntil(notifyWalkFinished(result));
+
+    // Финиш при полностью занятых дорожках освободил одну — событие для тех,
+    // кто ждал (п. 6.10.4). Дедупликация по `free:<walkId>` — внутри notify.
+    if (wasFullHouse) {
+      waitUntil(
+        notifyTreadmillFreed({
+          walkId: finished.id,
+          treadmillName: finished.treadmillName,
+          freedByUserId: finished.userId,
+          busySec: finished.durationSec ?? 0,
+        }),
+      );
+    }
 
     return NextResponse.json(result);
   });

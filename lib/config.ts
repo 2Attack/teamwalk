@@ -1,6 +1,6 @@
 /** Единая точка конфигурации приложения. Никаких «магических чисел» по коду. */
 
-export const APP_NAME = process.env.NEXT_PUBLIC_APP_NAME ?? 'CitrusWalk';
+export const APP_NAME = process.env.NEXT_PUBLIC_APP_NAME ?? 'TeamWalk';
 
 /** Часовой пояс офиса. Границы суток серии и недели считаются по нему (п. 6.8.5). */
 export const TZ = 'Europe/Moscow';
@@ -65,7 +65,7 @@ export const TELEGRAM_ENABLED =
 export const TG_LINK_TOKEN_TTL_MINUTES = 15;
 
 /** Панель «Привяжи Telegram» на экране прогулки (п. 6.10.2). */
-export const TG_NUDGE_AFTER_SEC = 180;
+export const TG_NUDGE_AFTER_SEC = 60;
 export const TG_NUDGE_COOLDOWN_DAYS = 3;
 export const TG_NUDGE_MAX_SHOWS = 5;
 
@@ -78,9 +78,12 @@ export const REMIND_BACKOFF_COOLDOWN_WORKDAYS = 5;
 /** После стольких — молчание до следующей завершённой прогулки. */
 export const REMIND_SILENCE_AFTER = 6;
 
-/** Окно отправки напоминаний и дайджеста: рабочие дни, [11:00, 17:00) МСК. */
-export const NOTIFY_WINDOW_START_HOUR = 11;
-export const NOTIFY_WINDOW_END_HOUR = 17;
+/**
+ * Окно отправки напоминаний, дайджеста и «дорожка освободилась»: рабочие дни,
+ * [11:00, 17:00) МСК. Через env переопределяется для локальных прогонов.
+ */
+export const NOTIFY_WINDOW_START_HOUR = Number(process.env.NOTIFY_WINDOW_START_HOUR ?? 11);
+export const NOTIFY_WINDOW_END_HOUR = Number(process.env.NOTIFY_WINDOW_END_HOUR ?? 17);
 
 /** Ключ в localStorage для последнего выбранного участника (п. 6.2). */
-export const LAST_USER_STORAGE_KEY = 'citruswalk:lastUserId';
+export const LAST_USER_STORAGE_KEY = 'teamwalk:lastUserId';

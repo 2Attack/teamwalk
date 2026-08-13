@@ -6,6 +6,7 @@ import {
   digestText,
   farewellText,
   finishText,
+  freeText,
   helpText,
   relinkedText,
   remindText,
@@ -116,6 +117,32 @@ describe('autocloseText', () => {
   it('все варианты безопасны и корректны', () => {
     for (let i = 0; i < RUNS; i += 1) {
       expectWellFormed(autocloseText());
+    }
+  });
+});
+
+describe('freeText', () => {
+  it('все варианты безопасны на разных длительностях занятости', () => {
+    const busySecs = [0, 40, 60 * 40, 3600, 3600 + 60 * 20, 8 * 3600];
+    for (let i = 0; i < RUNS; i += 1) {
+      const text = freeText({
+        treadmillName: 'Дорожка у окна',
+        busySec: busySecs[i % busySecs.length],
+      });
+      expectWellFormed(text);
+      expect(text).toContain('Дорожка у окна');
+    }
+  });
+
+  it('занятость меньше минуты не упоминается, длинная — в часах', () => {
+    for (let i = 0; i < RUNS; i += 1) {
+      // 40 секунд: фразы про занятость нет вовсе (отмена случайного старта).
+      expect(freeText({ treadmillName: 'Т', busySec: 40 })).not.toContain('занята');
+      // 40 минут — минутами, 8 часов — часами, не «480 минут».
+      expect(freeText({ treadmillName: 'Т', busySec: 60 * 40 })).toContain('40 минут');
+      const long = freeText({ treadmillName: 'Т', busySec: 8 * 3600 });
+      expect(long).toContain('8 часов');
+      expect(long).not.toContain('480');
     }
   });
 });

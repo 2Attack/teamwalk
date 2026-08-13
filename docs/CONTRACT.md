@@ -85,6 +85,9 @@ export function ensureFreshPool(): void; // фоновая регенераци�
 export async function notifyWalkStarted(walk: ActiveWalkDto): Promise<void>;
 export async function notifyWalkFinished(result: FinishWalkResultDto): Promise<void>;
 export async function notifyAutoClosed(closed: Array<{ walkId: string; userId: string }>): Promise<void>;
+export async function wereAllTreadmillsBusy(): Promise<boolean>; // вызывать ДО освобождения дорожки
+export async function notifyTreadmillFreed(input: { walkId: string; treadmillName: string;
+  freedByUserId: string; busySec: number }): Promise<void>; // широковещательное, дедуп free:<walkId>
 export function ensureNotifySweep(): void; // ленивый фолбэк cron: лок notify_meta, не чаще раза в час
 export async function runNotifySweep(now?: Date): Promise<void>; // напоминания + дайджест (вызывает cron)
 export async function getTelegramStatus(userId: string): Promise<TelegramStatusDto | null>;

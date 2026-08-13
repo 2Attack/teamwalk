@@ -1,12 +1,14 @@
 import { and, eq, sql } from 'drizzle-orm';
 
+import { APP_NAME } from '@/lib/config';
 import { db } from '@/lib/db';
-import { telegramUpdates, users, walks } from '@/lib/db/schema';
+import { telegramUpdates, treadmills, users, walks } from '@/lib/db/schema';
 import type { TelegramLink } from '@/lib/db/schema';
 
 import { answerCallbackQuery, editMessageReplyMarkup, sendMessage } from './client';
 import { consumeLinkToken, getLinkByChat, setMutedUntil, togglePref, unlinkByChat, upsertLink } from './links';
 import type { PrefKey } from './links';
+import { notifyTreadmillFreed, wereAllTreadmillsBusy } from './notify';
 import { farewellText, helpText, relinkedText, staleTokenText, welcomeText } from './texts';
 
 /**
@@ -34,8 +36,7 @@ interface TgUpdate {
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /** Подсказка для чатов без привязки — токен берут в приложении, не у бота. */
-const NOT_LINKED_TEXT =
-  'Этот чат не привязан к CitrusWalk. Возьми ссылку привязки в приложении — она живёт в карточке участника.';
+const NOT_LINKED_TEXT = `Этот чат не привязан к ${APP_NAME}. Возьми ссылку привязки в приложении — она живёт в карточке участника.`;
 
 /** Тумблеры категорий для `/settings`: ✅ — включено, ⬜ — выключено. */
 function settingsKeyboard(link: TelegramLink): unknown {
@@ -47,6 +48,7 @@ function settingsKeyboard(link: TelegramLink): unknown {
       row(link.notifyStart, 'Старт прогулки', 'pref:start'),
       row(link.notifyFinish, 'Финиш прогулки', 'pref:finish'),
       row(link.notifyRemind, 'Напоминания', 'pref:remind'),
+      row(link.notifyFree, 'Дорожка освободилась', 'pref:free'),
       row(link.notifyDigest, 'Недельный дайджест', 'pref:digest'),
       row(link.attachHints, 'Хинты в сообщениях', 'pref:hints'),
     ],
@@ -57,6 +59,7 @@ const PREF_KEYS: Record<string, PrefKey> = {
   start: 'notifyStart',
   finish: 'notifyFinish',
   remind: 'notifyRemind',
+  free: 'notifyFree',
   digest: 'notifyDigest',
   hints: 'attachHints',
 };
@@ -142,6 +145,9 @@ async function handleCancel(cbId: string, walkId: string, link: TelegramLink): P
     return;
   }
 
+  // До отмены: этот путь освобождает дорожку так же, как POST /cancel (п. 6.10.4).
+  const wasFullHouse = await wereAllTreadmillsBusy();
+
   const cancelled = await db
     .update(walks)
     .set({
@@ -150,9 +156,23 @@ async function handleCancel(cbId: string, walkId: string, link: TelegramLink): P
       durationSec: sql`greatest(0, extract(epoch from (now() - ${walks.startedAt}))::int)`,
     })
     .where(and(eq(walks.id, walkId), eq(walks.status, 'active'), eq(walks.userId, link.userId)))
-    .returning({ id: walks.id });
+    .returning({ id: walks.id, treadmillId: walks.treadmillId, durationSec: walks.durationSec });
 
   await answerCallbackQuery(cbId, cancelled.length > 0 ? 'Прогулка отменена' : 'Прогулка уже не активна');
+
+  if (cancelled.length > 0 && wasFullHouse) {
+    const rows = await db
+      .select({ name: treadmills.name })
+      .from(treadmills)
+      .where(eq(treadmills.id, cancelled[0].treadmillId))
+      .limit(1);
+    await notifyTreadmillFreed({
+      walkId: cancelled[0].id,
+      treadmillName: rows[0]?.name ?? 'Дорожка',
+      freedByUserId: link.userId,
+      busySec: cancelled[0].durationSec ?? 0,
+    });
+  }
 }
 
 async function handleCallback(cbId: string, data: string, message: TgMessage | undefined): Promise<void> {

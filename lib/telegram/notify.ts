@@ -1,14 +1,16 @@
-import { and, desc, eq, inArray, isNull, or } from 'drizzle-orm';
+import { and, desc, eq, inArray, isNull, lt, ne, notExists, or, sql } from 'drizzle-orm';
 
+import { NOTIFY_WINDOW_END_HOUR, NOTIFY_WINDOW_START_HOUR } from '@/lib/config';
 import { db } from '@/lib/db';
-import { hintsCache, notificationLog } from '@/lib/db/schema';
+import { hintsCache, notificationLog, telegramLinks, treadmills, walks } from '@/lib/db/schema';
 import type { TelegramLink } from '@/lib/db/schema';
 import { avgSpeedKmh } from '@/lib/format';
+import { isWeekend, officeHour, toOfficeDay } from '@/lib/time';
 import type { ActiveWalkDto, FinishWalkResultDto } from '@/lib/types';
 
 import { sendMessage, telegramEnabled } from './client';
 import { getLink } from './links';
-import { autocloseText, finishText, startText } from './texts';
+import { autocloseText, finishText, freeText, startText } from './texts';
 
 /**
  * Событийные уведомления: старт, финиш, автозакрытие (п. 6.10.4, 6.10.5 ТЗ).
@@ -114,6 +116,92 @@ export async function notifyWalkFinished(result: FinishWalkResultDto): Promise<v
     await sendMessage(link.chatId, text);
   } catch (error) {
     console.error('[telegram] notifyWalkFinished failed', error);
+  }
+}
+
+/**
+ * «Все ли дорожки заняты?» — вызывается **до** освобождения (финиш/отмена/
+ * автозакрытие): после апдейта переход «всё занято → свободно» уже не увидеть.
+ * Ошибка или выключенный Telegram — false: уведомление-подсказка не стоит
+ * лишнего запроса в горячем пути (п. 6.10.4).
+ */
+export async function wereAllTreadmillsBusy(): Promise<boolean> {
+  if (!telegramEnabled()) return false;
+  try {
+    // Два простых запроса вместо коррелированного exists в filter: дорожек
+    // единицы, а прозрачность здесь дороже одного round-trip'а.
+    const totals = await db
+      .select({ total: sql<number>`count(*)::int` })
+      .from(treadmills)
+      .where(eq(treadmills.isActive, true));
+    const total = totals[0]?.total ?? 0;
+    if (total === 0) return false;
+
+    const busyRows = await db
+      .selectDistinct({ treadmillId: walks.treadmillId })
+      .from(walks)
+      .innerJoin(treadmills, eq(treadmills.id, walks.treadmillId))
+      .where(and(eq(walks.status, 'active'), eq(treadmills.isActive, true)));
+
+    return busyRows.length >= total;
+  } catch (error) {
+    console.error('[telegram] wereAllTreadmillsBusy failed', error);
+    return false;
+  }
+}
+
+/**
+ * «Дорожка освободилась» (п. 6.10.4) — единственная широковещательная категория.
+ * Вызывающий код обязан проверить `wereAllTreadmillsBusy()` до освобождения:
+ * событие — переход «всё занято → появилась свободная», а не каждый финиш.
+ *
+ * Не шлётся освободившему и тем, кто идёт прямо сейчас. Вне рабочего окна —
+ * просто молчим, без переносов: событие протухает мгновенно. Дедупликация —
+ * `free:<walkId>`, один ключ на событие, а не на получателя.
+ */
+export async function notifyTreadmillFreed(input: {
+  walkId: string;
+  treadmillName: string;
+  freedByUserId: string;
+  busySec: number;
+}): Promise<void> {
+  try {
+    if (!telegramEnabled()) return;
+
+    const now = new Date();
+    if (isWeekend(toOfficeDay(now))) return;
+    const hour = officeHour(now);
+    if (hour < NOTIFY_WINDOW_START_HOUR || hour >= NOTIFY_WINDOW_END_HOUR) return;
+
+    if (!(await tryDedup(input.freedByUserId, 'free', `free:${input.walkId}`))) return;
+
+    const recipients = await db
+      .select({ chatId: telegramLinks.chatId })
+      .from(telegramLinks)
+      .where(
+        and(
+          eq(telegramLinks.notifyFree, true),
+          or(isNull(telegramLinks.mutedUntil), lt(telegramLinks.mutedUntil, sql`now()`)),
+          ne(telegramLinks.userId, input.freedByUserId),
+          // Идущим прямо сейчас дорожка не нужна.
+          notExists(
+            db
+              .select({ one: sql`1` })
+              .from(walks)
+              .where(and(eq(walks.status, 'active'), eq(walks.userId, telegramLinks.userId))),
+          ),
+        ),
+      );
+    if (recipients.length === 0) return;
+
+    // Один текст на событие: получатели видят одну и ту же фразу — это
+    // объявление по громкой связи, а не персональное сообщение.
+    const text = freeText({ treadmillName: input.treadmillName, busySec: input.busySec });
+    for (const { chatId } of recipients) {
+      await sendMessage(chatId, text);
+    }
+  } catch (error) {
+    console.error('[telegram] notifyTreadmillFreed failed', error);
   }
 }
 

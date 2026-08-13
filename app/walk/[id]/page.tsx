@@ -236,6 +236,10 @@ export default function WalkPage({ params }: { params: Promise<{ id: string }> }
         </div>
       </header>
 
+      {/* Приглашение привязать Telegram — через минуту после старта, над таймером;
+          появившись, висит до конца прогулки (п. 6.10.2). */}
+      <TelegramNudge userId={walk.userId} startedAt={walk.startedAt} />
+
       <WalkTimer
         startedAt={walk.startedAt}
         speedKmh={walk.speedKmh}
@@ -258,9 +262,6 @@ export default function WalkPage({ params }: { params: Promise<{ id: string }> }
           disabled={mode !== 'none'}
         />
       </div>
-
-      {/* Приглашение привязать Telegram — через 3 минуты после старта (п. 6.10.2). */}
-      <TelegramNudge userId={walk.userId} startedAt={walk.startedAt} />
 
       {/* variant="walk": интервал 10 с и крупный шрифт — фразу читают с дорожки (п. 6.6.10). */}
       <HintTicker userId={walk.userId} variant="walk" />

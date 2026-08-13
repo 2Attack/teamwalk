@@ -69,11 +69,25 @@ DATABASE_URL=postgres://postgres:postgres@db.localtest.me:4444/citruswalk?sslmod
 Дальше как обычно: `npm run db:migrate` (скрипт читает те же файлы и в том же
 порядке) и `npm run dev`.
 
+### Telegram-бот локально (без webhook)
+
+Telegram не достучится до localhost, поэтому в разработке вместо webhook —
+long polling: `npm run dev:tg` (рядом с работающим `npm run dev`) поднимает
+мост на grammY, который забирает апдейты поллингом и пробрасывает их в наш
+обычный `/api/telegram/webhook` с тем же секретным заголовком. Боевой код
+прогоняется целиком — проверка секрета, дедупликация, вся логика бота.
+
+Нужны `TELEGRAM_BOT_TOKEN` и `TELEGRAM_WEBHOOK_SECRET` в `.env.development.local`
+(или `.env.local`). Важно: поллинг **снимает у бота зарегистрированный webhook**,
+поэтому запускать мост можно только с дев-ботом — заведи отдельного через
+@BotFather, не используй токен боевого.
+
 ## Скрипты
 
 | Команда | Что делает |
 |---|---|
 | `npm run dev` | Дев-сервер |
+| `npm run dev:tg` | Мост Telegram → localhost: long polling вместо webhook (только дев-бот) |
 | `npm run build` | Прод-сборка |
 | `npm run typecheck` | `tsc --noEmit` |
 | `npm test` | Юнит-тесты (постфильтр хинтов, расчёт серий) |
@@ -90,9 +104,14 @@ DATABASE_URL=postgres://postgres:postgres@db.localtest.me:4444/citruswalk?sslmod
 | `GROQ_API_KEY` | нет | Резервный провайдер |
 | `HINTS_ENABLED` | нет | `false` → только статический каталог фраз, без обращений к LLM |
 | `HINTS_TTL_MINUTES` | нет | Период регенерации пула, по умолчанию 60 |
+| `TELEGRAM_BOT_TOKEN` | нет | Бот от @BotFather; без него Telegram-подсистема выключена целиком (п. 6.10 ТЗ) |
+| `TELEGRAM_WEBHOOK_SECRET` | нет | Секрет webhook (`setWebhook … secret_token`) и локального моста |
+| `CRON_SECRET` | нет | Защита `/api/cron/notify` (Vercel Cron шлёт его сам) |
+| `TELEGRAM_ENABLED` | нет | `false` → бот молчит, панель привязки скрыта |
 | `NEXT_PUBLIC_APP_NAME` | нет | Название в шапке |
 
 Без ключей LLM приложение полностью работоспособно: лента крутит статические фразы.
+Без токена бота — тоже: уведомления просто выключены.
 
 ## Развёртывание на Vercel
 

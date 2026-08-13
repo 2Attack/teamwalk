@@ -164,6 +164,8 @@ export const telegramLinks = pgTable('telegram_links', {
   notifyFinish: boolean('notify_finish').notNull().default(true),
   notifyRemind: boolean('notify_remind').notNull().default(true),
   notifyDigest: boolean('notify_digest').notNull().default(true),
+  /** «Дорожка освободилась» — только на переходе «всё занято → свободно» (п. 6.10.4). */
+  notifyFree: boolean('notify_free').notNull().default(true),
   attachHints: boolean('attach_hints').notNull().default(true),
 });
 

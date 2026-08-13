@@ -87,13 +87,27 @@ export async function upsertLink(
   return { displacedChatId };
 }
 
+/**
+ * Отвязка возвращает приглашение (п. 6.10.2): счётчики панели сбрасываются,
+ * иначе кулдаун от прошлых показов прятал бы её и после осознанного `/stop`,
+ * а постоянной кнопки привязки в интерфейсе пока нет.
+ */
+async function resetNudgeCounters(userId: string): Promise<void> {
+  await db
+    .update(users)
+    .set({ tgNudgeCount: 0, tgNudgeLastAt: null, tgNudgeDismissed: false })
+    .where(eq(users.id, userId));
+}
+
 /** Полная отвязка из приложения (`DELETE /api/users/:id/telegram`). */
 export async function unlink(userId: string): Promise<boolean> {
   const rows = await db
     .delete(telegramLinks)
     .where(eq(telegramLinks.userId, userId))
     .returning({ userId: telegramLinks.userId });
-  return rows.length > 0;
+  if (rows.length === 0) return false;
+  await resetNudgeCounters(rows[0].userId);
+  return true;
 }
 
 /** Полная отвязка командой `/stop` из бота. */
@@ -102,10 +116,18 @@ export async function unlinkByChat(chatId: number): Promise<boolean> {
     .delete(telegramLinks)
     .where(eq(telegramLinks.chatId, chatId))
     .returning({ userId: telegramLinks.userId });
-  return rows.length > 0;
+  if (rows.length === 0) return false;
+  await resetNudgeCounters(rows[0].userId);
+  return true;
 }
 
-export type PrefKey = 'notifyStart' | 'notifyFinish' | 'notifyRemind' | 'notifyDigest' | 'attachHints';
+export type PrefKey =
+  | 'notifyStart'
+  | 'notifyFinish'
+  | 'notifyRemind'
+  | 'notifyDigest'
+  | 'notifyFree'
+  | 'attachHints';
 
 /** Инверсия в SQL, а не чтение-запись: два клика подряд не потеряют друг друга. */
 function prefUpdate(key: PrefKey) {
@@ -118,6 +140,8 @@ function prefUpdate(key: PrefKey) {
       return { notifyRemind: not(telegramLinks.notifyRemind) };
     case 'notifyDigest':
       return { notifyDigest: not(telegramLinks.notifyDigest) };
+    case 'notifyFree':
+      return { notifyFree: not(telegramLinks.notifyFree) };
     case 'attachHints':
       return { attachHints: not(telegramLinks.attachHints) };
   }

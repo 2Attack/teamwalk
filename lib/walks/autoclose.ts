@@ -3,8 +3,12 @@ import { and, eq, lt, sql } from 'drizzle-orm';
 
 import { STALE_WALK_HOURS } from '@/lib/config';
 import { db } from '@/lib/db';
-import { walks } from '@/lib/db/schema';
-import { notifyAutoClosed } from '@/lib/telegram/notify';
+import { treadmills, walks } from '@/lib/db/schema';
+import {
+  notifyAutoClosed,
+  notifyTreadmillFreed,
+  wereAllTreadmillsBusy,
+} from '@/lib/telegram/notify';
 
 /**
  * Автозакрытие зависших прогулок (п. 7.6): человек забыл нажать «End walk».
@@ -23,6 +27,10 @@ export async function closeStaleWalks(): Promise<number> {
   // Константа из конфига, не пользовательский ввод — можно вклеить в литерал интервала.
   const staleInterval = sql.raw(`interval '${Number(STALE_WALK_HOURS)} hours'`);
 
+  // До закрытия: автозакрытие при аншлаге — тоже освобождение (п. 6.10.4).
+  // При выключенном Telegram вернёт false без запроса к БД.
+  const wasFullHouse = await wereAllTreadmillsBusy();
+
   const closed = await db
     .update(walks)
     .set({
@@ -31,7 +39,12 @@ export async function closeStaleWalks(): Promise<number> {
       durationSec: sql`greatest(0, extract(epoch from (now() - ${walks.startedAt}))::int)`,
     })
     .where(and(eq(walks.status, 'active'), lt(walks.startedAt, sql`now() - ${staleInterval}`)))
-    .returning({ id: walks.id, userId: walks.userId });
+    .returning({
+      id: walks.id,
+      userId: walks.userId,
+      treadmillId: walks.treadmillId,
+      durationSec: walks.durationSec,
+    });
 
   if (closed.length > 0) {
     console.warn('[walks] autoclosed stale walks', { count: closed.length });
@@ -39,6 +52,29 @@ export async function closeStaleWalks(): Promise<number> {
     // Уведомление в Telegram (п. 6.10.4): иначе человек узнаёт об автозакрытии
     // через неделю из рейтинга. Вне горячего пути, дедупликация — внутри notify.
     waitUntil(notifyAutoClosed(closed.map((r) => ({ walkId: r.id, userId: r.userId }))));
+
+    // Переход «всё занято → свободно» случается один раз — событие вешаем на
+    // первую закрытую прогулку; имя дорожки дочитываем уже в фоне.
+    if (wasFullHouse) {
+      const first = closed[0];
+      waitUntil(
+        (async () => {
+          const rows = await db
+            .select({ name: treadmills.name })
+            .from(treadmills)
+            .where(eq(treadmills.id, first.treadmillId))
+            .limit(1);
+          await notifyTreadmillFreed({
+            walkId: first.id,
+            treadmillName: rows[0]?.name ?? 'Дорожка',
+            freedByUserId: first.userId,
+            busySec: first.durationSec ?? 0,
+          });
+        })().catch((error) => {
+          console.error('[telegram] freed-after-autoclose failed', error);
+        }),
+      );
+    }
   }
 
   return closed.length;

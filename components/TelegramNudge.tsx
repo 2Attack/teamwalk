@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/8bit/alert';
 import { Button } from '@/components/ui/8bit/button';
 import { Icon } from '@/components/ui/icon';
 import { apiSend, useTelegramStatus } from '@/lib/client/api';
@@ -10,7 +11,7 @@ import type { TelegramLinkTokenDto } from '@/lib/types';
 
 interface TelegramNudgeProps {
   userId: string;
-  /** ISO старта прогулки — от него отсчитываются 3 минуты до показа. */
+  /** ISO старта прогулки — от него отсчитывается минута до показа. */
   startedAt: string;
 }
 
@@ -59,13 +60,14 @@ function playChirp(): void {
  *
  * Показывается через `TG_NUDGE_AFTER_SEC` после старта и только когда сервер
  * разрешил (`nudgeEligible`): лимиты показов, кулдаун и «не предлагать» живут
- * в БД на участнике, клиент их не дублирует. «Позже» прячет панель только до
- * конца прогулки — это локальный state, не счётчик.
+ * в БД на участнике, клиент их не дублирует. Появившись, панель **висит до
+ * конца прогулки** — по таймеру не закрывается; убирают её только привязка
+ * или «Больше не напоминать».
  */
 export function TelegramNudge({ userId, startedAt }: TelegramNudgeProps) {
   const { data: status, mutate: mutateStatus } = useTelegramStatus(userId);
 
-  // Три минуты человек настраивает скорость и раскладывает ноутбук — не мешаем.
+  // Первую минуту человек настраивает скорость и раскладывает ноутбук — не мешаем.
   // Один setTimeout на остаток: если срок уже вышел (страницу перезагрузили
   // посреди прогулки), показываем сразу.
   const [ripe, setRipe] = useState(false);
@@ -85,7 +87,32 @@ export function TelegramNudge({ userId, startedAt }: TelegramNudgeProps) {
   const [linkError, setLinkError] = useState<string | null>(null);
   const [awaitingReturn, setAwaitingReturn] = useState(false);
 
-  const visible = ripe && !hiddenLocally && status?.nudgeEligible === true;
+  // Показ существует только в видимой вкладке: фоновая вкладка с этим же
+  // экраном иначе «показала» бы панель первой — счётчик и кулдаун записались
+  // бы, а человек ничего не увидел бы ни там, ни здесь.
+  const [pageVisible, setPageVisible] = useState(true);
+  useEffect(() => {
+    const sync = () => setPageVisible(document.visibilityState === 'visible');
+    sync();
+    document.addEventListener('visibilitychange', sync);
+    return () => document.removeEventListener('visibilitychange', sync);
+  }, []);
+
+  // Защёлка показа: после записи «shown» сервер начинает отсчитывать кулдаун,
+  // и очередная SWR-ревалидация вернула бы `nudgeEligible: false` — без защёлки
+  // панель гасла бы сама через пару минут. Появилась — висит; закрывают её
+  // только привязка (status.linked) и кнопка «Больше не напоминать».
+  const [latched, setLatched] = useState(false);
+  useEffect(() => {
+    if (ripe && pageVisible && !hiddenLocally && status?.nudgeEligible === true) {
+      setLatched(true);
+    }
+  }, [ripe, pageVisible, hiddenLocally, status?.nudgeEligible]);
+  useEffect(() => {
+    if (status?.linked === true) setLatched(false);
+  }, [status?.linked]);
+
+  const visible = latched && !hiddenLocally;
 
   // Первое появление — ровно один раз за прогулку: чирп и счётчик показа.
   // POST — именно счётчик, не функциональность: его ошибка панель не трогает.
@@ -154,55 +181,48 @@ export function TelegramNudge({ userId, startedAt }: TelegramNudgeProps) {
       aria-label="Приглашение привязать Telegram"
       // Появление — только transform/opacity и только под motion-safe:
       // при prefers-reduced-motion панель просто появляется (звук остаётся,
-      // он не motion — п. 6.10.2).
-      className="pixel-panel flex flex-col gap-3 p-4 motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-2 motion-safe:duration-300"
+      // он не motion — п. 6.10.2). px-1.5 — место под боковые пиксели рамки.
+      className="px-1.5 motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-2 motion-safe:duration-300"
     >
-      <div className="flex items-center gap-2">
-        {/* Речевой пузырь из общего пиксельного набора — бот же пишет (п. 6.7.4). */}
-        <Icon name="hint" size={16} />
-        <h2 className="font-pixel text-[12px] leading-none text-citrus">TELEGRAM</h2>
-      </div>
+      {/* Alert из 8bitcn рисует пиксельную рамку сам; font="normal" — пиксельный
+          шрифт вешаем точечно на заголовок, текст читают обычным sans (п. 6.7.1). */}
+      <Alert font="normal" className="flex flex-col gap-2 bg-bg-panel p-3">
+        <AlertTitle className="flex items-center gap-2 font-pixel text-[12px] leading-none text-citrus">
+          {/* Речевой пузырь из общего пиксельного набора — бот же пишет (п. 6.7.4). */}
+          <Icon name="hint" size={16} />
+          TELEGRAM
+        </AlertTitle>
 
-      {/* Текст читают — обычный sans (п. 6.7.1). */}
-      <p className="text-sm leading-relaxed text-text-main">
-        Бот пришлёт итог прогулки, ачивки и напомнит, когда дорожка заскучает.
-        Без спама — всё выключается.
-      </p>
+        <AlertDescription className="w-full text-sm leading-relaxed text-text-main">
+          <p>Бот пришлёт итоги прогулок, ачивки и напомнит размяться.</p>
 
-      {linkError !== null ? (
-        <p role="alert" className="text-sm text-citrus">
-          {linkError}
-        </p>
-      ) : null}
+          {linkError !== null ? (
+            <p role="alert" className="text-citrus">
+              {linkError}
+            </p>
+          ) : null}
 
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-        <Button
-          type="button"
-          onClick={openLink}
-          disabled={linking}
-          className="min-h-11 w-full sm:flex-1"
-        >
-          {linking ? 'Открываем…' : 'Привязать Telegram'}
-        </Button>
-        <Button
-          variant="ghost"
-          font="normal"
-          type="button"
-          onClick={() => setHiddenLocally(true)}
-          className="min-h-11 w-full text-sm sm:w-auto"
-        >
-          Позже
-        </Button>
-        <Button
-          variant="ghost"
-          font="normal"
-          type="button"
-          onClick={dismissForever}
-          className="min-h-11 w-full text-sm text-text-dim sm:w-auto"
-        >
-          Не предлагать
-        </Button>
-      </div>
+          <div className="flex w-full items-center gap-2 pt-1">
+            <Button
+              type="button"
+              onClick={openLink}
+              disabled={linking}
+              className="min-h-11 flex-1"
+            >
+              {linking ? 'Открываем…' : 'Подключить'}
+            </Button>
+            <Button
+              variant="ghost"
+              font="normal"
+              type="button"
+              onClick={dismissForever}
+              className="min-h-11 text-sm text-text-dim"
+            >
+              Больше не напоминать
+            </Button>
+          </div>
+        </AlertDescription>
+      </Alert>
     </section>
   );
 }
