@@ -1,3 +1,4 @@
+import { SpeedInsights } from '@vercel/speed-insights/next';
 import type { Metadata, Viewport } from 'next';
 import { Inter, Press_Start_2P } from 'next/font/google';
 
@@ -54,7 +55,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     /* `dark` статичен: приложение живёт в тёмном углу опенспейса и светлой темы
        в MVP не имеет — класс нужен, чтобы работали dark:-варианты 8bitcn. */
     <html lang="ru" className={cn('dark', pixel.variable, ui.variable)}>
-      <body className="min-h-dvh antialiased">{children}</body>
+      <body className="min-h-dvh antialiased">
+        {children}
+        {/* Vercel Speed Insights: метрики Web Vitals с прода (наш бюджет — п. 8 ТЗ). */}
+        <SpeedInsights />
+      </body>
     </html>
   );
 }
