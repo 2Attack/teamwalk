@@ -10,6 +10,7 @@ import type {
   PeriodSelection,
   StatsDto,
   TeamProgressDto,
+  TelegramStatusDto,
   TreadmillDto,
   UserDto,
   UserStatsDto,
@@ -108,6 +109,13 @@ export function useHints(userId: string | null) {
 
 export function useUserStats(userId: string | null) {
   return useSWR<UserStatsDto>(userId ? `/api/users/${userId}/stats` : null, apiGet);
+}
+
+/** Статус Telegram участника — для карточки и панели-приглашения (п. 6.10.2). */
+export function useTelegramStatus(userId: string | null) {
+  return useSWR<TelegramStatusDto>(userId ? `/api/users/${userId}/telegram` : null, apiGet, {
+    revalidateOnFocus: true,
+  });
 }
 
 export function useTeamProgress() {

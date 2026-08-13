@@ -9,6 +9,7 @@ import { DialogShell } from '@/components/DialogShell';
 import { FinishWalkDialog } from '@/components/FinishWalkDialog';
 import { HintTicker } from '@/components/HintTicker';
 import { SpeedControl } from '@/components/SpeedControl';
+import { TelegramNudge } from '@/components/TelegramNudge';
 import { WalkSuccess } from '@/components/WalkSuccess';
 import { WalkTimer } from '@/components/WalkTimer';
 import { WalkerSprite } from '@/components/WalkerSprite';
@@ -257,6 +258,9 @@ export default function WalkPage({ params }: { params: Promise<{ id: string }> }
           disabled={mode !== 'none'}
         />
       </div>
+
+      {/* Приглашение привязать Telegram — через 3 минуты после старта (п. 6.10.2). */}
+      <TelegramNudge userId={walk.userId} startedAt={walk.startedAt} />
 
       {/* variant="walk": интервал 10 с и крупный шрифт — фразу читают с дорожки (п. 6.6.10). */}
       <HintTicker userId={walk.userId} variant="walk" />

@@ -1,3 +1,4 @@
+import { waitUntil } from '@vercel/functions';
 import { and, eq, sql } from 'drizzle-orm';
 import { NextResponse } from 'next/server';
 
@@ -10,6 +11,7 @@ import { awardAchievements } from '@/lib/game/achievements';
 import { getPersonalRecord, getTeamProgress } from '@/lib/game/progress';
 import { getStreak } from '@/lib/game/streak';
 import { ROUTE, positionOnRoute } from '@/lib/hints/route';
+import { notifyWalkFinished } from '@/lib/telegram/notify';
 import type { FinishWalkResultDto, TeamProgressDto, WalkDto } from '@/lib/types';
 import { finishWalkSchema, uuidSchema } from '@/lib/validation';
 
@@ -115,6 +117,13 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       return apiError(500, 'INTERNAL_ERROR', 'Прогулка сохранена, но её не удалось прочитать');
     }
 
-    return NextResponse.json(await buildResult(finished, previousRank));
+    const result = await buildResult(finished, previousRank);
+
+    // Telegram никогда не в горячем пути (п. 6.10.1): уведомление о финише —
+    // после ответа клиенту и только при свежем завершении; идемпотентные повторы
+    // POST выше сюда не доходят, дедупликацию по `finish:<walkId>` держит notify.
+    waitUntil(notifyWalkFinished(result));
+
+    return NextResponse.json(result);
   });
 }

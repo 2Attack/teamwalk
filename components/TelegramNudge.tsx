@@ -1,0 +1,208 @@
+'use client';
+
+import { useEffect, useRef, useState } from 'react';
+
+import { Button } from '@/components/ui/8bit/button';
+import { Icon } from '@/components/ui/icon';
+import { apiSend, useTelegramStatus } from '@/lib/client/api';
+import { TG_NUDGE_AFTER_SEC } from '@/lib/config';
+import type { TelegramLinkTokenDto } from '@/lib/types';
+
+interface TelegramNudgeProps {
+  userId: string;
+  /** ISO старта прогулки — от него отсчитываются 3 минуты до показа. */
+  startedAt: string;
+}
+
+/**
+ * Короткий 8-битный чирп при появлении панели (п. 6.10.2): две прямоугольные
+ * ноты, негромко, ~0.2 с. Синтез Web Audio API — без аудиофайлов и внешних
+ * запросов. Если AudioContext заблокирован или API нет — молчим без ошибок
+ * в консоли; из фоновой вкладки не звучим: сигнал оттуда пугает, а не приглашает.
+ */
+function playChirp(): void {
+  if (document.hidden) return;
+  try {
+    const Ctor: typeof AudioContext | undefined =
+      window.AudioContext ??
+      (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+    if (!Ctor) return;
+
+    const ctx = new Ctor();
+    const gain = ctx.createGain();
+    gain.gain.value = 0.04;
+    gain.connect(ctx.destination);
+
+    const note = (freqHz: number, atSec: number, durSec: number) => {
+      const osc = ctx.createOscillator();
+      osc.type = 'square';
+      osc.frequency.value = freqHz;
+      osc.connect(gain);
+      osc.start(ctx.currentTime + atSec);
+      osc.stop(ctx.currentTime + atSec + durSec);
+    };
+
+    note(660, 0, 0.09);
+    note(880, 0.09, 0.11);
+
+    // Контекст одноразовый: дожидаемся хвоста второй ноты и закрываем.
+    window.setTimeout(() => {
+      void ctx.close().catch(() => undefined);
+    }, 350);
+  } catch {
+    // Автоплей заблокирован или API урезан — панель работает и без звука.
+  }
+}
+
+/**
+ * Панель «Привяжи Telegram» на экране активной прогулки (п. 6.10.2).
+ *
+ * Показывается через `TG_NUDGE_AFTER_SEC` после старта и только когда сервер
+ * разрешил (`nudgeEligible`): лимиты показов, кулдаун и «не предлагать» живут
+ * в БД на участнике, клиент их не дублирует. «Позже» прячет панель только до
+ * конца прогулки — это локальный state, не счётчик.
+ */
+export function TelegramNudge({ userId, startedAt }: TelegramNudgeProps) {
+  const { data: status, mutate: mutateStatus } = useTelegramStatus(userId);
+
+  // Три минуты человек настраивает скорость и раскладывает ноутбук — не мешаем.
+  // Один setTimeout на остаток: если срок уже вышел (страницу перезагрузили
+  // посреди прогулки), показываем сразу.
+  const [ripe, setRipe] = useState(false);
+  useEffect(() => {
+    const remainingMs =
+      TG_NUDGE_AFTER_SEC * 1000 - (Date.now() - new Date(startedAt).getTime());
+    if (remainingMs <= 0) {
+      setRipe(true);
+      return;
+    }
+    const timer = window.setTimeout(() => setRipe(true), remainingMs);
+    return () => window.clearTimeout(timer);
+  }, [startedAt]);
+
+  const [hiddenLocally, setHiddenLocally] = useState(false);
+  const [linking, setLinking] = useState(false);
+  const [linkError, setLinkError] = useState<string | null>(null);
+  const [awaitingReturn, setAwaitingReturn] = useState(false);
+
+  const visible = ripe && !hiddenLocally && status?.nudgeEligible === true;
+
+  // Первое появление — ровно один раз за прогулку: чирп и счётчик показа.
+  // POST — именно счётчик, не функциональность: его ошибка панель не трогает.
+  const announcedRef = useRef(false);
+  useEffect(() => {
+    if (!visible || announcedRef.current) return;
+    announcedRef.current = true;
+    playChirp();
+    void apiSend<unknown>('POST', `/api/users/${userId}/telegram/nudge`, {
+      action: 'shown',
+    }).catch(() => undefined);
+  }, [visible, userId]);
+
+  // Человек ушёл в Telegram и вернулся — статус мог смениться на `linked`,
+  // тогда `nudgeEligible` станет false и панель исчезнет сама. Перечитываем
+  // по возвращении вкладки и страховочно через несколько секунд.
+  useEffect(() => {
+    if (!awaitingReturn) return;
+    const revalidate = () => void mutateStatus();
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') revalidate();
+    };
+    const timer = window.setTimeout(revalidate, 5_000);
+    document.addEventListener('visibilitychange', onVisible);
+    return () => {
+      window.clearTimeout(timer);
+      document.removeEventListener('visibilitychange', onVisible);
+    };
+  }, [awaitingReturn, mutateStatus]);
+
+  const openLink = async () => {
+    if (linking) return;
+    setLinking(true);
+    setLinkError(null);
+    try {
+      const dto = await apiSend<TelegramLinkTokenDto>(
+        'POST',
+        `/api/users/${userId}/telegram/link-token`,
+      );
+      window.open(dto.url, '_blank', 'noopener');
+      setAwaitingReturn(true);
+    } catch (error: unknown) {
+      setLinkError(
+        error instanceof Error && error.message
+          ? error.message
+          : 'Не вышло получить ссылку — проверьте связь и попробуйте ещё раз',
+      );
+    } finally {
+      setLinking(false);
+    }
+  };
+
+  const dismissForever = () => {
+    // Сначала прячем, потом сообщаем серверу: «не предлагать» должно сработать
+    // мгновенно, а счётчик догонит (его ошибка — не повод вернуть панель).
+    setHiddenLocally(true);
+    void apiSend<unknown>('POST', `/api/users/${userId}/telegram/nudge`, {
+      action: 'dismissed',
+    }).catch(() => undefined);
+  };
+
+  if (!visible) return null;
+
+  return (
+    <section
+      aria-label="Приглашение привязать Telegram"
+      // Появление — только transform/opacity и только под motion-safe:
+      // при prefers-reduced-motion панель просто появляется (звук остаётся,
+      // он не motion — п. 6.10.2).
+      className="pixel-panel flex flex-col gap-3 p-4 motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-2 motion-safe:duration-300"
+    >
+      <div className="flex items-center gap-2">
+        {/* Речевой пузырь из общего пиксельного набора — бот же пишет (п. 6.7.4). */}
+        <Icon name="hint" size={16} />
+        <h2 className="font-pixel text-[12px] leading-none text-citrus">TELEGRAM</h2>
+      </div>
+
+      {/* Текст читают — обычный sans (п. 6.7.1). */}
+      <p className="text-sm leading-relaxed text-text-main">
+        Бот пришлёт итог прогулки, ачивки и напомнит, когда дорожка заскучает.
+        Без спама — всё выключается.
+      </p>
+
+      {linkError !== null ? (
+        <p role="alert" className="text-sm text-citrus">
+          {linkError}
+        </p>
+      ) : null}
+
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+        <Button
+          type="button"
+          onClick={openLink}
+          disabled={linking}
+          className="min-h-11 w-full sm:flex-1"
+        >
+          {linking ? 'Открываем…' : 'Привязать Telegram'}
+        </Button>
+        <Button
+          variant="ghost"
+          font="normal"
+          type="button"
+          onClick={() => setHiddenLocally(true)}
+          className="min-h-11 w-full text-sm sm:w-auto"
+        >
+          Позже
+        </Button>
+        <Button
+          variant="ghost"
+          font="normal"
+          type="button"
+          onClick={dismissForever}
+          className="min-h-11 w-full text-sm text-text-dim sm:w-auto"
+        >
+          Не предлагать
+        </Button>
+      </div>
+    </section>
+  );
+}

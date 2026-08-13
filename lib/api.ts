@@ -13,6 +13,7 @@ export type ApiErrorCode =
   | 'SPEED_OUT_OF_RANGE'
   | 'WALK_NOT_ACTIVE'
   | 'DELETE_WINDOW_EXPIRED'
+  | 'TELEGRAM_DISABLED'
   | 'INTERNAL_ERROR';
 
 export interface ApiErrorBody {

@@ -116,6 +116,11 @@ export const periodSelectionSchema = z.union([
 ]);
 export type PeriodSelection = z.infer<typeof periodSelectionSchema>;
 
+/** Фиксация показа/отказа панели «Привяжи Telegram» (п. 6.10.2). */
+export const telegramNudgeSchema = z.object({
+  action: z.enum(['shown', 'dismissed']),
+});
+
 /** Ответ LLM с хинтами (п. 6.6.3). */
 export const hintToneSchema = z.enum(['praise', 'tease', 'neutral', 'tip']);
 

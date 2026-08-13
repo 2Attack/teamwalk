@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 
 import { type ApiErrorBody, handle, validationError } from '@/lib/api';
 import { getLeaderboard } from '@/lib/db/queries/leaderboard';
+import { ensureNotifySweep } from '@/lib/telegram/sweep';
 import type { LeaderboardDto } from '@/lib/types';
 import { closeStaleWalks } from '@/lib/walks/autoclose';
 import { periodSelectionSchema } from '@/lib/validation';
@@ -15,6 +16,11 @@ export const dynamic = 'force-dynamic';
  */
 export async function GET(request: Request) {
   return handle<LeaderboardDto | ApiErrorBody>(async () => {
+    // Ленивый фолбэк cron-рассылки (п. 6.10.5): если Vercel Cron не сработал,
+    // обход запускается при обращении к API — не чаще раза в час, под мьютексом
+    // `notify_meta`; сам уходит в waitUntil, ответ не задерживает.
+    ensureNotifySweep();
+
     const params = new URL(request.url).searchParams;
     const parsed = periodSelectionSchema.safeParse({
       period: params.get('period') ?? undefined,

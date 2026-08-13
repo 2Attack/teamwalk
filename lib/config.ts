@@ -52,5 +52,35 @@ export const HINTS_NEWCOMER_DAYS = 3;
 /** Стартовый город виртуального маршрута (п. 6.6.8). */
 export const ROUTE_HOME_CITY = 'Ярославль';
 
+/**
+ * Telegram-уведомления (п. 6.10). Без токена подсистема выключена целиком:
+ * бот молчит, панель привязки не показывается — деградация той же формы,
+ * что у LLM-ключей. На клиенте env-переменных нет, поэтому клиент узнаёт
+ * состояние через `GET /api/users/:id/telegram`, а не из этой константы.
+ */
+export const TELEGRAM_ENABLED =
+  process.env.TELEGRAM_ENABLED !== 'false' && Boolean(process.env.TELEGRAM_BOT_TOKEN);
+
+/** TTL одноразового токена привязки (п. 6.10.3). */
+export const TG_LINK_TOKEN_TTL_MINUTES = 15;
+
+/** Панель «Привяжи Telegram» на экране прогулки (п. 6.10.2). */
+export const TG_NUDGE_AFTER_SEC = 180;
+export const TG_NUDGE_COOLDOWN_DAYS = 3;
+export const TG_NUDGE_MAX_SHOWS = 5;
+
+/** Напоминания «пора размяться» (п. 6.10.4): все интервалы — в рабочих днях. */
+export const REMIND_IDLE_WORKDAYS = 2;
+export const REMIND_COOLDOWN_WORKDAYS = 3;
+/** После стольких напоминаний подряд без прогулки частота падает до раза в неделю. */
+export const REMIND_BACKOFF_AFTER = 3;
+export const REMIND_BACKOFF_COOLDOWN_WORKDAYS = 5;
+/** После стольких — молчание до следующей завершённой прогулки. */
+export const REMIND_SILENCE_AFTER = 6;
+
+/** Окно отправки напоминаний и дайджеста: рабочие дни, [11:00, 17:00) МСК. */
+export const NOTIFY_WINDOW_START_HOUR = 11;
+export const NOTIFY_WINDOW_END_HOUR = 17;
+
 /** Ключ в localStorage для последнего выбранного участника (п. 6.2). */
 export const LAST_USER_STORAGE_KEY = 'citruswalk:lastUserId';

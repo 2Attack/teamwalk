@@ -1,5 +1,6 @@
 import { sql } from 'drizzle-orm';
 import {
+  bigint,
   boolean,
   date,
   index,
@@ -25,6 +26,11 @@ export const users = pgTable(
     avatarId: text('avatar_id').notNull(),
     hintsOptOut: boolean('hints_opt_out').notNull().default(false),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    /** Панель «Привяжи Telegram» на экране прогулки (п. 6.10.2): счётчики в БД,
+     * а не в localStorage, — отказ должен действовать с любого устройства. */
+    tgNudgeCount: smallint('tg_nudge_count').notNull().default(0),
+    tgNudgeLastAt: timestamp('tg_nudge_last_at', { withTimezone: true }),
+    tgNudgeDismissed: boolean('tg_nudge_dismissed').notNull().default(false),
   },
   (t) => [
     uniqueIndex('users_name_uniq').on(
@@ -144,9 +150,67 @@ export const hintsMeta = pgTable('hints_meta', {
   lockedUntil: timestamp('locked_until', { withTimezone: true }).notNull().defaultNow(),
 });
 
+/** Привязка Telegram и настройки уведомлений (п. 6.10.6). */
+export const telegramLinks = pgTable('telegram_links', {
+  userId: uuid('user_id')
+    .primaryKey()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  /** Один чат — один участник. */
+  chatId: bigint('chat_id', { mode: 'number' }).notNull().unique(),
+  linkedAt: timestamp('linked_at', { withTimezone: true }).notNull().defaultNow(),
+  /** `/mute`; null — не заглушено. */
+  mutedUntil: timestamp('muted_until', { withTimezone: true }),
+  notifyStart: boolean('notify_start').notNull().default(true),
+  notifyFinish: boolean('notify_finish').notNull().default(true),
+  notifyRemind: boolean('notify_remind').notNull().default(true),
+  notifyDigest: boolean('notify_digest').notNull().default(true),
+  attachHints: boolean('attach_hints').notNull().default(true),
+});
+
+/** Одноразовые токены deep link'а привязки (п. 6.10.3). */
+export const telegramLinkTokens = pgTable('telegram_link_tokens', {
+  token: text('token').primaryKey(),
+  userId: uuid('user_id')
+    .notNull()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+  usedAt: timestamp('used_at', { withTimezone: true }),
+});
+
+/** Идемпотентность webhook: Telegram ретраит недоставленные апдейты. */
+export const telegramUpdates = pgTable('telegram_updates', {
+  updateId: bigint('update_id', { mode: 'number' }).primaryKey(),
+  receivedAt: timestamp('received_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+/** Журнал отправок: дедупликация и вся логика частоты напоминаний (п. 6.10.5). */
+export const notificationLog = pgTable(
+  'notification_log',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    kind: text('kind').notNull(),
+    dedupKey: text('dedup_key').notNull(),
+    sentAt: timestamp('sent_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex('notification_log_dedup_uniq').on(t.dedupKey),
+    index('notification_log_user_kind_idx').on(t.userId, t.kind, t.sentAt.desc()),
+  ],
+);
+
+/** Мьютекс ленивого фолбэка рассылки — копия `hints_meta` (п. 6.10.5). */
+export const notifyMeta = pgTable('notify_meta', {
+  id: boolean('id').primaryKey().default(true),
+  lockedUntil: timestamp('locked_until', { withTimezone: true }).notNull().defaultNow(),
+});
+
 export type User = typeof users.$inferSelect;
 export type Treadmill = typeof treadmills.$inferSelect;
 export type Walk = typeof walks.$inferSelect;
 export type WalkSpeedSegment = typeof walkSpeedSegments.$inferSelect;
 export type Achievement = typeof achievements.$inferSelect;
 export type HintRow = typeof hintsCache.$inferSelect;
+export type TelegramLink = typeof telegramLinks.$inferSelect;

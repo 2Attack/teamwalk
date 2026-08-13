@@ -1,8 +1,10 @@
+import { waitUntil } from '@vercel/functions';
 import { and, eq, lt, sql } from 'drizzle-orm';
 
 import { STALE_WALK_HOURS } from '@/lib/config';
 import { db } from '@/lib/db';
 import { walks } from '@/lib/db/schema';
+import { notifyAutoClosed } from '@/lib/telegram/notify';
 
 /**
  * Автозакрытие зависших прогулок (п. 7.6): человек забыл нажать «End walk».
@@ -29,10 +31,14 @@ export async function closeStaleWalks(): Promise<number> {
       durationSec: sql`greatest(0, extract(epoch from (now() - ${walks.startedAt}))::int)`,
     })
     .where(and(eq(walks.status, 'active'), lt(walks.startedAt, sql`now() - ${staleInterval}`)))
-    .returning({ id: walks.id });
+    .returning({ id: walks.id, userId: walks.userId });
 
   if (closed.length > 0) {
     console.warn('[walks] autoclosed stale walks', { count: closed.length });
+
+    // Уведомление в Telegram (п. 6.10.4): иначе человек узнаёт об автозакрытии
+    // через неделю из рейтинга. Вне горячего пути, дедупликация — внутри notify.
+    waitUntil(notifyAutoClosed(closed.map((r) => ({ walkId: r.id, userId: r.userId }))));
   }
 
   return closed.length;

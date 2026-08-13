@@ -57,6 +57,30 @@ export function isWeekend(day: string): boolean {
   return wd === 0 || wd === 6;
 }
 
+const hourFormatter = new Intl.DateTimeFormat('en-GB', {
+  timeZone: TZ,
+  hour: '2-digit',
+  hourCycle: 'h23',
+});
+
+/** Час суток (0–23) в офисном поясе — окно отправки уведомлений (п. 6.10.5). */
+export function officeHour(date: Date = new Date()): number {
+  return Number(hourFormatter.format(date));
+}
+
+/**
+ * Число рабочих дней в интервале офисных дат `(from; to]` — правая граница
+ * включается, левая нет. На этом полуинтервале держатся все частоты
+ * напоминаний (п. 6.10.4): «прошло N рабочих дней с события X».
+ */
+export function workdaysSince(from: string, to: string): number {
+  let count = 0;
+  for (let day = addOfficeDays(from, 1); day <= to; day = addOfficeDays(day, 1)) {
+    if (!isWeekend(day)) count += 1;
+  }
+  return count;
+}
+
 /** Предыдущий рабочий день перед указанным. */
 export function prevWorkday(day: string): string {
   let cur = addOfficeDays(day, -1);

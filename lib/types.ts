@@ -13,6 +13,22 @@ export interface UserDto {
   hintsOptOut: boolean;
 }
 
+/** Статус Telegram для карточки и панели-приглашения (п. 6.10.2). */
+export interface TelegramStatusDto {
+  /** Подсистема включена на сервере (есть токен бота и рубильник не опущен). */
+  enabled: boolean;
+  linked: boolean;
+  /** Панель можно показывать: не привязан, не отказался, лимиты показов не выбраны. */
+  nudgeEligible: boolean;
+}
+
+/** Ответ `POST /api/users/:id/telegram/link-token` (п. 6.10.3). */
+export interface TelegramLinkTokenDto {
+  /** `https://t.me/<бот>?start=<токен>` */
+  url: string;
+  expiresAt: string;
+}
+
 /** Кто сейчас занимает дорожку. `null` — свободна. */
 export interface TreadmillBusyDto {
   walkId: string;

@@ -1,3 +1,4 @@
+import { waitUntil } from '@vercel/functions';
 import { NextResponse } from 'next/server';
 
 import {
@@ -12,6 +13,8 @@ import { db } from '@/lib/db';
 import { getActiveWalk, getTreadmillById, listActiveTreadmills } from '@/lib/db/queries/walks';
 import { walks } from '@/lib/db/schema';
 import { formatTimeOfDay } from '@/lib/format';
+import { notifyWalkStarted } from '@/lib/telegram/notify';
+import { ensureNotifySweep } from '@/lib/telegram/sweep';
 import type { ActiveWalkDto, TreadmillDto } from '@/lib/types';
 import { startWalkSchema } from '@/lib/validation';
 import { closeStaleWalks } from '@/lib/walks/autoclose';
@@ -109,6 +112,10 @@ export async function POST(request: Request) {
   const { userId, speedKmh, treadmillId } = parsed.data;
 
   return handle<ActiveWalkDto | ApiErrorBody>(async () => {
+    // Ленивый фолбэк cron-рассылки (п. 6.10.5) — вторая точка после лидерборда:
+    // старт прогулки случается и в дни, когда рейтинг никто не открывал.
+    ensureNotifySweep();
+
     // Забытые прогулки освобождают дорожки до выбора (п. 7.6).
     await closeStaleWalks();
 
@@ -175,6 +182,10 @@ export async function POST(request: Request) {
     if (!walk) {
       return apiError(500, 'INTERNAL_ERROR', 'Прогулка создана, но её не удалось прочитать');
     }
+
+    // Telegram никогда не в горячем пути (п. 6.10.1): уведомление о старте —
+    // после ответа клиенту; идемпотентность и «Это не я» — внутри notify.
+    waitUntil(notifyWalkStarted(walk));
 
     return NextResponse.json(walk, { status: 201 });
   });
