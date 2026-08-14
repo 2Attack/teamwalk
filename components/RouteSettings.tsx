@@ -30,8 +30,8 @@ import type { RouteAdminDto } from '@/lib/types';
 
 /**
  * "Team route" settings section (spec § 6.12.3): the catalog table with icon
- * actions. Activation and deletion are only offered where they are legal —
- * the ROUTE_ACTIVE errors stay reachable through the API alone.
+ * actions. Any route can be deleted, the active one included — the dialog
+ * warns that home will switch to the "no route selected" state.
  */
 export function RouteSettings() {
   const { data, error, isLoading, mutate: reload } = useRoutesAdmin();
@@ -175,31 +175,31 @@ function RouteRow({ route, onEdit, onActivate, onDelete }: RouteRowProps) {
             <Icon name="edit" size={16} />
           </Button>
           {!route.isActive && (
-            <>
-              <Button
-                type="button"
-                variant="secondary"
-                size="icon"
-                className="size-11"
-                aria-label={`Выбрать маршрут «${route.name}»`}
-                title="Выбрать"
-                onClick={onActivate}
-              >
-                <Icon name="play" size={16} />
-              </Button>
-              <Button
-                type="button"
-                variant="destructive"
-                size="icon"
-                className="size-11"
-                aria-label={`Удалить маршрут «${route.name}»`}
-                title="Удалить"
-                onClick={onDelete}
-              >
-                <Icon name="trash" size={16} />
-              </Button>
-            </>
+            <Button
+              type="button"
+              variant="secondary"
+              size="icon"
+              className="size-11"
+              aria-label={`Выбрать маршрут «${route.name}»`}
+              title="Выбрать"
+              onClick={onActivate}
+            >
+              <Icon name="play" size={16} />
+            </Button>
           )}
+          {/* Deletion is allowed for the active route too (spec § 6.12.2):
+              routes are optional, the dialog carries the extra warning. */}
+          <Button
+            type="button"
+            variant="destructive"
+            size="icon"
+            className="size-11"
+            aria-label={`Удалить маршрут «${route.name}»`}
+            title="Удалить"
+            onClick={onDelete}
+          >
+            <Icon name="trash" size={16} />
+          </Button>
         </span>
       </TableCell>
     </TableRow>
@@ -358,7 +358,15 @@ function DeleteRouteDialog({ route, onClose }: DeleteRouteDialogProps) {
           </DialogDescription>
         </DialogHeader>
 
-        <DialogBody className="space-y-4">{error && <ActionError text={error} />}</DialogBody>
+        <DialogBody className="space-y-4">
+          {route.isActive && (
+            <p className="text-sm text-text-dim">
+              Это активный маршрут: после удаления главная покажет «маршрут не выбран»,
+              пока вы не выберете другой.
+            </p>
+          )}
+          {error && <ActionError text={error} />}
+        </DialogBody>
 
         <DialogFooter className="gap-3">
           <Button

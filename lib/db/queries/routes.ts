@@ -219,27 +219,16 @@ export async function activateRoute(
   return getRouteAdmin(id);
 }
 
-export type DeleteRouteResult = 'deleted' | 'not_found' | 'active';
-
 /**
- * Deletes a non-active route (spec § 6.12.2). The active guard shares the
- * statement with the delete itself, so the check cannot race the deletion.
- * There is no "last route" guard: routes are optional (spec § 6.12.6).
+ * Deletes a route, the active one included (spec § 6.12.2): routes are
+ * optional (spec § 6.12.6), so deleting the active route just puts the home
+ * screen into the "no route selected" state. The UI warns before doing it.
+ * Returns false when the route does not exist.
  */
-export async function deleteRoute(id: string): Promise<DeleteRouteResult> {
-  const rows = await sqlClient.query(
-    `delete from routes
-     where id = $1 and not is_active
-     returning id`,
-    [id],
-  );
-  if ((rows as unknown[]).length > 0) return 'deleted';
-
-  const current = await db
-    .select({ isActive: routes.isActive })
-    .from(routes)
+export async function deleteRoute(id: string): Promise<boolean> {
+  const rows = await db
+    .delete(routes)
     .where(eq(routes.id, id))
-    .limit(1);
-  if (!current[0]) return 'not_found';
-  return 'active';
+    .returning({ id: routes.id });
+  return rows.length > 0;
 }

@@ -100,7 +100,7 @@ export async function listRoutesAdmin(): Promise<RouteAdminDto[]>;
 export async function createRoute(input: { name: string; points: RouteCityDto[] }): Promise<RouteAdminDto>;
 export async function updateRoute(id: string, patch: { name?: string; points?: RouteCityDto[] }): Promise<RouteAdminDto | null>;
 export async function activateRoute(id: string, resetProgress: boolean): Promise<RouteAdminDto | null>;
-export async function deleteRoute(id: string): Promise<'deleted' | 'not_found' | 'active'>;
+export async function deleteRoute(id: string): Promise<boolean>;
 
 // lib/routes/generate.ts — владелец: SETTINGS (п. 6.12.4 ТЗ)
 export async function generateRouteDraft(prompt: string, cities?: string[]): Promise<RouteDraftDto | null>;

@@ -32,16 +32,16 @@ export function PATCH(request: Request, context: RouteContext) {
 }
 
 /**
- * DELETE /api/routes/:id — non-active routes only (spec § 6.12.2). Routes are
- * optional (spec § 6.12.6), so there is no "last route" protection.
+ * DELETE /api/routes/:id — any route, the active one included (spec § 6.12.2):
+ * routes are optional (spec § 6.12.6), deleting the active route just yields
+ * the "no route selected" state. The confirmation lives in the UI.
  */
 export function DELETE(_request: Request, context: RouteContext) {
   return handle<{ ok: boolean } | ApiErrorBody>(async () => {
     const id = uuidSchema.parse((await context.params).id);
 
-    const result = await deleteRoute(id);
-    if (result === 'deleted') return NextResponse.json({ ok: true });
-    if (result === 'not_found') return apiError(404, 'NOT_FOUND', 'Маршрут не найден');
-    return apiError(409, 'ROUTE_ACTIVE', 'Активный маршрут удалить нельзя — сначала выберите другой');
+    const deleted = await deleteRoute(id);
+    if (!deleted) return apiError(404, 'NOT_FOUND', 'Маршрут не найден');
+    return NextResponse.json({ ok: true });
   });
 }
