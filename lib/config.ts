@@ -29,30 +29,10 @@ export const ROUTE_POINTS_MAX = 20;
 export const ROUTE_POINT_KM_MAX = 100_000;
 
 /**
- * Pixel map grid and post-filter caps (spec § 6.12.5). The grid is integer;
- * everything the LLM returns is clamped and validated against these.
- */
-export const MAP_GRID_W = 96;
-export const MAP_GRID_H = 48;
-export const MAP_DECOR_MAX = 30;
-export const MAP_BENDS_PER_SEGMENT_MAX = 3;
-
-/**
  * Route generation is the only place where the user consciously waits for the
  * LLM (spec § 6.12.4) — same margin reasoning as HINTS_LLM_TIMEOUT_MS.
  */
 export const ROUTE_LLM_TIMEOUT_MS = 45_000;
-
-/**
- * Map background image (spec § 6.12.5): the model is env-tunable like the
- * text one; the output is normalized to a fixed 2:1 geometry so the SVG
- * overlay and the picture always share one coordinate system.
- */
-export const AI_GATEWAY_IMAGE_MODEL =
-  process.env.AI_GATEWAY_IMAGE_MODEL ?? 'google/gemini-3.1-flash-image-preview';
-export const MAP_IMAGE_WIDTH = 768;
-export const MAP_IMAGE_HEIGHT = 384;
-export const MAP_IMAGE_TIMEOUT_MS = 90_000;
 
 /** Default speed for a new participant (spec § 6.2). */
 export const DEFAULT_SPEED_KMH = 4;

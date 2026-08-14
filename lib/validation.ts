@@ -2,10 +2,6 @@ import { z } from 'zod';
 
 import { AVATAR_IDS } from './avatars';
 import {
-  MAP_BENDS_PER_SEGMENT_MAX,
-  MAP_DECOR_MAX,
-  MAP_GRID_H,
-  MAP_GRID_W,
   MAX_DISTANCE_KM,
   MAX_SPEED_KMH_ABS,
   MIN_DISTANCE_KM,
@@ -173,32 +169,6 @@ export const generateRouteSchema = z.object({
       message: 'Опишите маршрут (от 3 до 300 символов)',
     }),
   cities: z.array(treadmillNameSchema).max(ROUTE_POINTS_MAX).optional(),
-});
-
-/**
- * Pixel-map layout (spec § 6.12.5) — validates both LLM output and stored
- * jsonb. Coordinate bounds match the MAP_GRID_W × MAP_GRID_H grid; caps keep a
- * hallucinating model from flooding the map.
- */
-const mapCoord = (max: number) => z.number().int().min(0).max(max);
-
-export const mapLayoutSchema = z.object({
-  cities: z
-    .array(z.object({ city: z.string().min(1).max(60), x: mapCoord(MAP_GRID_W), y: mapCoord(MAP_GRID_H) }))
-    .min(ROUTE_POINTS_MIN)
-    .max(ROUTE_POINTS_MAX),
-  bends: z
-    .array(z.object({ after: z.string().min(1).max(60), x: mapCoord(MAP_GRID_W), y: mapCoord(MAP_GRID_H) }))
-    .max(ROUTE_POINTS_MAX * MAP_BENDS_PER_SEGMENT_MAX),
-  decor: z
-    .array(
-      z.object({
-        kind: z.enum(['tree', 'mountain', 'lake', 'house', 'anchor']),
-        x: mapCoord(MAP_GRID_W),
-        y: mapCoord(MAP_GRID_H),
-      }),
-    )
-    .max(MAP_DECOR_MAX),
 });
 
 /** Distance: 0.01–50.00, step 0.01. Dot and comma are both accepted at the UI level. */

@@ -3,8 +3,7 @@ import { and, asc, desc, eq, inArray, ne, sql } from 'drizzle-orm';
 import { db, sqlClient } from '@/lib/db';
 import { routePoints, routes, walks } from '@/lib/db/schema';
 import { ROUTE, positionOnRoute } from '@/lib/hints/route';
-import type { MapLayoutDto, RouteAdminDto, RouteCityDto } from '@/lib/types';
-import { mapLayoutSchema } from '@/lib/validation';
+import type { RouteAdminDto, RouteCityDto } from '@/lib/types';
 
 /**
  * SETTINGS-zone queries: team route catalog (spec § 6.12).
@@ -20,16 +19,6 @@ export interface ActiveRoute {
   id: string | null;
   points: RouteCityDto[];
   baseKm: number;
-  mapLayout: MapLayoutDto | null;
-  /** Cache-busting version of the background image; null — no image stored. */
-  mapImageVersion: string | null;
-}
-
-/** Stored jsonb passes the same schema as LLM output; junk degrades to null. */
-function parseLayout(raw: unknown): MapLayoutDto | null {
-  if (!raw) return null;
-  const parsed = mapLayoutSchema.safeParse(raw);
-  return parsed.success ? parsed.data : null;
 }
 
 async function loadPoints(routeIds: string[]): Promise<Map<string, RouteCityDto[]>> {
@@ -70,19 +59,10 @@ export async function getActiveRoute(): Promise<ActiveRoute> {
     id: null,
     points: ROUTE.map((c) => ({ ...c })),
     baseKm: 0,
-    mapLayout: null,
-    mapImageVersion: null,
   };
 
   const rows = await db
-    .select({
-      id: routes.id,
-      baseKm: routes.baseKm,
-      mapLayout: routes.mapLayout,
-      // Presence only — the blob itself is served by a dedicated endpoint.
-      hasImage: sql<boolean>`${routes.mapImage} is not null`,
-      mapImageGeneratedAt: routes.mapImageGeneratedAt,
-    })
+    .select({ id: routes.id, baseKm: routes.baseKm })
     .from(routes)
     .where(eq(routes.isActive, true))
     .limit(1);
@@ -95,14 +75,7 @@ export async function getActiveRoute(): Promise<ActiveRoute> {
   // treated the same as no route at all.
   if (points.length < 2) return fallback;
 
-  return {
-    id: row.id,
-    points,
-    baseKm: Number(row.baseKm),
-    mapLayout: parseLayout(row.mapLayout),
-    mapImageVersion:
-      row.hasImage && row.mapImageGeneratedAt ? String(row.mapImageGeneratedAt.getTime()) : null,
-  };
+  return { id: row.id, points, baseKm: Number(row.baseKm) };
 }
 
 /** All routes for the settings list, active first, then by name. */
@@ -113,8 +86,6 @@ export async function listRoutesAdmin(): Promise<RouteAdminDto[]> {
       name: routes.name,
       baseKm: routes.baseKm,
       isActive: routes.isActive,
-      mapLayout: routes.mapLayout,
-      hasImage: sql<boolean>`${routes.mapImage} is not null`,
     })
     .from(routes)
     .orderBy(desc(routes.isActive), asc(routes.name));
@@ -136,8 +107,6 @@ export async function listRoutesAdmin(): Promise<RouteAdminDto[]> {
       baseKm: Number(row.baseKm),
       isActive: row.isActive,
       points,
-      hasMapLayout: parseLayout(row.mapLayout) !== null,
-      hasMapImage: row.hasImage,
       progress,
     };
   });
@@ -178,8 +147,7 @@ export async function createRoute(input: {
 /**
  * Partial update. Points are replaced wholesale in one statement (spec
  * § 6.12.2) — delete + insert inside a single CTE, atomic without a
- * transaction. Editing points invalidates the stored map layout AND the
- * background image: neither may show cities the route no longer has.
+ * transaction.
  */
 export async function updateRoute(
   id: string,
@@ -197,11 +165,7 @@ export async function updateRoute(
   if (patch.points !== undefined) {
     const rows = await sqlClient.query(
       `with target as (
-         update routes
-         set map_layout = null, map_generated_at = null,
-             map_image = null, map_image_generated_at = null
-         where id = $1
-         returning id
+         select id from routes where id = $1
        ), del as (
          delete from route_points where route_id in (select id from target)
        )
@@ -215,37 +179,6 @@ export async function updateRoute(
   }
 
   return getRouteAdmin(id);
-}
-
-/** Persist a freshly generated (and already validated) map layout. */
-export async function saveMapLayout(id: string, layout: MapLayoutDto): Promise<boolean> {
-  const rows = await db
-    .update(routes)
-    .set({ mapLayout: layout, mapGeneratedAt: new Date() })
-    .where(eq(routes.id, id))
-    .returning({ id: routes.id });
-  return rows.length > 0;
-}
-
-/** Persist the generated map background (spec § 6.12.5). */
-export async function saveMapImage(id: string, png: Buffer): Promise<boolean> {
-  const rows = await db
-    .update(routes)
-    .set({ mapImage: png.toString('base64'), mapImageGeneratedAt: new Date() })
-    .where(eq(routes.id, id))
-    .returning({ id: routes.id });
-  return rows.length > 0;
-}
-
-/** The stored background PNG — for the binary image endpoint. */
-export async function getRouteImage(id: string): Promise<Buffer | null> {
-  const rows = await db
-    .select({ mapImage: routes.mapImage })
-    .from(routes)
-    .where(eq(routes.id, id))
-    .limit(1);
-  const image = rows[0]?.mapImage;
-  return image ? Buffer.from(image, 'base64') : null;
 }
 
 /**

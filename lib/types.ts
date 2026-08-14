@@ -185,21 +185,6 @@ export interface RouteCityDto {
   km: number;
 }
 
-/** Decor glyph kinds of the pixel map — a fixed catalog (spec § 6.12.5). */
-export type MapDecorKind = 'tree' | 'mountain' | 'lake' | 'house' | 'anchor';
-
-/**
- * Pixel-map layout (spec § 6.12.5): integer coordinates on the MAP_GRID_W ×
- * MAP_GRID_H grid. Produced by the LLM (validated + normalized) or, when
- * absent, built deterministically by `fallbackLayout`.
- */
-export interface MapLayoutDto {
-  cities: Array<{ city: string; x: number; y: number }>;
-  /** Optional trail bends between a city and the next one. */
-  bends: Array<{ after: string; x: number; y: number }>;
-  decor: Array<{ kind: MapDecorKind; x: number; y: number }>;
-}
-
 /** A route row on the settings screen (spec § 6.12.3). */
 export interface RouteAdminDto {
   id: string;
@@ -207,9 +192,6 @@ export interface RouteAdminDto {
   baseKm: number;
   isActive: boolean;
   points: RouteCityDto[];
-  hasMapLayout: boolean;
-  /** A generated background picture is stored (spec § 6.12.5). */
-  hasMapImage: boolean;
   /** Present only on the active route: km walked on it and what is next. */
   progress: { walkedKm: number; nextCity: string | null; kmLeft: number } | null;
 }
@@ -241,14 +223,6 @@ export interface TeamProgressDto {
   /** Fraction of the way between `passed` and `next`, 0…1 — progress bar width. */
   progressRatio: number;
   route: RouteCityDto[];
-  /** Pixel-map layout of the active route, null → deterministic fallback (spec § 6.12.5). */
-  mapLayout: MapLayoutDto | null;
-  /**
-   * Versioned URL of the map background (`GET /api/routes/:id/image?v=…`),
-   * null → the SVG-only map. Only the URL travels here: the progress endpoint
-   * is polled and must not carry the image itself (spec § 6.12.5).
-   */
-  mapImageUrl: string | null;
 }
 
 export interface UserStatsDto {

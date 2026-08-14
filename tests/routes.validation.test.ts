@@ -5,7 +5,6 @@ import {
   activateRouteSchema,
   createRouteSchema,
   generateRouteSchema,
-  mapLayoutSchema,
   patchRouteSchema,
   routePointsSchema,
 } from '@/lib/validation';
@@ -89,33 +88,6 @@ describe('create/patch/activate schemas', () => {
   it('generateRouteSchema trims and bounds the prompt', () => {
     expect(generateRouteSchema.safeParse({ prompt: '  до Токио  ' }).success).toBe(true);
     expect(generateRouteSchema.safeParse({ prompt: 'аб' }).success).toBe(false);
-  });
-});
-
-describe('mapLayoutSchema', () => {
-  const layout = {
-    cities: [
-      { city: 'Ярославль', x: 4, y: 8 },
-      { city: 'Москва', x: 30, y: 20 },
-    ],
-    bends: [{ after: 'Ярославль', x: 16, y: 12 }],
-    decor: [{ kind: 'tree', x: 10, y: 30 }],
-  };
-
-  it('accepts a sane layout', () => {
-    expect(mapLayoutSchema.safeParse(layout).success).toBe(true);
-  });
-
-  it('rejects out-of-grid coordinates and unknown decor kinds', () => {
-    expect(
-      mapLayoutSchema.safeParse({ ...layout, decor: [{ kind: 'dragon', x: 1, y: 1 }] }).success,
-    ).toBe(false);
-    expect(
-      mapLayoutSchema.safeParse({
-        ...layout,
-        cities: [{ city: 'Ярославль', x: 999, y: 0 }, layout.cities[1]],
-      }).success,
-    ).toBe(false);
   });
 });
 

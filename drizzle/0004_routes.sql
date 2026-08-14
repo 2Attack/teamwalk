@@ -6,10 +6,6 @@ create table if not exists routes (
   -- Start mark: position on the route = teamTotalKm - base_km (spec § 6.12.1).
   base_km    numeric(8,2) not null default 0,
   is_active  boolean not null default false,
-  -- Pixel map layout (spec § 6.12.5): JSON from the LLM, or null — then the
-  -- renderer builds a deterministic layout itself.
-  map_layout jsonb,
-  map_generated_at timestamptz,
   created_at timestamptz not null default now()
 );
 

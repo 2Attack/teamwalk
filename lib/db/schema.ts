@@ -5,7 +5,6 @@ import {
   date,
   index,
   integer,
-  jsonb,
   numeric,
   pgEnum,
   pgTable,
@@ -48,12 +47,6 @@ export const routes = pgTable(
     /** Start mark: position on the route = teamTotalKm − base_km (spec § 6.12.1). */
     baseKm: numeric('base_km', { precision: 8, scale: 2 }).notNull().default('0'),
     isActive: boolean('is_active').notNull().default(false),
-    /** Pixel map layout (spec § 6.12.5); null — deterministic layout is used. */
-    mapLayout: jsonb('map_layout'),
-    mapGeneratedAt: timestamp('map_generated_at', { withTimezone: true }),
-    /** Map background (spec § 6.12.5): base64 PNG from the image model, or null. */
-    mapImage: text('map_image'),
-    mapImageGeneratedAt: timestamp('map_image_generated_at', { withTimezone: true }),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [

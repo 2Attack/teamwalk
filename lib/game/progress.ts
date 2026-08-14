@@ -48,11 +48,6 @@ export async function getTeamProgress(): Promise<TeamProgressDto> {
     kmLeft: position.kmLeft,
     progressRatio: position.progressRatio,
     route: activeRoute.points,
-    mapLayout: activeRoute.mapLayout,
-    mapImageUrl:
-      activeRoute.id && activeRoute.mapImageVersion
-        ? `/api/routes/${activeRoute.id}/image?v=${activeRoute.mapImageVersion}`
-        : null,
   };
 }
 

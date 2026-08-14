@@ -1,20 +1,16 @@
-import { waitUntil } from '@vercel/functions';
 import { generateObject } from 'ai';
 import { z } from 'zod';
 
-import { MAP_GRID_H, MAP_GRID_W, ROUTE_LLM_TIMEOUT_MS, ROUTE_POINTS_MAX } from '@/lib/config';
-import { saveMapImage, saveMapLayout } from '@/lib/db/queries/routes';
-import { GATEWAY_MODEL, llmEnabled } from '@/lib/hints/providers';
-import { fallbackLayout, normalizeLayout } from '@/lib/map/layout';
-import { generateMapImage } from '@/lib/routes/map-image';
-import type { MapLayoutDto, RouteCityDto, RouteDraftDto } from '@/lib/types';
-import { mapLayoutSchema, routePointsSchema, treadmillNameSchema } from '@/lib/validation';
+import { ROUTE_LLM_TIMEOUT_MS, ROUTE_POINTS_MAX } from '@/lib/config';
+import { GATEWAY_MODEL } from '@/lib/hints/providers';
+import type { RouteCityDto, RouteDraftDto } from '@/lib/types';
+import { routePointsSchema, treadmillNameSchema } from '@/lib/validation';
 
 /**
- * LLM helpers of the route feature (spec § 6.12.4, 6.12.5). Both return null
- * on any failure — the callers degrade: the editor stays manual, the map
- * falls back to the deterministic layout. The model's output never reaches
- * the DB or the UI without passing the same Zod validation as manual input.
+ * LLM helper of the route feature (spec § 6.12.4). Returns null on any
+ * failure — the caller degrades and the editor stays manual. The model's
+ * output never reaches the DB or the UI without passing the same Zod
+ * validation as manual input.
  */
 
 /** Loose response shape for the draft; the strict rules run after normalization. */
@@ -95,93 +91,6 @@ export async function generateRouteDraft(
     return { name: name.data, points: points.data };
   } catch (error) {
     console.warn('[routes] llm draft fail', {
-      model: GATEWAY_MODEL,
-      latencyMs: Date.now() - startedAt,
-      error: error instanceof Error ? error.message : String(error),
-    });
-    return null;
-  }
-}
-
-/**
- * Full map art pipeline (spec § 6.12.5): layout first, then the background
- * image drawn from a sketch of that layout (or of the deterministic one when
- * the layout call fails). Each stage saves what it produced — a partial
- * success still improves the map one degradation step.
- */
-export async function generateMapArt(
-  routeId: string,
-  points: RouteCityDto[],
-): Promise<'image' | 'layout' | 'none'> {
-  const layout = await generateMapLayout(points);
-  if (layout) await saveMapLayout(routeId, layout);
-
-  const image = await generateMapImage(points, layout ?? fallbackLayout(points));
-  if (image) await saveMapImage(routeId, image);
-
-  return image ? 'image' : layout ? 'layout' : 'none';
-}
-
-/**
- * Background map generation after a route save (spec § 6.12.5): runs via
- * waitUntil after the response, never in the hot path, never throws. Without
- * LLM credentials it is a no-op — the deterministic layout serves the map.
- */
-export function scheduleMapArt(routeId: string, points: RouteCityDto[]): void {
-  if (!llmEnabled()) return;
-  waitUntil(
-    generateMapArt(routeId, points).catch((error) => {
-      console.warn('[routes] background map art failed', {
-        routeId,
-        error: error instanceof Error ? error.message : String(error),
-      });
-    }),
-  );
-}
-
-const LAYOUT_SYSTEM_PROMPT = `Ты раскладываешь пиксельную карту-свиток офисного трекера ходьбы.
-Дана последовательность городов маршрута. Расставь их на целочисленной сетке ${MAP_GRID_W}×${MAP_GRID_H} (x вправо, y вниз) так, чтобы взаимное расположение напоминало реальную географию, а тропа шла без самопересечений.
-Правила:
-- каждый город маршрута — ровно один раз, координаты с отступом от краёв 6+ клеток;
-- bends — необязательные изгибы тропы между городом after и следующим, не больше трёх на отрезок;
-- decor — украшения из каталога tree/mountain/lake/house/anchor вдали от городов и тропы, до 20 штук: лес и горы там, где они уместны географически, lake у воды, anchor у морей;
-- ответ строго по схеме, без пояснений.`;
-
-/**
- * Map layout for a route (spec § 6.12.5): the LLM proposes positions, the
- * post-filter (`normalizeLayout`) makes them safe. Null on any failure.
- */
-export async function generateMapLayout(points: RouteCityDto[]): Promise<MapLayoutDto | null> {
-  const startedAt = Date.now();
-  try {
-    const { object } = await generateObject({
-      model: GATEWAY_MODEL,
-      schema: mapLayoutSchema,
-      system: LAYOUT_SYSTEM_PROMPT,
-      prompt: `Города маршрута по порядку: ${points.map((p) => `${p.city} (${p.km} км)`).join(' → ')}.`,
-      temperature: 0.6,
-      maxOutputTokens: 4096,
-      maxRetries: 1,
-      abortSignal: AbortSignal.timeout(ROUTE_LLM_TIMEOUT_MS),
-    });
-
-    const layout = normalizeLayout(object, points);
-    if (!layout) {
-      console.warn('[routes] llm layout rejected', {
-        model: GATEWAY_MODEL,
-        latencyMs: Date.now() - startedAt,
-      });
-      return null;
-    }
-
-    console.info('[routes] llm layout ok', {
-      model: GATEWAY_MODEL,
-      latencyMs: Date.now() - startedAt,
-      decor: layout.decor.length,
-    });
-    return layout;
-  } catch (error) {
-    console.warn('[routes] llm layout fail', {
       model: GATEWAY_MODEL,
       latencyMs: Date.now() - startedAt,
       error: error instanceof Error ? error.message : String(error),

@@ -101,16 +101,9 @@ export async function createRoute(input: { name: string; points: RouteCityDto[] 
 export async function updateRoute(id: string, patch: { name?: string; points?: RouteCityDto[] }): Promise<RouteAdminDto | null>;
 export async function activateRoute(id: string, resetProgress: boolean): Promise<RouteAdminDto | null>;
 export async function deleteRoute(id: string): Promise<'deleted' | 'not_found' | 'active' | 'last'>;
-export async function saveMapLayout(id: string, layout: MapLayoutDto): Promise<boolean>;
 
-// lib/map/layout.ts — владелец: SETTINGS (п. 6.12.5 ТЗ)
-export function fallbackLayout(points: RouteCityDto[], seedText?: string): MapLayoutDto;
-export function normalizeLayout(raw: MapLayoutDto, points: RouteCityDto[]): MapLayoutDto | null;
-
-// lib/routes/generate.ts — владелец: SETTINGS (п. 6.12.4–6.12.5 ТЗ)
+// lib/routes/generate.ts — владелец: SETTINGS (п. 6.12.4 ТЗ)
 export async function generateRouteDraft(prompt: string, cities?: string[]): Promise<RouteDraftDto | null>;
-export async function generateMapLayout(points: RouteCityDto[]): Promise<MapLayoutDto | null>;
-export function scheduleMapLayout(routeId: string, points: RouteCityDto[]): void; // waitUntil, вне горячего пути
 
 // lib/db/queries/treadmills.ts — владелец: SETTINGS (п. 6.11 ТЗ)
 export async function listAllTreadmills(): Promise<TreadmillAdminDto[]>;
@@ -178,6 +171,6 @@ export function AvatarPicker(props: { value: string; onChange: (id: string) => v
 | **TELEGRAM** | `lib/telegram/*`, `app/api/telegram/**`, `app/api/users/[id]/telegram/**`, `app/api/cron/notify/route.ts`, `components/TelegramNudge.tsx`, `components/TelegramLinkDialog.tsx`, `tests/telegram.*.test.ts`, `vercel.json`, `drizzle/0002_telegram.sql` |
 | **UIKIT** | `components/ui/*`, `components/Avatar.tsx`, `components/AvatarPicker.tsx` |
 | **HOME** | `app/page.tsx`, `components/UserSelect.tsx`, `components/AddUserDialog.tsx`, `components/StartWalkCard.tsx`, `components/StartCountdown.tsx`, `components/TreadmillPicker.tsx` |
-| **SETTINGS** | `app/settings/page.tsx`, `app/api/treadmills/**`, `app/api/routes/**`, `lib/db/queries/treadmills.ts`, `lib/db/queries/routes.ts`, `lib/map/layout.ts`, `lib/routes/generate.ts`, `components/TreadmillSettings.tsx`, `components/TreadmillFormDialog.tsx`, `components/RouteSettings.tsx`, `components/RouteFormDialog.tsx`, `components/RouteMap.tsx`, `tests/treadmills.validation.test.ts`, `tests/routes.validation.test.ts`, `tests/map.layout.test.ts` (п. 6.11 ТЗ; `GET /api/treadmills` без `scope` по-прежнему отдаёт форму зоны WALKS — `listActiveTreadmills`) |
+| **SETTINGS** | `app/settings/page.tsx`, `app/api/treadmills/**`, `app/api/routes/**`, `lib/db/queries/treadmills.ts`, `lib/db/queries/routes.ts`, `lib/routes/generate.ts`, `components/TreadmillSettings.tsx`, `components/TreadmillFormDialog.tsx`, `components/RouteSettings.tsx`, `components/RouteFormDialog.tsx`, `tests/treadmills.validation.test.ts`, `tests/routes.validation.test.ts` (п. 6.11 ТЗ; `GET /api/treadmills` без `scope` по-прежнему отдаёт форму зоны WALKS — `listActiveTreadmills`) |
 | **WALKSCREEN** | `app/walk/[id]/page.tsx`, `components/WalkTimer.tsx`, `components/FinishWalkDialog.tsx`, `components/WalkSuccess.tsx`, `components/WalkerSprite.tsx` |
 | **BOARDUI** | `components/Podium.tsx`, `components/Leaderboard.tsx`, `components/PeriodTabs.tsx`, `components/TeamProgress.tsx`, `components/StreakBadge.tsx`, `components/HintTicker.tsx`, `components/AchievementToast.tsx` |
