@@ -60,7 +60,7 @@ function ProgressBar({ ratio, label }: { ratio: number; label: string }) {
 }
 
 function ProgressBody({ data }: { data: TeamProgressDto }) {
-  const { totalKm, passed, next, kmLeft, progressRatio } = data;
+  const { totalKm, passed, next, kmLeft, progressRatio, route } = data;
 
   // Пройденное — без округления: команда честно заработала каждую сотку.
   const caption = next
@@ -84,6 +84,28 @@ function ProgressBody({ data }: { data: TeamProgressDto }) {
       </div>
 
       <p className="mt-3 text-sm text-text-dim">{caption}</p>
+
+      {/* Полная цепочка маршрута (п. 6.12): шапка показывает края текущего
+          отрезка, а эта строка отвечает на «а что дальше?» — пройденные города
+          приглушены, следующий подсвечен. Названия — данные, sans (п. 6.7.1). */}
+      {route.length >= 2 && (
+        <p className="mt-2 flex flex-wrap items-center gap-x-1.5 gap-y-1 text-xs text-text-dim">
+          {route.map((point, index) => (
+            <span key={point.city} className="flex items-center gap-x-1.5">
+              {index > 0 && <span aria-hidden>→</span>}
+              <span
+                title={`${point.km} км от старта`}
+                className={cn(
+                  point.km <= totalKm && 'opacity-50',
+                  next?.city === point.city && 'font-medium text-citrus',
+                )}
+              >
+                {point.city}
+              </span>
+            </span>
+          ))}
+        </p>
+      )}
     </>
   );
 }

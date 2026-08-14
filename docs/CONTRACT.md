@@ -36,7 +36,7 @@
 | `lib/api.ts` | `apiError, validationError, handle, isUniqueViolation, readJson` |
 | `lib/cn.ts` | `cn()` — слияние Tailwind-классов |
 | `lib/client/api.ts` | SWR-хуки и `apiSend` для всего UI |
-| `lib/hints/route.ts` | `ROUTE` (сид и фолбэк), `positionOnRoute(points, totalKm)` |
+| `lib/hints/route.ts` | `ROUTE` (фолбэк пустой таблицы), `positionOnRoute(points, totalKm)` |
 | `app/globals.css` | палитра (`bg-deep, bg-panel, border-dim, citrus, lime, text-main, text-dim, silver, bronze`), классы `.pixel-panel`, `.pixel-btn`, `.font-pixel`, `.pixelated`, `.animate-blink` |
 
 Цвета в Tailwind: `bg-bg-panel`, `text-text-dim`, `border-citrus`, `text-lime` и т. п.

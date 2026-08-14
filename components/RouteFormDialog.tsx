@@ -198,27 +198,27 @@ export function RouteFormDialog({ open, route, llmEnabled, onClose }: RouteFormD
                 >
                   Опишите маршрут
                 </Label>
-                <div className="flex gap-2">
-                  <Input
-                    id={`${fieldId}-ai`}
-                    font="normal"
-                    value={aiPrompt}
-                    onChange={(e) => setAiPrompt(e.target.value)}
-                    placeholder="например: от Ярославля до Токио"
-                    className="min-h-11 w-full text-base"
-                    maxLength={300}
-                    disabled={aiBusy}
-                  />
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    className="min-h-11 shrink-0 text-xs"
-                    onClick={() => void handleGenerate()}
-                    disabled={aiBusy || aiPrompt.trim().length < 3}
-                  >
-                    {aiBusy ? 'Генерируем…' : 'Сгенерировать'}
-                  </Button>
-                </div>
+                {/* The input takes the full dialog width; the action sits on
+                    its own row below — a long description needs the room. */}
+                <Input
+                  id={`${fieldId}-ai`}
+                  font="normal"
+                  value={aiPrompt}
+                  onChange={(e) => setAiPrompt(e.target.value)}
+                  placeholder="например: от Ярославля до Токио"
+                  className="min-h-11 w-full text-base"
+                  maxLength={300}
+                  disabled={aiBusy}
+                />
+                <Button
+                  type="button"
+                  variant="secondary"
+                  className="min-h-11 w-full text-xs"
+                  onClick={() => void handleGenerate()}
+                  disabled={aiBusy || aiPrompt.trim().length < 3}
+                >
+                  {aiBusy ? 'Генерируем…' : 'Сгенерировать'}
+                </Button>
                 {aiError ? (
                   <p role="alert" className="text-sm text-destructive">
                     {aiError}

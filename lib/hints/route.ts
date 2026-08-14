@@ -3,8 +3,8 @@ import type { RouteCityDto } from '@/lib/types';
 /**
  * Static fallback route Ярославль → Лиссабон (spec § 6.6.8, 6.12.6). Since
  * spec § 6.12 the source of truth is the `routes` table; this constant remains
- * in two roles — the seed of the first migration and the fallback for an empty
- * table (the same degradation shape as hints without LLM keys). One city per
+ * only as the fallback for an empty table (the same degradation shape as
+ * hints without LLM keys) — the migration seeds nothing. One city per
  * country (Russia gets the start plus Москва); `km` is the cumulative road
  * distance from the start, rounded to tens.
  */
