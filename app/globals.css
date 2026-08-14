@@ -248,6 +248,42 @@ img.pixel,
   animation: pixel-pulse 1.2s steps(3) infinite;
 }
 
+/*
+  Start countdown (§ 6.2). Both animations end on a visible/neutral frame on
+  purpose: under prefers-reduced-motion durations collapse to 0.01ms and the
+  element jumps straight to 100% — the digit must stay readable there.
+*/
+@keyframes count-pop {
+  0% {
+    transform: scale(2.6);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* Square "shockwave" behind the digit; purely decorative, ends transparent. */
+@keyframes count-ring {
+  0% {
+    transform: scale(0.5);
+    opacity: 0.9;
+  }
+  100% {
+    transform: scale(1.6);
+    opacity: 0;
+  }
+}
+
+.animate-count-pop {
+  animation: count-pop 240ms steps(4) both;
+}
+
+.animate-count-ring {
+  animation: count-ring 600ms steps(5) both;
+}
+
 * {
   scrollbar-width: thin;
   scrollbar-color: var(--color-border-dim) transparent;
