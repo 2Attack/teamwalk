@@ -38,16 +38,17 @@ import { calcSegmentedDistanceKm, formatTimeOfDay } from '@/lib/format';
 import type { ActiveWalkDto, FinishWalkResultDto, StatsDto, WalkDto } from '@/lib/types';
 
 /**
- * Экран активной прогулки (п. 6.3) — HUD: аватар и имя, крупный таймер,
- * набегающая дистанция, рекорд дня, ходок, лента хинтов и кнопки внизу,
- * в зоне большого пальца (п. 6.7.5).
+ * Active walk screen (§ 6.3) — HUD: avatar and name, a large timer, running
+ * distance, day record, the walker, the hint ticker and buttons at the
+ * bottom, in the thumb zone (§ 6.7.5).
  */
 
 type DialogMode = 'none' | 'finish' | 'accidental' | 'cancel';
 
 /**
- * Wake Lock: планшет стоит у дорожки, гаснущий экран прячет таймер.
- * API есть не везде и отзывается при уходе вкладки в фон — оба случая штатные.
+ * Wake Lock: the tablet stands by the treadmill, a dimming screen hides the
+ * timer. The API is not everywhere and revokes when the tab goes background —
+ * both cases are routine.
  */
 function useWakeLock(active: boolean): void {
   useEffect(() => {
@@ -74,7 +75,7 @@ function useWakeLock(active: boolean): void {
         }
         sentinel = next;
       } catch {
-        // Энергосбережение или отказ пользователя — экран просто гаснет как обычно.
+        // Power saving or user refusal — the screen just dims as usual.
       }
     };
 
@@ -98,7 +99,7 @@ function elapsedSeconds(startedAt: string): number {
   return Math.max(0, Math.floor((Date.now() - new Date(startedAt).getTime()) / 1000));
 }
 
-/** Цвета кубков топ-3 — те же, что на подиуме лидерборда. */
+/** Top-3 trophy colors — same as on the leaderboard podium. */
 const RANK_TROPHY_COLOR: Record<number, string> = {
   1: 'text-citrus',
   2: 'text-silver',
@@ -106,8 +107,8 @@ const RANK_TROPHY_COLOR: Record<number, string> = {
 };
 
 /**
- * Содержимое бейджа карточки — по образцу StreakBadge: иконка 16 + число
- * tabular-nums, раскладку делает сам Badge. Топ-3 — кубок, дальше просто #N.
+ * Card badge content — modeled on StreakBadge: 16px icon + tabular-nums
+ * number, the Badge does the layout. Top-3 gets a trophy, below that just #N.
  */
 function rankBadge(rank: number | null): React.ReactNode {
   if (rank === null) return undefined;
@@ -123,14 +124,31 @@ function rankBadge(rank: number | null): React.ReactNode {
 }
 
 /**
- * Загрузка — игровой загрузочный экран 8bitcn (блок loading-screen):
- * прогресс-бар и ротация советов из статического каталога хинтов — та же
- * метафора, что у ленты (п. 6.6). Прогресс декоративный: реального процента
- * у SWR-запроса нет, а экран живёт доли секунды.
+ * Loading — the 8bitcn game loading screen (loading-screen block): progress
+ * bar and rotating tips from the static hint catalog — same metaphor as the
+ * ticker (§ 6.6). The progress is decorative: the SWR request has no real
+ * percentage and the screen lives a fraction of a second.
  */
 const LOADING_TIPS = STATIC_HINTS.map((hint) => hint.text);
 
+/**
+ * Grace delay before showing the loading block. The start flow lands here
+ * with the active walk already seeded into the SWR cache, so data resolves
+ * within a frame or two — flashing the full loading screen for that moment
+ * is exactly the jank we want to avoid. A quiet dark frame bridges the gap;
+ * genuinely slow loads (cold direct opens) still get the block.
+ */
+const LOADER_GRACE_MS = 250;
+
 function LoadingScreen() {
+  const [visible, setVisible] = useState(false);
+  useEffect(() => {
+    const timer = window.setTimeout(() => setVisible(true), LOADER_GRACE_MS);
+    return () => window.clearTimeout(timer);
+  }, []);
+
+  if (!visible) return <main className="min-h-dvh" />;
+
   return (
     <main className="mx-auto flex min-h-dvh w-full max-w-lg flex-col justify-center px-4 py-8">
       <LoadingScreenBlock
@@ -144,7 +162,7 @@ function LoadingScreen() {
   );
 }
 
-/** Прогулку уже закрыли с другого устройства: объясняем, а не мигаем пустотой. */
+/** The walk was already closed from another device: explain instead of blinking emptiness. */
 function NotFoundScreen({ onHome }: { onHome: () => void }) {
   return (
     <main className="mx-auto flex min-h-dvh w-full max-w-lg flex-col justify-center gap-6 px-4 py-8">
@@ -179,8 +197,8 @@ export default function WalkPage({ params }: { params: Promise<{ id: string }> }
 
   const { data: mine, isLoading } = useActiveWalk(storedUserId ?? null);
   const matched = mine !== undefined && mine !== null && mine.id === id ? mine : null;
-  // Экран открыт на чужом устройстве или без записи в localStorage — активные
-  // прогулки видны в /api/stats списком (п. 7.2), берём нужную оттуда.
+  // The screen was opened on someone else's device or without a localStorage
+  // record — active walks are listed in /api/stats (§ 7.2), take it from there.
   const needsFallback = storedUserId !== undefined && matched === null && !isLoading;
   const { data: stats } = useSWR<StatsDto>(needsFallback ? '/api/stats' : null, apiGet, {
     refreshInterval: 30_000,
@@ -189,9 +207,9 @@ export default function WalkPage({ params }: { params: Promise<{ id: string }> }
   const server: ActiveWalkDto | null =
     matched ?? stats?.activeWalks.find((item) => item.id === id) ?? null;
 
-  // Ответ на смену скорости приходит раньше, чем SWR перечитает прогулку.
-  // Отрезки только добавляются, поэтому «свежее» — та версия, где их больше;
-  // как только SWR догоняет, снова побеждают серверные данные.
+  // The speed-change response arrives before SWR rereads the walk. Segments
+  // are append-only, so the "fresher" version is the one with more of them;
+  // as soon as SWR catches up, server data wins again.
   const [changed, setChanged] = useState<ActiveWalkDto | null>(null);
   const walk: ActiveWalkDto | null =
     server !== null &&
@@ -214,7 +232,7 @@ export default function WalkPage({ params }: { params: Promise<{ id: string }> }
   const loading =
     result === null && walk === null && (storedUserId === undefined || isLoading || (needsFallback && stats === undefined));
 
-  // Прогулки уже нет: завершена или отменена с другого устройства.
+  // The walk is gone: finished or cancelled from another device.
   useEffect(() => {
     if (loading || result !== null || walk !== null) return;
     router.replace('/');
@@ -232,8 +250,8 @@ export default function WalkPage({ params }: { params: Promise<{ id: string }> }
     const now = Date.now();
     const seconds = elapsedSeconds(walk.startedAt);
     setDurationSec(seconds);
-    // Дистанцию фиксируем тем же нажатием, что и время: считать её в модалке
-    // значило бы дать ей идти дальше, пока человек правит число.
+    // Distance is fixed by the same press as the time: computing it in the
+    // dialog would let it keep running while the person edits the number.
     setCalculatedKm(calcSegmentedDistanceKm(walk.speedSegments, now));
     setMode(seconds < SHORT_WALK_CANCEL_SEC ? 'accidental' : 'finish');
   };
@@ -257,20 +275,22 @@ export default function WalkPage({ params }: { params: Promise<{ id: string }> }
   };
 
   return (
-    <main className="mx-auto flex min-h-dvh w-full max-w-lg flex-col gap-6 px-4 pt-6 pb-2">
-      {/* Карточка игрока — блок 8bitcn player-profile-card. Бейдж — место
-          в недельном рейтинге; топ-3 получает кубок в цвет подиума (п. 6.2),
-          без единой прогулки за неделю бейджа нет. Бары HP/XP выключены —
-          прогресс к рекорду уже показывает таймер. */}
+    // animate-screen-in: a short stepped fade instead of a hard cut — the HUD
+    // usually appears straight after the start countdown's dark "GO!" frame.
+    <main className="animate-screen-in mx-auto flex min-h-dvh w-full max-w-lg flex-col gap-6 px-4 pt-6 pb-2">
+      {/* Player card — the 8bitcn player-profile-card block. The badge is the
+          weekly-rank position; top-3 gets a trophy in podium colors (§ 6.2),
+          no badge without a single walk this week. HP/XP bars are off —
+          progress toward the record is already shown by the timer. */}
       <header className="flex flex-col gap-3 px-1.5">
-        {/* Строка старта — над карточкой, по центру; короткая метка,
-            пиксельный шрифт уместен (п. 6.7.1). */}
+        {/* Start line — above the card, centered; a short label, the pixel
+            font is appropriate (§ 6.7.1). */}
         <p className="text-center font-pixel text-[10px] leading-relaxed text-text-dim">
           Старт в {formatTimeOfDay(walk.startedAt)} · {walk.treadmillName}
         </p>
         <PlayerProfileCard
-          // Компактный вариант: базовый Card читает все припуски из
-          // --card-spacing — 12px вместо 16px убирают лишний воздух.
+          // Compact variant: the base Card reads all spacing from
+          // --card-spacing — 12px instead of 16px removes the extra air.
           className="max-w-none [--card-spacing:0.75rem]"
           playerName={walk.user.name}
           avatarSrc={avatarSrc(walk.user.avatarId)}
@@ -282,13 +302,13 @@ export default function WalkPage({ params }: { params: Promise<{ id: string }> }
           showHealth={false}
           showMana={false}
           showExperience={false}
-          // Полученные ачивки — строкой под именем, с тултипами (п. 6.8.3).
+          // Earned achievements — a row under the name, with tooltips (§ 6.8.3).
           belowName={<AchievementIcons achievements={userStats?.achievements ?? []} />}
         />
       </header>
 
-      {/* Приглашение привязать Telegram — над таймером; видно всегда,
-          пока участник не привязан (п. 6.10.2). */}
+      {/* Telegram link invite — above the timer; always visible while the
+          participant is not linked (§ 6.10.2). */}
       <TelegramNudge userId={walk.userId} />
 
       <WalkTimer
@@ -297,9 +317,10 @@ export default function WalkPage({ params }: { params: Promise<{ id: string }> }
         bestDayKm={userStats?.personalRecord.bestDayKm ?? null}
       />
 
-      {/* Ходок стоит на «полотне»: две линии вместо рамки — панель здесь спорила бы
-          с панелью хинтов, а спрайт должен читаться как единственная живая деталь.
-          Регулятор скорости стоит здесь же: темп ходока меняется вместе с ним. */}
+      {/* The walker stands on a "canvas": two lines instead of a frame — a
+          panel here would compete with the hints panel, and the sprite should
+          read as the only living detail. The speed control sits right here:
+          the walker's pace changes together with it. */}
       <div className="flex flex-col items-center gap-4 border-y-[3px] border-border-dim py-4">
         <WalkerSprite speedKmh={walk.speedKmh} size={96} />
         <SpeedControl
@@ -307,17 +328,18 @@ export default function WalkPage({ params }: { params: Promise<{ id: string }> }
           speedKmh={walk.speedKmh}
           maxSpeedKmh={walk.treadmillMaxSpeedKmh}
           onChanged={setChanged}
-          // В открытой модалке завершения дистанция уже зафиксирована: смена
-          // скорости под ней разошлась бы с числом, которое человек правит.
+          // In an open finish dialog the distance is already fixed: changing
+          // speed under it would diverge from the number the person is editing.
           disabled={mode !== 'none'}
         />
       </div>
 
-      {/* variant="walk": интервал 10 с и крупный шрифт — фразу читают с дорожки (п. 6.6.10). */}
+      {/* variant="walk": 10 s interval and larger font — the phrase is read from the treadmill (§ 6.6.10). */}
       <HintTicker userId={walk.userId} variant="walk" />
 
-      {/* Кнопки прижаты к низу и липнут к нему: на планшете у дорожки «End walk»
-          должен быть под большим пальцем, а не уезжать под ленту хинтов. */}
+      {/* Buttons pinned and sticky at the bottom: on the tablet by the
+          treadmill "End walk" must sit under the thumb, not slide under the
+          hint ticker. */}
       <div className="sticky bottom-0 mt-auto flex flex-col gap-4 bg-background px-1.5 pt-6 pb-3">
         <Button
           variant="default"
@@ -353,8 +375,8 @@ export default function WalkPage({ params }: { params: Promise<{ id: string }> }
         }}
       />
 
-      {/* Подтверждение отмены. Короткая прогулка (< 10 с) ведёт сюда же: это
-          почти всегда случайное нажатие, но сохранить всё равно разрешено (п. 7.5). */}
+      {/* Cancel confirmation. A short walk (< 10 s) leads here too: it is
+          almost always an accidental press, but saving is still allowed (§ 7.5). */}
       <Dialog
         open={mode === 'cancel' || mode === 'accidental'}
         onOpenChange={(next: boolean) => {

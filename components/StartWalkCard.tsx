@@ -5,13 +5,22 @@ import { useEffect, useRef, useState } from 'react';
 
 import { AddUserDialog } from '@/components/AddUserDialog';
 import { SpeedPicker } from '@/components/SpeedPicker';
+import { StartCountdown } from '@/components/StartCountdown';
 import { TreadmillPicker, busyLabel, elapsedSec, useNowTick } from '@/components/TreadmillPicker';
 import { UserSelect } from '@/components/UserSelect';
 import { Button } from '@/components/ui/8bit/button';
 import { Card, CardAction, CardContent, CardHeader, CardTitle } from '@/components/ui/8bit/card';
 import { Icon } from '@/components/ui/icon';
 import { Skeleton } from '@/components/ui/8bit/skeleton';
-import { ApiError, apiGet, apiSend, useTreadmills, useUserStats } from '@/lib/client/api';
+import {
+  ApiError,
+  apiGet,
+  apiSend,
+  primeActiveWalk,
+  useTelegramStatus,
+  useTreadmills,
+  useUserStats,
+} from '@/lib/client/api';
 import { DEFAULT_SPEED_KMH, MAX_SPEED_KMH_ABS } from '@/lib/config';
 import { formatDuration } from '@/lib/format';
 import type { ActiveWalkDto, TreadmillBusyDto, TreadmillDto, UserDto } from '@/lib/types';
@@ -20,10 +29,28 @@ interface StartWalkCardProps {
   users: UserDto[];
   userId: string | null;
   onSelectUser: (userId: string) => void;
+  /**
+   * Countdown/start in progress. Home pauses its active-walk subscription
+   * while true, so seeding the SWR cache before navigation doesn't trigger
+   * its own redirect and race ours.
+   */
+  onStartFlowChange?: (active: boolean) => void;
 }
 
-/** Блок старта прогулки: участник → дорожка → скорость → «Start walk» (п. 6.1). */
-export function StartWalkCard({ users, userId, onSelectUser }: StartWalkCardProps) {
+/**
+ * How long "GO!" stays on screen before navigation. Gives the prefetched
+ * route payload time to land, so the push usually commits straight to the
+ * walk screen without flashing the route-level loading screen.
+ */
+const GO_DWELL_MS = 400;
+
+/** Walk start block: participant → treadmill → speed → «Start walk» (§ 6.1). */
+export function StartWalkCard({
+  users,
+  userId,
+  onSelectUser,
+  onStartFlowChange,
+}: StartWalkCardProps) {
   const router = useRouter();
   const { data: treadmills, isLoading, mutate: reloadTreadmills } = useTreadmills();
   const { data: userStats } = useUserStats(userId);
@@ -31,24 +58,32 @@ export function StartWalkCard({ users, userId, onSelectUser }: StartWalkCardProp
   const [treadmillId, setTreadmillId] = useState<string | null>(null);
   const [speed, setSpeed] = useState<number | null>(null);
   const [starting, setStarting] = useState(false);
+  // «Start walk» runs the 3-2-1 countdown first (§ 6.2); the POST fires at "GO!".
+  const [counting, setCounting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  // Диалог создания участника живёт здесь, а не в `UserSelect`: открывающая его
-  // кнопка стоит в шапке карточки, то есть вне поддерева селекта.
+  // The add-participant dialog lives here, not in `UserSelect`: the button that
+  // opens it sits in the card header, i.e. outside the select's subtree.
   const [addOpen, setAddOpen] = useState(false);
 
   const list = treadmills ?? [];
   const free = list.filter((t) => t.busy === null);
-  // Значение выводим, а не только храним в стейте: в первом кадре после загрузки
-  // дорожек эффект предвыбора ещё не отработал, и кнопка мигнула бы «выберите дорожку».
+  // Derive the value instead of only storing it in state: on the first frame
+  // after treadmills load, the preselection effect has not run yet and the
+  // button would flash "pick a treadmill".
   const activeTreadmillId = treadmillId ?? pickTreadmill(list, null, userStats?.lastTreadmillId);
   const selectedTreadmill = list.find((t) => t.id === activeTreadmillId) ?? null;
-  // Пока дорожка не выбрана (например, все заняты) — потолок первой по списку,
-  // чтобы ряд скоростей не разрастался до абсолютного санити-предела.
+  // While no treadmill is selected (e.g. all busy) — cap by the first one in
+  // the list, so the speed row does not grow to the absolute sanity limit.
   const maxSpeed = selectedTreadmill?.maxSpeedKmh ?? list[0]?.maxSpeedKmh ?? MAX_SPEED_KMH_ABS;
   const now = useNowTick(list.some((t) => t.busy !== null));
 
-  // Предвыбор дорожки: последняя дорожка участника, если свободна,
-  // иначе первая свободная по sortOrder (п. 6.9.3).
+  // Warm the Telegram-status cache while the countdown runs: the walk screen
+  // shows the invite panel from this data, and fetching it there after mount
+  // would insert the panel late, shifting the layout under the user.
+  useTelegramStatus(counting ? userId : null);
+
+  // Treadmill preselection: the participant's last treadmill if free,
+  // otherwise the first free one by sortOrder (§ 6.9.3).
   const pickedFor = useRef<string | null>(null);
   useEffect(() => {
     if (treadmills === undefined) return;
@@ -57,37 +92,46 @@ export function StartWalkCard({ users, userId, onSelectUser }: StartWalkCardProp
     setTreadmillId((prev) => pickTreadmill(treadmills, sameUser ? prev : null, userStats?.lastTreadmillId));
   }, [treadmills, userId, userStats?.lastTreadmillId]);
 
-  // Предвыбор скорости: скорость прошлой прогулки, для нового участника — дефолт (п. 6.2).
+  // Speed preselection: last walk's speed, default for a new participant (§ 6.2).
   useEffect(() => {
     setSpeed(userId === null ? null : (userStats?.lastSpeedKmh ?? DEFAULT_SPEED_KMH));
   }, [userId, userStats?.lastSpeedKmh]);
 
-  // Переключили дорожку с меньшим потолком — поджимаем выбранное значение (п. 6.9.3).
+  // Switched to a treadmill with a lower cap — clamp the chosen value (§ 6.9.3).
   useEffect(() => {
     setSpeed((prev) => (prev !== null && prev > maxSpeed ? maxSpeed : prev));
   }, [maxSpeed]);
 
   async function handleStart() {
-    if (!userId || speed === null || starting) return; // защита от двойного нажатия
+    if (!userId || speed === null || starting) return; // double-press guard
     setStarting(true);
     setError(null);
     try {
       const walk = await apiSend<ActiveWalkDto>('POST', '/api/walks/start', {
         userId,
         speedKmh: speed,
-        // Дорожку не передаём, если её нет: при единственной активной сервер
-        // подставит её сам (п. 6.9.2).
+        // Omit the treadmill when there is none: with a single active one the
+        // server substitutes it itself (§ 6.9.2).
         ...(activeTreadmillId ? { treadmillId: activeTreadmillId } : {}),
       });
+      // Seamless landing (§ 6.2): the walk screen renders from this cache
+      // entry without a refetch, and prefetch + one "GO!" beat let the route
+      // payload arrive so the push commits without a loading-screen flash.
+      await primeActiveWalk(walk);
+      router.prefetch(`/walk/${walk.id}`);
+      await new Promise((resolve) => window.setTimeout(resolve, GO_DWELL_MS));
       router.push(`/walk/${walk.id}`);
     } catch (err) {
+      // Drop the countdown overlay so the error is visible on the card.
+      setCounting(false);
+      onStartFlowChange?.(false);
       await handleStartError(err);
     } finally {
       setStarting(false);
     }
   }
 
-  /** Обе «конфликтные» 409-ошибки имеют осмысленный исход, а не текст ошибки. */
+  /** Both "conflict" 409 errors get a meaningful outcome, not an error text. */
   async function handleStartError(err: unknown) {
     if (err instanceof ApiError && err.code === 'WALK_ALREADY_ACTIVE' && userId) {
       const active = await apiGet<ActiveWalkDto | null>(`/api/walks/active?userId=${userId}`);
@@ -112,7 +156,7 @@ export function StartWalkCard({ users, userId, onSelectUser }: StartWalkCardProp
     return <StartWalkCardSkeleton />;
   }
 
-  // Единственный сценарий, в котором стартовать нельзя вовсе (п. 6.9.6).
+  // The only scenario where starting is impossible at all (§ 6.9.6).
   if (list.length === 0) {
     return (
       <StartCard title="Дорожек сейчас нет">
@@ -158,10 +202,15 @@ export function StartWalkCard({ users, userId, onSelectUser }: StartWalkCardProp
           type="button"
           size="lg"
           className="min-h-14 w-full gap-2 text-sm"
-          disabled={!canStart || starting}
-          onClick={handleStart}
+          disabled={!canStart || starting || counting}
+          onClick={() => {
+            if (!canStart || starting || counting) return;
+            setError(null);
+            setCounting(true);
+            onStartFlowChange?.(true);
+          }}
         >
-          {starting ? (
+          {starting || counting ? (
             'Стартуем…'
           ) : (
             <>
@@ -181,6 +230,18 @@ export function StartWalkCard({ users, userId, onSelectUser }: StartWalkCardProp
         )}
       </div>
 
+      {/* The overlay lives until navigation succeeds; `handleStart` closes it
+          itself on error, so the message under the button is not covered. */}
+      {counting && (
+        <StartCountdown
+          onGo={() => void handleStart()}
+          onCancel={() => {
+            setCounting(false);
+            onStartFlowChange?.(false);
+          }}
+        />
+      )}
+
       <AddUserDialog
         open={addOpen}
         onClose={() => setAddOpen(false)}
@@ -192,8 +253,8 @@ export function StartWalkCard({ users, userId, onSelectUser }: StartWalkCardProp
 }
 
 /**
- * Общая рамка блока старта: заголовок пиксельный, содержимое — обычным sans,
- * иначе имена и подписи внутри карточки станут нечитаемыми (п. 6.7.1).
+ * Shared frame of the start block: pixel-font title, regular sans content —
+ * otherwise names and labels inside the card become unreadable (§ 6.7.1).
  */
 function StartCard({
   title,
@@ -201,33 +262,33 @@ function StartCard({
   children,
 }: {
   title: string;
-  /** Правый край шапки: кнопка добавления участника либо её скелетон. */
+  /** Right edge of the header: the add-participant button or its skeleton. */
   action?: React.ReactNode;
   children: React.ReactNode;
 }) {
-  // overflow-visible: базовая карточка shadcn режет содержимое по своей рамке,
-  // и выпадающий список участников обрезался бы по нижнему краю карточки.
+  // overflow-visible: the base shadcn card clips content by its own frame,
+  // and the participant dropdown would be cut off at the card's bottom edge.
   return (
     <Card font="normal" className="overflow-visible">
-      {/* items-center вместо дефолтного items-start: заголовок в одну строку и
-          кнопка выравниваются по общей средней линии.
+      {/* items-center instead of the default items-start: a single-line title
+          and the button align on a common middle line.
 
-          `retro` продублирован намеренно: `CardHeader` из 8bitcn спредит
-          `{...props}` после вычисленного `className`, поэтому любой переданный
-          класс затирает его целиком. Пока className не передавали, шапка
-          получала `retro` сама; теперь его надо вернуть руками. */}
+          `retro` is duplicated on purpose: `CardHeader` from 8bitcn spreads
+          `{...props}` after the computed `className`, so any passed class
+          wipes it entirely. While no className was passed, the header got
+          `retro` by itself; now it has to be restored by hand. */}
       <CardHeader className="retro items-center">
-        {/* text-sm на мобильном: пиксельный шрифт широкий, «Старт прогулки»
-            16-м кеглем упирается в край экрана 360 px (п. 6.7.2).
-            `retro` в классе обязателен — className в 8bitcn перекрывает его. */}
+        {/* text-sm on mobile: the pixel font is wide, «Старт прогулки» at 16px
+            hits the edge of a 360 px screen (§ 6.7.2).
+            `retro` in the class is mandatory — className in 8bitcn overrides it. */}
         <CardTitle className="retro text-sm leading-snug break-words sm:text-base">
           {title}
         </CardTitle>
         {/*
-          `CardAction` — штатный слот shadcn: при его наличии `CardHeader`
-          переключается в `grid-cols-[1fr_auto]`, а сам слот встаёт в
-          `col-start-2 justify-self-end`. Свой flex-ряд здесь дал бы то же
-          самое, но мимо сетки шапки — и сломался бы, добавь мы описание.
+          `CardAction` is the standard shadcn slot: when present, `CardHeader`
+          switches to `grid-cols-[1fr_auto]` and the slot goes into
+          `col-start-2 justify-self-end`. A custom flex row here would do the
+          same but bypass the header grid — and break once we add a description.
         */}
         {action && <CardAction className="self-center">{action}</CardAction>}
       </CardHeader>
@@ -239,13 +300,13 @@ function StartCard({
 }
 
 /**
- * Кнопка создания участника в шапке карточки — компактная: действие редкое
- * (люди заводятся раз в жизни команды), и большая кнопка спорила бы по весу
- * с «Start walk». `h-auto min-h-8`, а не фиксированная высота: пиксельная
- * рамка 8-битной кнопки висит снаружи бокса и добавляет по 6 px сверху и
- * снизу, жёсткая высота её обрезала бы. Метка пиксельная — это действие,
- * а не данные (п. 6.7.1); на узких экранах остаётся короткое «Добавить»,
- * полный текст всегда доступен скринридеру через `aria-label`.
+ * The add-participant button in the card header is compact: the action is rare
+ * (people are added once in a team's lifetime), and a big button would compete
+ * in weight with «Start walk». `h-auto min-h-8` instead of a fixed height: the
+ * 8-bit button's pixel frame hangs outside the box and adds 6 px on top and
+ * bottom, a hard height would clip it. The label is pixel-font — it is an
+ * action, not data (§ 6.7.1); narrow screens keep the short «Добавить», the
+ * full text stays available to screen readers via `aria-label`.
  */
 function AddUserButton({ onClick }: { onClick: () => void }) {
   return (
@@ -264,7 +325,7 @@ function AddUserButton({ onClick }: { onClick: () => void }) {
   );
 }
 
-/** Плейсхолдер блока старта: та же рамка, чтобы экран не «прыгал» после загрузки. */
+/** Start-block placeholder: same frame, so the screen doesn't "jump" after load. */
 export function StartWalkCardSkeleton() {
   return (
     <StartCard title="Старт прогулки" action={<Skeleton className="h-11 w-40" />}>
@@ -285,7 +346,7 @@ export function StartWalkCardSkeleton() {
   );
 }
 
-/** Почему нельзя стартовать; `null` — можно. Занятость видна до нажатия (п. 6.9.2). */
+/** Why starting is impossible; `null` — it is possible. Busy state is visible before the press (§ 6.9.2). */
 function startBlocker(
   list: TreadmillDto[],
   free: TreadmillDto[],
@@ -299,7 +360,7 @@ function startBlocker(
     }
   }
   if (free.length === 0) {
-    // Ближайшее освобождение неизвестно, поэтому показываем того, кто идёт дольше всех.
+    // The nearest release time is unknown, so show whoever has walked longest.
     const busyList = list
       .map((t) => t.busy)
       .filter((b): b is TreadmillBusyDto => b !== null)
@@ -312,7 +373,7 @@ function startBlocker(
   return null;
 }
 
-/** Последняя дорожка участника, если свободна; иначе первая свободная по sortOrder. */
+/** The participant's last treadmill if free; otherwise the first free one by sortOrder. */
 function pickTreadmill(
   list: TreadmillDto[],
   current: string | null,

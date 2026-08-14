@@ -1,15 +1,15 @@
 /**
- * 8-битные звуки интерфейса: синтез Web Audio API, без аудиофайлов и внешних
- * запросов (правило «в рантайме сторонних запросов нет»).
+ * 8-bit interface sounds: Web Audio API synthesis, no audio files and no
+ * external requests (the "no third-party requests at runtime" rule).
  *
- * Все функции безопасны по построению: молчат в фоновой вкладке (звук из
- * невидимой вкладки пугает), глотают заблокированный AudioContext без ошибок
- * в консоли и закрывают контекст после проигрывания. Громкость сознательно
- * низкая — это офис.
+ * Every function is safe by construction: silent in a background tab (sound
+ * from an invisible tab is startling), swallows a blocked AudioContext without
+ * console errors and closes the context after playback. Volume is deliberately
+ * low — this is an office.
  */
 
 interface Note {
-  /** 0 — пауза: время идёт, осциллятор не создаётся. */
+  /** 0 — rest: time passes, no oscillator is created. */
   freqHz: number;
   durSec: number;
 }
@@ -42,18 +42,18 @@ function playNotes(notes: readonly Note[], wave: OscillatorType = 'square'): voi
       at += durSec;
     }
 
-    // Контекст одноразовый: закрываем после хвоста последней ноты.
+    // The context is single-use: close it after the tail of the last note.
     window.setTimeout(() => {
       void ctx.close().catch(() => undefined);
     }, (at + 0.15) * 1000);
   } catch {
-    // Автоплей заблокирован или API урезан — интерфейс работает и без звука.
+    // Autoplay blocked or the API is stripped down — the UI works without sound.
   }
 }
 
 /**
- * Фанфара выдачи достижения (п. 6.8.3): «та-да-да…ДА» — быстрый взлёт,
- * пауза-вдох и длинная высокая финальная. Волна — треугольная (канал NES).
+ * Achievement fanfare (§ 6.8.3): "ta-da-da…DA" — quick ascent, a breath-pause
+ * and a long high finale. Triangle wave (the NES melody channel).
  */
 export function playFanfare(): void {
   playNotes(
@@ -66,4 +66,20 @@ export function playFanfare(): void {
     ],
     'triangle',
   );
+}
+
+/**
+ * Start-countdown tick (§ 6.2): one short flat beep per digit, racing-lights
+ * style. Square wave — the interface channel, distinct from the fanfare.
+ */
+export function playCountTick(): void {
+  playNotes([{ freqHz: 660, durSec: 0.07 }]);
+}
+
+/** Final "GO!" of the countdown: two rising tones, longer than a tick. */
+export function playCountGo(): void {
+  playNotes([
+    { freqHz: 880, durSec: 0.08 },
+    { freqHz: 1320, durSec: 0.24 },
+  ]);
 }
