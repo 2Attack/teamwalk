@@ -29,7 +29,7 @@ export function AppHeader() {
         <span className="sr-only"> — {APP_NAME}</span>
       </h1>
 
-      <div className="flex items-end gap-1">
+      <div className="flex items-center gap-1">
         <div className="text-right">
           {isLoading ? (
             <Skeleton className="ml-auto h-6 w-40" />
@@ -46,11 +46,13 @@ export function AppHeader() {
         </div>
 
         {/* Settings entry (spec § 6.11.1): 44 px touch target, icon-only with an
-            aria-label — the gear is a universally readable symbol here. */}
+            aria-label — the gear is a universally readable symbol here.
+            Negative vertical margins cancel the target's extra height so the
+            icon centers on the km line instead of stretching the header. */}
         <Link
           href="/settings"
           aria-label="Настройки"
-          className="-mb-3 flex min-h-11 min-w-11 items-center justify-center text-text-dim transition-colors hover:text-text-main focus-visible:text-text-main"
+          className="-my-3 flex min-h-11 min-w-11 items-center justify-center text-text-dim transition-colors hover:text-text-main focus-visible:text-text-main"
         >
           <Icon name="gear" size={16} />
         </Link>
