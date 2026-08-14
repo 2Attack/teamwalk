@@ -44,15 +44,14 @@ function Input({ ...props }: BitInputProps) {
       />
 
       {/*
-        Боковые грани рисуются внутри габаритов поля, без `-mx-1.5`. С выносом
-        наружу рамка переставала быть прямоугольником: верх и низ — настоящие
-        бордеры обёртки (`border-y-6`, внутри box), а бока уезжали на 6px за её
-        край. В модалке это читалось как «поле шире остального содержимого», и
-        вдобавок подрезалось: у `DialogBody` стоит `overflow-y-auto`, а он по
-        спецификации превращает `overflow-x: visible` в `auto`.
+        `-mx-1.5` is upstream 8bitcn: the side edges overhang the field by 6px,
+        which is what draws the signature pixel-corner silhouette. Containers
+        that clip x-overflow must leave 6px of horizontal room for the ears —
+        `DialogBody` (overflow-y-auto turns overflow-x into auto) does it with
+        its own `px-1.5`.
       */}
       <div
-        className="absolute inset-0 border-x-6 border-foreground dark:border-ring pointer-events-none"
+        className="absolute inset-0 border-x-6 -mx-1.5 border-foreground dark:border-ring pointer-events-none"
         aria-hidden="true"
       />
     </div>
