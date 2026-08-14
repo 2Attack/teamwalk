@@ -1,24 +1,11 @@
 import type { RouteCityDto } from '@/lib/types';
 
 /**
- * Static fallback route Ярославль → Лиссабон (spec § 6.6.8, 6.12.6). Since
- * spec § 6.12 the source of truth is the `routes` table; this constant remains
- * only as the fallback for an empty table (the same degradation shape as
- * hints without LLM keys) — the migration seeds nothing. One city per
- * country (Russia gets the start plus Москва); `km` is the cumulative road
- * distance from the start, rounded to tens.
+ * Team position math (spec § 6.6.8, 6.12). The route lives in the `routes`
+ * table only — the former hardcoded fallback is retired: an empty table is the
+ * legitimate "no route selected" state, and callers must guard for it
+ * (`points.length >= 2`) before projecting a position.
  */
-export const ROUTE: RouteCityDto[] = [
-  { city: 'Ярославль', km: 0 }, // Russia — start
-  { city: 'Москва', km: 265 }, // Russia
-  { city: 'Минск', km: 995 }, // Belarus
-  { city: 'Варшава', km: 1540 }, // Poland
-  { city: 'Берлин', km: 2120 }, // Germany
-  { city: 'Брюссель', km: 2915 }, // Belgium
-  { city: 'Париж', km: 3225 }, // France
-  { city: 'Мадрид', km: 4495 }, // Spain
-  { city: 'Лиссабон', km: 5120 }, // Portugal
-];
 
 export interface RoutePosition {
   passed: RouteCityDto;
@@ -29,20 +16,20 @@ export interface RoutePosition {
 }
 
 /**
- * Team position on a route. Pure over its inputs since spec § 6.12.2: the
- * points come from the active DB route (or the ROUTE fallback), and the
- * arithmetic is ours, not the LLM's (spec § 6.6.8).
+ * Team position on a route. Pure over its inputs; the arithmetic is ours, not
+ * the LLM's (spec § 6.6.8). Expects a non-empty points list — callers with a
+ * possibly empty route check that themselves.
  */
 export function positionOnRoute(points: RouteCityDto[], totalKm: number): RoutePosition {
-  const route = points.length >= 2 ? points : ROUTE;
+  const start = points[0] ?? { city: '', km: 0 };
   const km = Math.max(0, totalKm);
   let passedIndex = 0;
-  for (let i = 0; i < route.length; i += 1) {
-    if (km >= route[i].km) passedIndex = i;
+  for (let i = 0; i < points.length; i += 1) {
+    if (km >= points[i].km) passedIndex = i;
   }
 
-  const passed = route[passedIndex];
-  const next = route[passedIndex + 1] ?? null;
+  const passed = points[passedIndex] ?? start;
+  const next = points[passedIndex + 1] ?? null;
 
   if (!next) return { passed, next: null, kmLeft: 0, progressRatio: 1 };
 

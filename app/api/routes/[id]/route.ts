@@ -32,8 +32,8 @@ export function PATCH(request: Request, context: RouteContext) {
 }
 
 /**
- * DELETE /api/routes/:id — non-active routes only; the last remaining route is
- * also protected: the product always stands on some route (spec § 6.12.2).
+ * DELETE /api/routes/:id — non-active routes only (spec § 6.12.2). Routes are
+ * optional (spec § 6.12.6), so there is no "last route" protection.
  */
 export function DELETE(_request: Request, context: RouteContext) {
   return handle<{ ok: boolean } | ApiErrorBody>(async () => {
@@ -42,9 +42,6 @@ export function DELETE(_request: Request, context: RouteContext) {
     const result = await deleteRoute(id);
     if (result === 'deleted') return NextResponse.json({ ok: true });
     if (result === 'not_found') return apiError(404, 'NOT_FOUND', 'Маршрут не найден');
-    if (result === 'active') {
-      return apiError(409, 'ROUTE_ACTIVE', 'Активный маршрут удалить нельзя — сначала выберите другой');
-    }
-    return apiError(409, 'ROUTE_ACTIVE', 'Нельзя удалить последний маршрут');
+    return apiError(409, 'ROUTE_ACTIVE', 'Активный маршрут удалить нельзя — сначала выберите другой');
   });
 }

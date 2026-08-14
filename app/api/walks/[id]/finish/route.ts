@@ -10,7 +10,6 @@ import { walks } from '@/lib/db/schema';
 import { awardAchievements } from '@/lib/game/achievements';
 import { getPersonalRecord, getTeamProgress } from '@/lib/game/progress';
 import { getStreak } from '@/lib/game/streak';
-import { ROUTE, positionOnRoute } from '@/lib/hints/route';
 import {
   notifyTreadmillFreed,
   notifyWalkFinished,
@@ -33,8 +32,7 @@ async function safe<T>(run: () => Promise<T>, fallback: T, label: string): Promi
 }
 
 function fallbackProgress(): TeamProgressDto {
-  const position = positionOnRoute(ROUTE, 0);
-  return { totalKm: 0, ...position, route: ROUTE };
+  return { totalKm: 0, passed: null, next: null, kmLeft: 0, progressRatio: 0, route: [] };
 }
 
 /** Сводка для экрана успеха: собирается без второго запроса от клиента (п. 6.8.6). */

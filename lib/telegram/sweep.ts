@@ -155,7 +155,7 @@ async function sendDigest(today: string): Promise<void> {
         link.chatId,
         digestText({
           weekKm,
-          passedCity: progress.passed.city,
+          passedCity: progress.passed?.city ?? null,
           top,
           selfRank,
           selfKm: self?.totalKm ?? 0,

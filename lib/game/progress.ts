@@ -38,6 +38,19 @@ export async function getTeamProgress(): Promise<TeamProgressDto> {
     getActiveRoute(),
   ]);
 
+  // No route selected (spec § 6.12.6): a legitimate state, not an error —
+  // the team total is still worth showing.
+  if (activeRoute.points.length < 2) {
+    return {
+      totalKm: round2(row?.totalKm ?? 0),
+      passed: null,
+      next: null,
+      kmLeft: 0,
+      progressRatio: 0,
+      route: [],
+    };
+  }
+
   const totalKm = round2(Math.max(0, (row?.totalKm ?? 0) - activeRoute.baseKm));
   const position = positionOnRoute(activeRoute.points, totalKm);
 

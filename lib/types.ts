@@ -211,13 +211,13 @@ export interface RouteDraftDto {
 
 export interface TeamProgressDto {
   /**
-   * Km walked on the active route: `teamTotalKm − base_km` (spec § 6.12.1).
-   * With the seeded route (`base_km = 0`) it equals the all-time team total.
+   * Km walked on the active route: `teamTotalKm − base_km` (spec § 6.12.1);
+   * the raw all-time total when no route is selected.
    */
   totalKm: number;
-  /** The last city passed. */
-  passed: RouteCityDto;
-  /** The next city; null — the route is fully completed. */
+  /** The last city passed; null — no route selected (`route` is empty too). */
+  passed: RouteCityDto | null;
+  /** The next city; null — the route is fully completed (or not selected). */
   next: RouteCityDto | null;
   kmLeft: number;
   /** Fraction of the way between `passed` and `next`, 0…1 — progress bar width. */

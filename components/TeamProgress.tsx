@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useId } from 'react';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/8bit/card';
@@ -61,6 +62,20 @@ function ProgressBar({ ratio, label }: { ratio: number; label: string }) {
 
 function ProgressBody({ data }: { data: TeamProgressDto }) {
   const { totalKm, passed, next, kmLeft, progressRatio, route } = data;
+
+  // «Маршрут не выбран» — штатное состояние пустой таблицы (п. 6.12.6):
+  // километры команды всё равно показываем, вместо полосы — приглашение.
+  if (!passed || route.length < 2) {
+    return (
+      <p className="text-sm text-text-dim">
+        Команда прошла {formatKm(totalKm)} км. Маршрут не выбран — добавьте его в{' '}
+        <Link href="/settings" className="text-citrus underline-offset-4 hover:underline">
+          настройках
+        </Link>
+        .
+      </p>
+    );
+  }
 
   // Пройденное — без округления: команда честно заработала каждую сотку.
   const caption = next

@@ -2,7 +2,7 @@ import { and, asc, desc, eq, inArray, ne, sql } from 'drizzle-orm';
 
 import { db, sqlClient } from '@/lib/db';
 import { routePoints, routes, walks } from '@/lib/db/schema';
-import { ROUTE, positionOnRoute } from '@/lib/hints/route';
+import { positionOnRoute } from '@/lib/hints/route';
 import type { RouteAdminDto, RouteCityDto } from '@/lib/types';
 
 /**
@@ -13,9 +13,9 @@ import type { RouteAdminDto, RouteCityDto } from '@/lib/types';
  * transaction would give, without pretending the driver can hold one.
  */
 
-/** The active route resolved for consumers, with the static fallback applied. */
+/** The active route resolved for consumers. */
 export interface ActiveRoute {
-  /** null — the table is empty and the hardcoded ROUTE fallback is in effect. */
+  /** null — no route selected: the table is empty (points are empty too). */
   id: string | null;
   points: RouteCityDto[];
   baseKm: number;
@@ -51,15 +51,12 @@ async function teamTotalKm(): Promise<number> {
 }
 
 /**
- * Active route with the ROUTE fallback (spec § 6.12.6): an empty table must
- * not break the home screen or hints.
+ * Active route; an empty table (or a route that lost its points, impossible
+ * past validation) resolves to the "no route selected" state — a legitimate
+ * one since spec § 6.12.6, not an error.
  */
 export async function getActiveRoute(): Promise<ActiveRoute> {
-  const fallback: ActiveRoute = {
-    id: null,
-    points: ROUTE.map((c) => ({ ...c })),
-    baseKm: 0,
-  };
+  const none: ActiveRoute = { id: null, points: [], baseKm: 0 };
 
   const rows = await db
     .select({ id: routes.id, baseKm: routes.baseKm })
@@ -68,12 +65,10 @@ export async function getActiveRoute(): Promise<ActiveRoute> {
     .limit(1);
 
   const row = rows[0];
-  if (!row) return fallback;
+  if (!row) return none;
 
   const points = (await loadPoints([row.id])).get(row.id) ?? [];
-  // A route that lost its points (should be impossible past validation) is
-  // treated the same as no route at all.
-  if (points.length < 2) return fallback;
+  if (points.length < 2) return none;
 
   return { id: row.id, points, baseKm: Number(row.baseKm) };
 }
@@ -186,8 +181,8 @@ export async function updateRoute(
  * single whole-table UPDATE trips the `routes_one_active` partial unique
  * index — Postgres checks uniqueness row by row, and the new active row can
  * be flipped before the old one is cleared. The instant with no active route
- * between the statements is harmless: `getActiveRoute` falls back, and a
- * retry of the activation heals the state.
+ * between the statements is harmless: progress momentarily reads as "no route
+ * selected", and a retry of the activation heals the state.
  */
 export async function activateRoute(
   id: string,
@@ -224,19 +219,17 @@ export async function activateRoute(
   return getRouteAdmin(id);
 }
 
-export type DeleteRouteResult = 'deleted' | 'not_found' | 'active' | 'last';
+export type DeleteRouteResult = 'deleted' | 'not_found' | 'active';
 
 /**
- * Deletes a non-active route (spec § 6.12.2). The WHERE encodes both guards —
- * not active and not the last one — so the checks race-proofly share the
- * statement with the delete itself.
+ * Deletes a non-active route (spec § 6.12.2). The active guard shares the
+ * statement with the delete itself, so the check cannot race the deletion.
+ * There is no "last route" guard: routes are optional (spec § 6.12.6).
  */
 export async function deleteRoute(id: string): Promise<DeleteRouteResult> {
   const rows = await sqlClient.query(
     `delete from routes
-     where id = $1
-       and not is_active
-       and (select count(*) from routes) > 1
+     where id = $1 and not is_active
      returning id`,
     [id],
   );
@@ -248,6 +241,5 @@ export async function deleteRoute(id: string): Promise<DeleteRouteResult> {
     .where(eq(routes.id, id))
     .limit(1);
   if (!current[0]) return 'not_found';
-  if (current[0].isActive) return 'active';
-  return 'last';
+  return 'active';
 }

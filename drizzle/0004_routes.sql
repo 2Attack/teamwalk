@@ -29,5 +29,5 @@ create unique index if not exists route_points_city_uniq on route_points (route_
 create index if not exists route_points_route_idx on route_points (route_id, km);
 
 -- No seed on purpose (spec § 6.12.6): routes are imported manually via SQL or
--- created from the settings screen. An empty table falls back to the
--- hardcoded ROUTE, so the app works either way.
+-- created from the settings screen. An empty table is the legitimate
+-- "no route selected" state — home shows an invitation instead of the bar.

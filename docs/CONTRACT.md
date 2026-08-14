@@ -36,7 +36,7 @@
 | `lib/api.ts` | `apiError, validationError, handle, isUniqueViolation, readJson` |
 | `lib/cn.ts` | `cn()` — слияние Tailwind-классов |
 | `lib/client/api.ts` | SWR-хуки и `apiSend` для всего UI |
-| `lib/hints/route.ts` | `ROUTE` (фолбэк пустой таблицы), `positionOnRoute(points, totalKm)` |
+| `lib/hints/route.ts` | `positionOnRoute(points, totalKm)` |
 | `app/globals.css` | палитра (`bg-deep, bg-panel, border-dim, citrus, lime, text-main, text-dim, silver, bronze`), классы `.pixel-panel`, `.pixel-btn`, `.font-pixel`, `.pixelated`, `.animate-blink` |
 
 Цвета в Tailwind: `bg-bg-panel`, `text-text-dim`, `border-citrus`, `text-lime` и т. п.
@@ -100,7 +100,7 @@ export async function listRoutesAdmin(): Promise<RouteAdminDto[]>;
 export async function createRoute(input: { name: string; points: RouteCityDto[] }): Promise<RouteAdminDto>;
 export async function updateRoute(id: string, patch: { name?: string; points?: RouteCityDto[] }): Promise<RouteAdminDto | null>;
 export async function activateRoute(id: string, resetProgress: boolean): Promise<RouteAdminDto | null>;
-export async function deleteRoute(id: string): Promise<'deleted' | 'not_found' | 'active' | 'last'>;
+export async function deleteRoute(id: string): Promise<'deleted' | 'not_found' | 'active'>;
 
 // lib/routes/generate.ts — владелец: SETTINGS (п. 6.12.4 ТЗ)
 export async function generateRouteDraft(prompt: string, cities?: string[]): Promise<RouteDraftDto | null>;

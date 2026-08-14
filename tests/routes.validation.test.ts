@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { positionOnRoute, ROUTE } from '@/lib/hints/route';
+import { positionOnRoute } from '@/lib/hints/route';
 import {
   activateRouteSchema,
   createRouteSchema,
@@ -105,8 +105,9 @@ describe('positionOnRoute (points as an argument since spec § 6.12.2)', () => {
     expect(position.progressRatio).toBe(1);
   });
 
-  it('falls back to the static ROUTE when points are degenerate', () => {
+  it('does not crash on an empty list — callers guard, this is a safety net', () => {
     const position = positionOnRoute([], 0);
-    expect(position.passed.city).toBe(ROUTE[0].city);
+    expect(position.next).toBeNull();
+    expect(position.passed.km).toBe(0);
   });
 });
