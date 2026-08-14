@@ -1,0 +1,334 @@
+'use client';
+
+import { useState } from 'react';
+
+import { DialogBody, DialogShell } from '@/components/DialogShell';
+import { TreadmillFormDialog } from '@/components/TreadmillFormDialog';
+import { Badge } from '@/components/ui/8bit/badge';
+import { Button } from '@/components/ui/8bit/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/8bit/card';
+import {
+  Dialog,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/8bit/dialog';
+import { Skeleton } from '@/components/ui/8bit/skeleton';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/8bit/table';
+import { Icon } from '@/components/ui/icon';
+import { ApiError, apiSend, revalidateTreadmills, useTreadmillsAdmin } from '@/lib/client/api';
+import type { TreadmillAdminDto } from '@/lib/types';
+
+/**
+ * "Treadmills" settings section (spec § 6.11.2): the full list — inactive
+ * included — with per-row actions. The second action depends on walksCount:
+ * "delete" for a treadmill nothing references, "toggle active" otherwise
+ * (spec § 6.11.4).
+ */
+export function TreadmillSettings() {
+  const { data: treadmills, error, isLoading, mutate: reload } = useTreadmillsAdmin();
+
+  /** Dialog target: `undefined` — closed, `null` — create, a row — edit. */
+  const [formTarget, setFormTarget] = useState<TreadmillAdminDto | null | undefined>(undefined);
+  const [deleteTarget, setDeleteTarget] = useState<TreadmillAdminDto | null>(null);
+  /** Rows with an in-flight quick toggle — their buttons are disabled. */
+  const [togglingIds, setTogglingIds] = useState<ReadonlySet<string>>(new Set());
+  const [actionError, setActionError] = useState<string | null>(null);
+
+  async function toggleActive(treadmill: TreadmillAdminDto) {
+    if (togglingIds.has(treadmill.id)) return;
+    setTogglingIds((prev) => new Set(prev).add(treadmill.id));
+    setActionError(null);
+    try {
+      await apiSend('PATCH', `/api/treadmills/${treadmill.id}`, {
+        isActive: !treadmill.isActive,
+      });
+      await revalidateTreadmills();
+    } catch (err) {
+      setActionError(errorText(err));
+    } finally {
+      setTogglingIds((prev) => {
+        const next = new Set(prev);
+        next.delete(treadmill.id);
+        return next;
+      });
+    }
+  }
+
+  return (
+    <Card font="normal">
+      <CardHeader>
+        <CardTitle className="retro text-sm leading-snug break-words sm:text-base">
+          Дорожки
+        </CardTitle>
+      </CardHeader>
+      <CardContent font="normal" className="space-y-4">
+        {error ? (
+          <div className="space-y-4">
+            <p className="text-sm text-text-dim">
+              Не удалось загрузить список дорожек. Проверьте подключение и повторите.
+            </p>
+            <Button type="button" className="min-h-11 text-xs" onClick={() => void reload()}>
+              Повторить
+            </Button>
+          </div>
+        ) : isLoading || !treadmills ? (
+          <div className="space-y-3">
+            <Skeleton className="h-16 w-full" />
+            <Skeleton className="h-16 w-full" />
+          </div>
+        ) : (
+          <>
+            {treadmills.length === 0 ? (
+              <p className="text-sm text-text-dim">
+                Дорожек пока нет. Добавьте первую — и на главной появится блок старта.
+              </p>
+            ) : (
+              /*
+                The 8bit Table wrapper is `w-fit`; the `[&>div]:w-full` override
+                stretches it to the card so the base shadcn container (already
+                `overflow-x-auto`) owns the horizontal scroll on narrow screens.
+              */
+              /*
+                `borderless`: the card already draws a pixel frame, and the
+                default table frame (thick borders + p-4) both doubled it and
+                stole the width the actions column needs.
+              */
+              <div className="w-full [&>div]:w-full">
+                <Table font="normal" variant="borderless" className="w-full">
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="retro text-[10px] text-text-dim">Название</TableHead>
+                      <TableHead className="retro w-px text-right text-[10px] text-text-dim">
+                        Км/ч
+                      </TableHead>
+                      <TableHead className="retro w-px text-right text-[10px] text-text-dim">
+                        Прогулок
+                      </TableHead>
+                      <TableHead className="retro text-[10px] text-text-dim">Статус</TableHead>
+                      <TableHead className="sr-only">Действия</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {treadmills.map((treadmill) => (
+                      <TreadmillRow
+                        key={treadmill.id}
+                        treadmill={treadmill}
+                        toggling={togglingIds.has(treadmill.id)}
+                        onEdit={() => setFormTarget(treadmill)}
+                        onDelete={() => setDeleteTarget(treadmill)}
+                        onToggleActive={() => void toggleActive(treadmill)}
+                      />
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
+
+            {actionError && <ActionError text={actionError} />}
+
+            <Button
+              type="button"
+              variant="secondary"
+              className="min-h-11 w-full text-xs sm:w-auto"
+              onClick={() => setFormTarget(null)}
+            >
+              <Icon name="plus" size={16} />
+              Добавить дорожку
+            </Button>
+          </>
+        )}
+      </CardContent>
+
+      <TreadmillFormDialog
+        open={formTarget !== undefined}
+        treadmill={formTarget ?? null}
+        onClose={() => setFormTarget(undefined)}
+      />
+
+      <DeleteTreadmillDialog
+        treadmill={deleteTarget}
+        treadmills={treadmills ?? []}
+        onClose={() => setDeleteTarget(null)}
+      />
+    </Card>
+  );
+}
+
+interface TreadmillRowProps {
+  treadmill: TreadmillAdminDto;
+  toggling: boolean;
+  onEdit: () => void;
+  onDelete: () => void;
+  onToggleActive: () => void;
+}
+
+/** One table row (spec § 6.11.2): data cells are sans, actions sit in the last cell. */
+function TreadmillRow({ treadmill, toggling, onEdit, onDelete, onToggleActive }: TreadmillRowProps) {
+  return (
+    <TableRow>
+      <TableCell className="text-sm text-text-main">{treadmill.name}</TableCell>
+      <TableCell className="text-right text-sm text-text-main">
+        {treadmill.maxSpeedKmh}
+      </TableCell>
+      <TableCell className="text-right text-sm text-text-main">
+        {treadmill.walksCount}
+      </TableCell>
+      <TableCell>
+        {/* Occupancy goes on its own line: inline it pushed the actions column
+            out of the card on ordinary desktop widths. */}
+        <span className="flex flex-col items-start gap-1">
+          {treadmill.isActive ? (
+            <span className="text-sm text-text-dim">активна</span>
+          ) : (
+            <Badge variant="secondary" className="text-[10px]">
+              выключена
+            </Badge>
+          )}
+          {treadmill.busy && (
+            <span className="text-sm text-citrus">идёт {treadmill.busy.user.name}</span>
+          )}
+        </span>
+      </TableCell>
+      <TableCell>
+        <span className="flex justify-end gap-2">
+          <Button
+            type="button"
+            variant="secondary"
+            className="min-h-11 text-xs"
+            onClick={onEdit}
+          >
+            Изменить
+          </Button>
+          {treadmill.walksCount === 0 ? (
+            <Button
+              type="button"
+              variant="destructive"
+              className="min-h-11 text-xs"
+              onClick={onDelete}
+            >
+              Удалить
+            </Button>
+          ) : (
+            <Button
+              type="button"
+              variant="secondary"
+              className="min-h-11 text-xs"
+              disabled={toggling}
+              onClick={onToggleActive}
+            >
+              {toggling ? '…' : treadmill.isActive ? 'Выключить' : 'Включить'}
+            </Button>
+          )}
+        </span>
+      </TableCell>
+    </TableRow>
+  );
+}
+
+interface DeleteTreadmillDialogProps {
+  /** `null` — the dialog is closed. */
+  treadmill: TreadmillAdminDto | null;
+  treadmills: TreadmillAdminDto[];
+  onClose: () => void;
+}
+
+/** Deletion confirmation (spec § 6.11.4): only reachable for walk-free treadmills. */
+function DeleteTreadmillDialog({ treadmill, treadmills, onClose }: DeleteTreadmillDialogProps) {
+  const [deleting, setDeleting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  if (!treadmill) return null;
+
+  // Warn when this is the last active treadmill: home will show the
+  // "no treadmills right now" empty state after deletion (spec § 6.9.6).
+  const lastActive =
+    treadmill.isActive && treadmills.filter((t) => t.isActive).length === 1;
+
+  async function handleDelete() {
+    if (deleting || !treadmill) return;
+    setDeleting(true);
+    setError(null);
+    try {
+      await apiSend('DELETE', `/api/treadmills/${treadmill.id}`);
+      await revalidateTreadmills();
+      onClose();
+    } catch (err) {
+      setError(errorText(err));
+    } finally {
+      setDeleting(false);
+    }
+  }
+
+  return (
+    <Dialog open onOpenChange={(next) => (next ? undefined : onClose())}>
+      <DialogShell>
+        <DialogHeader>
+          <DialogTitle className="retro text-sm leading-snug break-words sm:text-base">
+            Удалить дорожку?
+          </DialogTitle>
+          <DialogDescription>
+            «{treadmill.name}» будет удалена насовсем. Отменить действие нельзя.
+          </DialogDescription>
+        </DialogHeader>
+
+        <DialogBody className="space-y-4">
+          {lastActive && (
+            <p className="text-sm text-text-dim">
+              Это последняя активная дорожка: после удаления стартовать прогулки будет нельзя,
+              пока не добавите новую.
+            </p>
+          )}
+          {error && <ActionError text={error} />}
+        </DialogBody>
+
+        <DialogFooter className="gap-3">
+          <Button
+            type="button"
+            variant="secondary"
+            className="min-h-11 w-full text-xs sm:w-auto"
+            onClick={onClose}
+            disabled={deleting}
+          >
+            Отмена
+          </Button>
+          <Button
+            type="button"
+            variant="destructive"
+            className="min-h-11 w-full text-xs sm:w-auto"
+            onClick={() => void handleDelete()}
+            disabled={deleting}
+          >
+            {deleting ? 'Удаляем…' : 'Удалить'}
+          </Button>
+        </DialogFooter>
+      </DialogShell>
+    </Dialog>
+  );
+}
+
+/** Form-level error: an accent bar instead of a bare red line. */
+function ActionError({ text }: { text: string }) {
+  return (
+    <p
+      role="alert"
+      className="border-l-[3px] border-destructive bg-destructive/10 px-3 py-2 text-sm text-destructive"
+    >
+      {text}
+    </p>
+  );
+}
+
+/** Human error text: the API message or a neutral fallback. */
+function errorText(error: unknown): string {
+  if (error instanceof ApiError) return error.message;
+  return 'Не удалось связаться с сервером. Проверьте сеть и повторите.';
+}

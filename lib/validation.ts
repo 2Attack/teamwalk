@@ -6,12 +6,14 @@ import {
   MAX_SPEED_KMH_ABS,
   MIN_DISTANCE_KM,
   MIN_SPEED_KMH,
+  TREADMILL_SORT_ORDER_MAX,
+  TREADMILL_SORT_ORDER_MIN,
 } from './config';
 import { normalizeName } from './format';
 
-/** Zod-схемы — одни и те же на клиенте и в API (п. 3 ТЗ). */
+/** Zod schemas — the same ones on the client and in the API (spec § 3). */
 
-/** Буквы (кириллица/латиница), цифры, пробел, дефис, апостроф, точка (п. 6.2). */
+/** Letters (Cyrillic/Latin), digits, space, hyphen, apostrophe, dot (spec § 6.2). */
 const NAME_ALLOWED = /^[\p{L}\p{Nd} '.\-]+$/u;
 
 export const nameSchema = z
@@ -57,12 +59,57 @@ export const startWalkSchema = z.object({
   treadmillId: uuidSchema.optional(),
 });
 
-/** Смена скорости на ходу (п. 6.3): границы те же, что на старте. */
+/** Mid-walk speed change (spec § 6.3): the same bounds as at start. */
 export const changeSpeedSchema = z.object({
   speedKmh: speedSchema,
 });
 
-/** Дистанция: 0.01–50.00, шаг 0.01. Точка и запятая принимаются на уровне UI. */
+/**
+ * Treadmill CRUD on the settings screen (spec § 6.11.3). The speed ceiling uses
+ * the DB sanity bounds (spec § 4.2); the name follows the participant-name rules
+ * except title-casing: «У окна» must not become «У Окна». Case-insensitive
+ * uniqueness is enforced by the `treadmills_name_uniq` index.
+ */
+export const treadmillNameSchema = z
+  .string()
+  .transform((v) => v.trim().replace(/\s+/g, ' '))
+  .refine((v) => v.length >= 2 && v.length <= 60, {
+    message: 'Название должно быть от 2 до 60 символов',
+  })
+  .refine((v) => NAME_ALLOWED.test(v), {
+    message: 'Допустимы только буквы, цифры, пробел, дефис, апостроф и точка',
+  });
+
+export const treadmillMaxSpeedSchema = z
+  .number()
+  .int({ message: 'Потолок скорости — целое число' })
+  .min(MIN_SPEED_KMH, { message: `Минимум ${MIN_SPEED_KMH} км/ч` })
+  .max(MAX_SPEED_KMH_ABS, { message: `Максимум ${MAX_SPEED_KMH_ABS} км/ч` });
+
+export const treadmillSortOrderSchema = z
+  .number()
+  .int({ message: 'Порядок — целое число' })
+  .min(TREADMILL_SORT_ORDER_MIN, { message: `Минимум ${TREADMILL_SORT_ORDER_MIN}` })
+  .max(TREADMILL_SORT_ORDER_MAX, { message: `Максимум ${TREADMILL_SORT_ORDER_MAX}` });
+
+export const createTreadmillSchema = z.object({
+  name: treadmillNameSchema,
+  maxSpeedKmh: treadmillMaxSpeedSchema,
+  sortOrder: treadmillSortOrderSchema.optional(),
+});
+
+export const patchTreadmillSchema = z
+  .object({
+    name: treadmillNameSchema.optional(),
+    maxSpeedKmh: treadmillMaxSpeedSchema.optional(),
+    sortOrder: treadmillSortOrderSchema.optional(),
+    isActive: z.boolean().optional(),
+  })
+  .refine((v) => Object.values(v).some((field) => field !== undefined), {
+    message: 'Нечего обновлять',
+  });
+
+/** Distance: 0.01–50.00, step 0.01. Dot and comma are both accepted at the UI level. */
 export const distanceSchema = z
   .number()
   .min(MIN_DISTANCE_KM, { message: `Минимум ${MIN_DISTANCE_KM} км` })
@@ -79,9 +126,9 @@ export const periodSchema = z.enum(['week', 'month', 'all']).default('week');
 export type Period = z.infer<typeof periodSchema>;
 
 /**
- * Офисный день `YYYY-MM-DD` — граница произвольного периода рейтинга.
- * Несуществующие даты ловятся раунд-трипом по компонентам: `Date.parse`
- * не годится — V8 молча перекатывает `2026-02-31` в 3 марта.
+ * Office day `YYYY-MM-DD` — a boundary of a custom leaderboard period.
+ * Nonexistent dates are caught by a component round-trip: `Date.parse` is not
+ * suitable — V8 silently rolls `2026-02-31` over into March 3.
  */
 export const officeDaySchema = z
   .string()
@@ -98,8 +145,8 @@ export const officeDaySchema = z
   );
 
 /**
- * Выбор периода рейтинга: предустановленный или произвольный диапазон офисных
- * дней (обе границы включительно). Одна схема на клиент и API (п. 3 ТЗ).
+ * Leaderboard period selection: a preset or a custom range of office days
+ * (both bounds inclusive). One schema for the client and the API (spec § 3).
  */
 export const periodSelectionSchema = z.union([
   z
@@ -116,7 +163,7 @@ export const periodSelectionSchema = z.union([
 ]);
 export type PeriodSelection = z.infer<typeof periodSelectionSchema>;
 
-/** Ответ LLM с хинтами (п. 6.6.3). */
+/** LLM response with hints (spec § 6.6.3). */
 export const hintToneSchema = z.enum(['praise', 'tease', 'neutral', 'tip']);
 
 export const llmHintSchema = z.object({

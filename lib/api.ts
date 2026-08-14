@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { ZodError } from 'zod';
 
-/** Единый формат ошибок API (п. 5 ТЗ). */
+/** Unified API error format (spec § 5). */
 export type ApiErrorCode =
   | 'VALIDATION_ERROR'
   | 'NOT_FOUND'
@@ -9,6 +9,7 @@ export type ApiErrorCode =
   | 'WALK_ALREADY_ACTIVE'
   | 'TREADMILL_BUSY'
   | 'TREADMILL_INACTIVE'
+  | 'TREADMILL_HAS_WALKS'
   | 'NO_TREADMILLS'
   | 'SPEED_OUT_OF_RANGE'
   | 'WALK_NOT_ACTIVE'
@@ -45,7 +46,7 @@ export function validationError(error: ZodError): NextResponse<ApiErrorBody> {
   });
 }
 
-/** Обёртка хендлера: ловит Zod и неожиданные ошибки, логирует, отдаёт конверт. */
+/** Handler wrapper: catches Zod and unexpected errors, logs, returns the envelope. */
 export async function handle<T>(fn: () => Promise<NextResponse<T>>) {
   try {
     return await fn();
@@ -57,30 +58,43 @@ export async function handle<T>(fn: () => Promise<NextResponse<T>>) {
 }
 
 /**
- * Постгрес-ошибка нарушения уникальности.
+ * Postgres unique-constraint violation.
  *
- * Drizzle заворачивает ошибку драйвера в `DrizzleQueryError`, у которой нет `code`,
- * поэтому проверять надо всю цепочку `cause` — иначе гонка на partial unique index
- * уедет клиенту как 500 вместо понятного 409.
+ * Drizzle wraps the driver error into a `DrizzleQueryError` that has no `code`,
+ * so the whole `cause` chain must be checked — otherwise a race on a partial
+ * unique index reaches the client as a 500 instead of a clear 409.
  */
 export function isUniqueViolation(error: unknown, constraint?: string): boolean {
+  return isPgViolation(error, '23505', constraint);
+}
+
+/**
+ * Postgres foreign-key violation (SQLSTATE 23503) — e.g. deleting a treadmill
+ * that walks still reference (`on delete restrict`, spec § 6.11.4).
+ */
+export function isForeignKeyViolation(error: unknown, constraint?: string): boolean {
+  return isPgViolation(error, '23503', constraint);
+}
+
+/** Walks the `cause` chain looking for a given SQLSTATE. */
+function isPgViolation(error: unknown, sqlState: string, constraint?: string): boolean {
   for (let cur: unknown = error, depth = 0; cur && depth < 6; depth += 1) {
     const e = cur as { code?: string; constraint?: string; message?: string; cause?: unknown };
-    if (e.code === '23505') {
+    if (e.code === sqlState) {
       if (!constraint) return true;
       const text = `${e.constraint ?? ''} ${e.message ?? ''}`;
       if (text.includes(constraint)) return true;
     }
-    // Имя индекса может остаться только в тексте внешней обёртки.
+    // The constraint name may survive only in the outer wrapper's message.
     if (constraint && typeof e.message === 'string' && e.message.includes(constraint)) {
-      if (findPgCode(error) === '23505') return true;
+      if (findPgCode(error) === sqlState) return true;
     }
     cur = e.cause;
   }
   return false;
 }
 
-/** Ищет SQLSTATE в цепочке причин. */
+/** Finds the SQLSTATE in the cause chain. */
 function findPgCode(error: unknown): string | undefined {
   for (let cur: unknown = error, depth = 0; cur && depth < 6; depth += 1) {
     const e = cur as { code?: string; cause?: unknown };
@@ -90,7 +104,7 @@ function findPgCode(error: unknown): string | undefined {
   return undefined;
 }
 
-/** Безопасный разбор JSON-тела: пустое тело — понятная ошибка, а не краш. */
+/** Safe JSON body parsing: an empty body yields a clear error, not a crash. */
 export async function readJson(request: Request): Promise<unknown> {
   try {
     return await request.json();

@@ -94,6 +94,15 @@ export async function getTelegramStatus(userId: string): Promise<TelegramStatusD
 export async function dismissNudge(userId: string): Promise<void>; // «Больше не показывать» панель (п. 6.10.2)
 export async function processTelegramUpdate(update: unknown): Promise<void>; // webhook, дедуп по update_id
 
+// lib/db/queries/treadmills.ts — владелец: SETTINGS (п. 6.11 ТЗ)
+export async function listAllTreadmills(): Promise<TreadmillAdminDto[]>;
+export async function getTreadmillAdmin(id: string): Promise<TreadmillAdminDto | null>;
+export async function createTreadmill(input: { name: string; maxSpeedKmh: number;
+  sortOrder?: number }): Promise<TreadmillAdminDto>;
+export async function updateTreadmill(id: string, patch: { name?: string; maxSpeedKmh?: number;
+  sortOrder?: number; isActive?: boolean }): Promise<TreadmillAdminDto | null>;
+export async function deleteTreadmill(id: string): Promise<boolean>; // FK 23503 → 409 у роута
+
 // components/ui/* — владелец: UIKIT (см. ниже)
 ```
 
@@ -144,12 +153,13 @@ export function AvatarPicker(props: { value: string; onChange: (id: string) => v
 |---|---|
 | **ASSETS** | `public/avatars/pixel-01..24.svg`, `public/sprites/*`, `lib/icons.generated.ts` |
 | **USERS** | `app/api/users/route.ts`, `app/api/users/[id]/route.ts`, `app/api/users/[id]/walks/route.ts`, `lib/db/queries/users.ts` |
-| **WALKS** | `app/api/treadmills/route.ts`, `app/api/walks/**`, `lib/db/queries/walks.ts`, `lib/walks/autoclose.ts` |
+| **WALKS** | `app/api/walks/**`, `lib/db/queries/walks.ts`, `lib/walks/autoclose.ts` |
 | **LEADERBOARD** | `app/api/leaderboard/route.ts`, `app/api/stats/route.ts`, `lib/db/queries/leaderboard.ts` |
 | **HINTS** | `lib/hints/*` (кроме `route.ts`), `app/api/hints/route.ts`, `tests/hints.filter.test.ts`, `vitest.config.ts` |
 | **GAME** | `lib/game/*`, `app/api/users/[id]/stats/route.ts`, `app/api/achievements/route.ts`, `app/api/team/progress/route.ts`, `tests/streak.test.ts` |
 | **TELEGRAM** | `lib/telegram/*`, `app/api/telegram/**`, `app/api/users/[id]/telegram/**`, `app/api/cron/notify/route.ts`, `components/TelegramNudge.tsx`, `components/TelegramLinkDialog.tsx`, `tests/telegram.*.test.ts`, `vercel.json`, `drizzle/0002_telegram.sql` |
 | **UIKIT** | `components/ui/*`, `components/Avatar.tsx`, `components/AvatarPicker.tsx` |
 | **HOME** | `app/page.tsx`, `components/UserSelect.tsx`, `components/AddUserDialog.tsx`, `components/StartWalkCard.tsx`, `components/StartCountdown.tsx`, `components/TreadmillPicker.tsx` |
+| **SETTINGS** | `app/settings/page.tsx`, `app/api/treadmills/**`, `lib/db/queries/treadmills.ts`, `components/TreadmillSettings.tsx`, `components/TreadmillFormDialog.tsx`, `tests/treadmills.validation.test.ts` (п. 6.11 ТЗ; `GET /api/treadmills` без `scope` по-прежнему отдаёт форму зоны WALKS — `listActiveTreadmills`) |
 | **WALKSCREEN** | `app/walk/[id]/page.tsx`, `components/WalkTimer.tsx`, `components/FinishWalkDialog.tsx`, `components/WalkSuccess.tsx`, `components/WalkerSprite.tsx` |
 | **BOARDUI** | `components/Podium.tsx`, `components/Leaderboard.tsx`, `components/PeriodTabs.tsx`, `components/TeamProgress.tsx`, `components/StreakBadge.tsx`, `components/HintTicker.tsx`, `components/AchievementToast.tsx` |
