@@ -43,7 +43,8 @@ export const STREAK_FREEZES_PER_MONTH = 2;
 export const HINTS_ENABLED = process.env.HINTS_ENABLED !== 'false';
 export const HINTS_TTL_MINUTES = Number(process.env.HINTS_TTL_MINUTES ?? 60);
 export const HINTS_POOL_MIN = 8;
-export const HINTS_POOL_MAX = 12;
+/** Верх пула настраивается без деплоя: размер ленты — вопрос вкуса, не кода. */
+export const HINTS_POOL_MAX = Number(process.env.HINTS_POOL_MAX ?? 24);
 /** Ниже этого числа после фильтрации пул добивается статикой (п. 6.6.4). */
 export const HINTS_MIN_AFTER_FILTER = 6;
 /*
