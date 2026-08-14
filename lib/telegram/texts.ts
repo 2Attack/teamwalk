@@ -129,7 +129,8 @@ export function remindText(i: {
 /** Недельный дайджест — понедельник, тихое (п. 6.10.4). */
 export function digestText(i: {
   weekKm: number;
-  passedCity: string;
+  /** null — маршрут не выбран (п. 6.12.6): дайджест обходится без географии. */
+  passedCity: string | null;
   top: Array<{ name: string; km: number }>;
   selfRank: number | null;
   selfKm: number;
@@ -137,11 +138,16 @@ export function digestText(i: {
   const lines: string[] = [];
 
   lines.push(
-    pick([
-      `Неделя закрыта: команда +${formatKm(i.weekKm)} км. Последняя отметка на маршруте — ${i.passedCity} 🎉`,
-      `Итоги недели: +${formatKm(i.weekKm)} км на общий счёт. На карте команда прошла отметку «${i.passedCity}».`,
-      `Ещё ${formatKm(i.weekKm)} км позади. Маршрут показывает: ${i.passedCity} уже за спиной.`,
-    ]),
+    i.passedCity === null
+      ? pick([
+          `Неделя закрыта: команда +${formatKm(i.weekKm)} км 🎉`,
+          `Итоги недели: +${formatKm(i.weekKm)} км на общий счёт.`,
+        ])
+      : pick([
+          `Неделя закрыта: команда +${formatKm(i.weekKm)} км. Последняя отметка на маршруте — ${i.passedCity} 🎉`,
+          `Итоги недели: +${formatKm(i.weekKm)} км на общий счёт. На карте команда прошла отметку «${i.passedCity}».`,
+          `Ещё ${formatKm(i.weekKm)} км позади. Маршрут показывает: ${i.passedCity} уже за спиной.`,
+        ]),
   );
 
   if (i.top.length > 0) {

@@ -6,6 +6,9 @@ import {
   MAX_SPEED_KMH_ABS,
   MIN_DISTANCE_KM,
   MIN_SPEED_KMH,
+  ROUTE_POINT_KM_MAX,
+  ROUTE_POINTS_MAX,
+  ROUTE_POINTS_MIN,
   TREADMILL_SORT_ORDER_MAX,
   TREADMILL_SORT_ORDER_MIN,
 } from './config';
@@ -108,6 +111,65 @@ export const patchTreadmillSchema = z
   .refine((v) => Object.values(v).some((field) => field !== undefined), {
     message: 'Нечего обновлять',
   });
+
+/**
+ * Team routes (spec § 6.12.2). City and route names follow the treadmill-name
+ * rules (2–60 chars, whitespace collapse, no title-casing). Points: the first
+ * is the start at km 0, km strictly increase, cities are unique, 2–20 points.
+ */
+export const routePointSchema = z.object({
+  city: treadmillNameSchema,
+  km: z
+    .number()
+    .int({ message: 'Километры — целое число' })
+    .min(0, { message: 'Километры не могут быть отрицательными' })
+    .max(ROUTE_POINT_KM_MAX, { message: `Максимум ${ROUTE_POINT_KM_MAX} км` }),
+});
+
+export const routePointsSchema = z
+  .array(routePointSchema)
+  .min(ROUTE_POINTS_MIN, { message: `Минимум ${ROUTE_POINTS_MIN} точки: старт и цель` })
+  .max(ROUTE_POINTS_MAX, { message: `Максимум ${ROUTE_POINTS_MAX} точек` })
+  .refine((points) => points[0]?.km === 0, {
+    message: 'Маршрут начинается со старта — точки с 0 км',
+  })
+  .refine((points) => points.every((p, i) => i === 0 || p.km > points[i - 1].km), {
+    message: 'Километры должны строго возрастать',
+  })
+  .refine(
+    (points) =>
+      new Set(points.map((p) => p.city.toLocaleLowerCase('ru-RU'))).size === points.length,
+    { message: 'Города в маршруте не должны повторяться' },
+  );
+
+export const createRouteSchema = z.object({
+  name: treadmillNameSchema,
+  points: routePointsSchema,
+});
+
+export const patchRouteSchema = z
+  .object({
+    name: treadmillNameSchema.optional(),
+    points: routePointsSchema.optional(),
+  })
+  .refine((v) => v.name !== undefined || v.points !== undefined, {
+    message: 'Нечего обновлять',
+  });
+
+export const activateRouteSchema = z.object({
+  resetProgress: z.boolean(),
+});
+
+/** Request of `POST /api/routes/generate` (spec § 6.12.4). */
+export const generateRouteSchema = z.object({
+  prompt: z
+    .string()
+    .transform((v) => v.trim())
+    .refine((v) => v.length >= 3 && v.length <= 300, {
+      message: 'Опишите маршрут (от 3 до 300 символов)',
+    }),
+  cities: z.array(treadmillNameSchema).max(ROUTE_POINTS_MAX).optional(),
+});
 
 /** Distance: 0.01–50.00, step 0.01. Dot and comma are both accepted at the UI level. */
 export const distanceSchema = z

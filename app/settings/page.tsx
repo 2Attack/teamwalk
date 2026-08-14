@@ -2,13 +2,13 @@
 
 import Link from 'next/link';
 
+import { RouteSettings } from '@/components/RouteSettings';
 import { TreadmillSettings } from '@/components/TreadmillSettings';
 
 /**
- * Settings screen (spec § 6.11): a page rather than a dialog — the section is a
- * CRUD list with dialogs of its own. No authorization by design (spec § 7.9).
- * The only section for now is treadmills; the page is built as header +
- * section cards so the next sections slot in without restructuring.
+ * Settings screen (spec § 6.11): a page rather than a dialog — the sections
+ * are CRUD lists with dialogs of their own. No authorization by design
+ * (spec § 7.9). Sections: treadmills (§ 6.11.2) and the team route (§ 6.12).
  */
 export default function SettingsPage() {
   return (
@@ -24,6 +24,7 @@ export default function SettingsPage() {
       </header>
 
       <TreadmillSettings />
+      <RouteSettings />
     </main>
   );
 }

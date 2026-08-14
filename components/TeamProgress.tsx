@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useId } from 'react';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/8bit/card';
@@ -60,12 +61,26 @@ function ProgressBar({ ratio, label }: { ratio: number; label: string }) {
 }
 
 function ProgressBody({ data }: { data: TeamProgressDto }) {
-  const { totalKm, passed, next, kmLeft, progressRatio } = data;
+  const { totalKm, passed, next, kmLeft, progressRatio, route } = data;
+
+  // «Маршрут не выбран» — штатное состояние пустой таблицы (п. 6.12.6):
+  // километры команды всё равно показываем, вместо полосы — приглашение.
+  if (!passed || route.length < 2) {
+    return (
+      <p className="text-sm text-text-dim">
+        Команда прошла {formatKm(totalKm)} км. Маршрут не выбран — добавьте его в{' '}
+        <Link href="/settings" className="text-citrus underline-offset-4 hover:underline">
+          настройках
+        </Link>
+        .
+      </p>
+    );
+  }
 
   // Пройденное — без округления: команда честно заработала каждую сотку.
   const caption = next
     ? `${formatKm(totalKm)} км пройдено, до ${next.city} ${routeKm(kmLeft)} км`
-    : `${formatKm(totalKm)} км пройдено — маршрут пройден целиком`;
+    : `${formatKm(totalKm)} км пройдено — маршрут пройден целиком. Выберите следующий в настройках`;
 
   return (
     <>
@@ -84,6 +99,28 @@ function ProgressBody({ data }: { data: TeamProgressDto }) {
       </div>
 
       <p className="mt-3 text-sm text-text-dim">{caption}</p>
+
+      {/* Полная цепочка маршрута (п. 6.12): шапка показывает края текущего
+          отрезка, а эта строка отвечает на «а что дальше?» — пройденные города
+          приглушены, следующий подсвечен. Названия — данные, sans (п. 6.7.1). */}
+      {route.length >= 2 && (
+        <p className="mt-2 flex flex-wrap items-center gap-x-1.5 gap-y-1 text-xs text-text-dim">
+          {route.map((point, index) => (
+            <span key={point.city} className="flex items-center gap-x-1.5">
+              {index > 0 && <span aria-hidden>→</span>}
+              <span
+                title={`${point.km} км от старта`}
+                className={cn(
+                  point.km <= totalKm && 'opacity-50',
+                  next?.city === point.city && 'font-medium text-citrus',
+                )}
+              >
+                {point.city}
+              </span>
+            </span>
+          ))}
+        </p>
+      )}
     </>
   );
 }

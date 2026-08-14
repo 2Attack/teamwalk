@@ -49,6 +49,14 @@ function gatewayEnabled(): boolean {
 }
 
 /**
+ * Shared LLM availability check: route generation (spec § 6.12.4) degrades the
+ * same way hints do, so it must ask the same question.
+ */
+export function llmEnabled(): boolean {
+  return gatewayEnabled();
+}
+
+/**
  * Gateway → (ошибка/квота/пусто) → `null`.
  * `null` означает «пул не обновляем», а не «сломались»: вызывающий код остаётся
  * на предыдущем пуле либо на статике.

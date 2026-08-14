@@ -8,6 +8,7 @@ import type {
   HintsResponseDto,
   LeaderboardDto,
   PeriodSelection,
+  RoutesAdminResponseDto,
   StatsDto,
   TeamProgressDto,
   TelegramStatusDto,
@@ -78,6 +79,11 @@ export function useUsers() {
 
 export function useTreadmills() {
   return useSWR<TreadmillDto[]>('/api/treadmills', apiGet, { refreshInterval: 15_000 });
+}
+
+/** Route catalog for the settings screen (spec § 6.12.3). */
+export function useRoutesAdmin() {
+  return useSWR<RoutesAdminResponseDto>('/api/routes', apiGet, { revalidateOnFocus: true });
 }
 
 /** Full treadmill list for the settings screen (spec § 6.11.2), inactive included. */
@@ -152,6 +158,22 @@ export function useAchievements(userId: string | null) {
  */
 export async function primeActiveWalk(walk: ActiveWalkDto): Promise<void> {
   await globalMutate(`/api/walks/active?userId=${walk.userId}`, walk, { revalidate: false });
+}
+
+/**
+ * Invalidate routes after settings CRUD (spec § 6.12.3): the admin list plus
+ * everything derived from the active route — team progress and hints.
+ */
+export async function revalidateRoutes(): Promise<void> {
+  await globalMutate(
+    (key) =>
+      typeof key === 'string' &&
+      (key.startsWith('/api/routes') ||
+        key.startsWith('/api/team/progress') ||
+        key.startsWith('/api/hints')),
+    undefined,
+    { revalidate: true },
+  );
 }
 
 /**

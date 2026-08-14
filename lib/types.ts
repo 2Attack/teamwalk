@@ -185,11 +185,39 @@ export interface RouteCityDto {
   km: number;
 }
 
+/** A route row on the settings screen (spec § 6.12.3). */
+export interface RouteAdminDto {
+  id: string;
+  name: string;
+  baseKm: number;
+  isActive: boolean;
+  points: RouteCityDto[];
+  /** Present only on the active route: km walked on it and what is next. */
+  progress: { walkedKm: number; nextCity: string | null; kmLeft: number } | null;
+}
+
+/** Response of `GET /api/routes` (spec § 5.6). */
+export interface RoutesAdminResponseDto {
+  routes: RouteAdminDto[];
+  /** LLM credentials are configured — the AI generation UI is shown (spec § 6.12.4). */
+  llmEnabled: boolean;
+}
+
+/** Draft returned by `POST /api/routes/generate` — never written to the DB. */
+export interface RouteDraftDto {
+  name: string;
+  points: RouteCityDto[];
+}
+
 export interface TeamProgressDto {
+  /**
+   * Km walked on the active route: `teamTotalKm − base_km` (spec § 6.12.1);
+   * the raw all-time total when no route is selected.
+   */
   totalKm: number;
-  /** The last city passed. */
-  passed: RouteCityDto;
-  /** The next city; null — the route is fully completed. */
+  /** The last city passed; null — no route selected (`route` is empty too). */
+  passed: RouteCityDto | null;
+  /** The next city; null — the route is fully completed (or not selected). */
   next: RouteCityDto | null;
   kmLeft: number;
   /** Fraction of the way between `passed` and `next`, 0…1 — progress bar width. */

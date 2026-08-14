@@ -5,6 +5,7 @@ import { db } from '@/lib/db';
 import { users, walks } from '@/lib/db/schema';
 import { catchupDays, nextMilestone, rankChanges } from '@/lib/hints/enrich';
 import type { MilestoneInfo } from '@/lib/hints/enrich';
+import { getActiveRoute } from '@/lib/db/queries/routes';
 import { positionOnRoute } from '@/lib/hints/route';
 import { diffOfficeDays, periodStart, toOfficeDay } from '@/lib/time';
 
@@ -39,8 +40,9 @@ export interface HintSnapshotParticipant {
 export interface HintSnapshot {
   team_total_km: number;
   team_km_week: number;
-  /** Арифметику по маршруту делаем мы: на числах LLM ошибается охотнее всего. */
-  route_position: { passed: string; next: string | null; km_left: number };
+  /** Арифметику по маршруту делаем мы: на числах LLM ошибается охотнее всего.
+   * Отсутствует, когда маршрут не выбран (п. 6.12.6) — гео-фразы просто не рождаются. */
+  route_position?: { passed: string; next: string | null; km_left: number };
   /** Ближайший круглый рубеж команды — готовый сюжет «кто добьёт». */
   next_milestone: MilestoneInfo;
   /** Рекордный день команды за всю историю; отсутствует, пока прогулок нет. */
@@ -233,19 +235,28 @@ export async function buildSnapshot(): Promise<SnapshotResult> {
 
   const teamTotalKm = Math.round(all.reduce((sum, u) => sum + u.totalKm, 0) * 100) / 100;
   const teamKmWeek = Math.round(all.reduce((sum, u) => sum + u.kmWeek, 0) * 100) / 100;
-  const position = positionOnRoute(teamTotalKm);
+  // The route lives in the DB since spec § 6.12; the position is projected
+  // from the km walked on the active route, not the raw all-time total.
+  // No route selected → the geo position is simply omitted from the snapshot.
+  const activeRoute = await getActiveRoute();
+  const position =
+    activeRoute.points.length >= 2
+      ? positionOnRoute(activeRoute.points, Math.max(0, teamTotalKm - activeRoute.baseKm))
+      : null;
 
   const snapshot: HintSnapshot = {
     team_total_km: teamTotalKm,
     team_km_week: teamKmWeek,
-    route_position: {
-      passed: position.passed.city,
-      next: position.next?.city ?? null,
-      km_left: position.kmLeft,
-    },
     next_milestone: nextMilestone(teamTotalKm),
     participants,
   };
+  if (position) {
+    snapshot.route_position = {
+      passed: position.passed.city,
+      next: position.next?.city ?? null,
+      km_left: position.kmLeft,
+    };
+  }
   if (recordDay) snapshot.record_day = recordDay;
 
   // Сюжет о погоне — только про верхнюю пару видимых участников: у обоих
