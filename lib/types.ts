@@ -185,7 +185,51 @@ export interface RouteCityDto {
   km: number;
 }
 
+/** Decor glyph kinds of the pixel map — a fixed catalog (spec § 6.12.5). */
+export type MapDecorKind = 'tree' | 'mountain' | 'lake' | 'house' | 'anchor';
+
+/**
+ * Pixel-map layout (spec § 6.12.5): integer coordinates on the MAP_GRID_W ×
+ * MAP_GRID_H grid. Produced by the LLM (validated + normalized) or, when
+ * absent, built deterministically by `fallbackLayout`.
+ */
+export interface MapLayoutDto {
+  cities: Array<{ city: string; x: number; y: number }>;
+  /** Optional trail bends between a city and the next one. */
+  bends: Array<{ after: string; x: number; y: number }>;
+  decor: Array<{ kind: MapDecorKind; x: number; y: number }>;
+}
+
+/** A route row on the settings screen (spec § 6.12.3). */
+export interface RouteAdminDto {
+  id: string;
+  name: string;
+  baseKm: number;
+  isActive: boolean;
+  points: RouteCityDto[];
+  hasMapLayout: boolean;
+  /** Present only on the active route: km walked on it and what is next. */
+  progress: { walkedKm: number; nextCity: string | null; kmLeft: number } | null;
+}
+
+/** Response of `GET /api/routes` (spec § 5.6). */
+export interface RoutesAdminResponseDto {
+  routes: RouteAdminDto[];
+  /** LLM credentials are configured — the AI generation UI is shown (spec § 6.12.4). */
+  llmEnabled: boolean;
+}
+
+/** Draft returned by `POST /api/routes/generate` — never written to the DB. */
+export interface RouteDraftDto {
+  name: string;
+  points: RouteCityDto[];
+}
+
 export interface TeamProgressDto {
+  /**
+   * Km walked on the active route: `teamTotalKm − base_km` (spec § 6.12.1).
+   * With the seeded route (`base_km = 0`) it equals the all-time team total.
+   */
   totalKm: number;
   /** The last city passed. */
   passed: RouteCityDto;
@@ -195,6 +239,8 @@ export interface TeamProgressDto {
   /** Fraction of the way between `passed` and `next`, 0…1 — progress bar width. */
   progressRatio: number;
   route: RouteCityDto[];
+  /** Pixel-map layout of the active route, null → deterministic fallback (spec § 6.12.5). */
+  mapLayout: MapLayoutDto | null;
 }
 
 export interface UserStatsDto {

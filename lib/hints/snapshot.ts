@@ -5,6 +5,7 @@ import { db } from '@/lib/db';
 import { users, walks } from '@/lib/db/schema';
 import { catchupDays, nextMilestone, rankChanges } from '@/lib/hints/enrich';
 import type { MilestoneInfo } from '@/lib/hints/enrich';
+import { getActiveRoute } from '@/lib/db/queries/routes';
 import { positionOnRoute } from '@/lib/hints/route';
 import { diffOfficeDays, periodStart, toOfficeDay } from '@/lib/time';
 
@@ -233,7 +234,13 @@ export async function buildSnapshot(): Promise<SnapshotResult> {
 
   const teamTotalKm = Math.round(all.reduce((sum, u) => sum + u.totalKm, 0) * 100) / 100;
   const teamKmWeek = Math.round(all.reduce((sum, u) => sum + u.kmWeek, 0) * 100) / 100;
-  const position = positionOnRoute(teamTotalKm);
+  // The route lives in the DB since spec § 6.12; the position is projected
+  // from the km walked on the active route, not the raw all-time total.
+  const activeRoute = await getActiveRoute();
+  const position = positionOnRoute(
+    activeRoute.points,
+    Math.max(0, teamTotalKm - activeRoute.baseKm),
+  );
 
   const snapshot: HintSnapshot = {
     team_total_km: teamTotalKm,

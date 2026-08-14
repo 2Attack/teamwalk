@@ -5,6 +5,7 @@ import {
   date,
   index,
   integer,
+  jsonb,
   numeric,
   pgEnum,
   pgTable,
@@ -35,6 +36,45 @@ export const users = pgTable(
     uniqueIndex('users_name_uniq').on(
       sql`lower(regexp_replace(btrim(${t.name}), '\\s+', ' ', 'g'))`,
     ),
+  ],
+);
+
+/** Team route catalog (spec § 6.12): several routes, exactly one active. */
+export const routes = pgTable(
+  'routes',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    name: text('name').notNull(),
+    /** Start mark: position on the route = teamTotalKm − base_km (spec § 6.12.1). */
+    baseKm: numeric('base_km', { precision: 8, scale: 2 }).notNull().default('0'),
+    isActive: boolean('is_active').notNull().default(false),
+    /** Pixel map layout (spec § 6.12.5); null — deterministic layout is used. */
+    mapLayout: jsonb('map_layout'),
+    mapGeneratedAt: timestamp('map_generated_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex('routes_name_uniq').on(sql`lower(btrim(${t.name}))`),
+    // Exactly one active route — same technique as one active walk (spec § 7.1).
+    uniqueIndex('routes_one_active').on(t.isActive).where(sql`${t.isActive}`),
+  ],
+);
+
+export const routePoints = pgTable(
+  'route_points',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    routeId: uuid('route_id')
+      .notNull()
+      .references(() => routes.id, { onDelete: 'cascade' }),
+    city: text('city').notNull(),
+    /** Cumulative distance from the start; ordering is defined by it alone. */
+    km: integer('km').notNull(),
+  },
+  (t) => [
+    uniqueIndex('route_points_km_uniq').on(t.routeId, t.km),
+    uniqueIndex('route_points_city_uniq').on(t.routeId, sql`lower(btrim(${t.city}))`),
+    index('route_points_route_idx').on(t.routeId, t.km),
   ],
 );
 
@@ -210,6 +250,8 @@ export const notifyMeta = pgTable('notify_meta', {
 
 export type User = typeof users.$inferSelect;
 export type Treadmill = typeof treadmills.$inferSelect;
+export type RouteRow = typeof routes.$inferSelect;
+export type RoutePointRow = typeof routePoints.$inferSelect;
 export type Walk = typeof walks.$inferSelect;
 export type WalkSpeedSegment = typeof walkSpeedSegments.$inferSelect;
 export type Achievement = typeof achievements.$inferSelect;

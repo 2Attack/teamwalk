@@ -23,6 +23,26 @@ export const MAX_DISTANCE_KM = 50;
 export const TREADMILL_SORT_ORDER_MIN = 0;
 export const TREADMILL_SORT_ORDER_MAX = 999;
 
+/** Team route bounds (spec § 6.12.2). */
+export const ROUTE_POINTS_MIN = 2;
+export const ROUTE_POINTS_MAX = 20;
+export const ROUTE_POINT_KM_MAX = 100_000;
+
+/**
+ * Pixel map grid and post-filter caps (spec § 6.12.5). The grid is integer;
+ * everything the LLM returns is clamped and validated against these.
+ */
+export const MAP_GRID_W = 96;
+export const MAP_GRID_H = 48;
+export const MAP_DECOR_MAX = 30;
+export const MAP_BENDS_PER_SEGMENT_MAX = 3;
+
+/**
+ * Route generation is the only place where the user consciously waits for the
+ * LLM (spec § 6.12.4) — same margin reasoning as HINTS_LLM_TIMEOUT_MS.
+ */
+export const ROUTE_LLM_TIMEOUT_MS = 45_000;
+
 /** Default speed for a new participant (spec § 6.2). */
 export const DEFAULT_SPEED_KMH = 4;
 
@@ -62,9 +82,6 @@ export const HINTS_MIN_AFTER_FILTER = 6;
 export const HINTS_LLM_TIMEOUT_MS = 45_000;
 /** A participant younger than this many days is not teased (spec § 6.6.7). */
 export const HINTS_NEWCOMER_DAYS = 3;
-
-/** Starting city of the virtual route (spec § 6.6.8). */
-export const ROUTE_HOME_CITY = 'Ярославль';
 
 /**
  * Telegram notifications (spec § 6.10). Without a token the subsystem is off

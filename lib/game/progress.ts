@@ -2,8 +2,9 @@ import { and, desc, eq, ne, sql } from 'drizzle-orm';
 
 import { TZ } from '../config';
 import { db } from '../db';
+import { getActiveRoute } from '../db/queries/routes';
 import { walks } from '../db/schema';
-import { ROUTE, positionOnRoute } from '../hints/route';
+import { positionOnRoute } from '../hints/route';
 import type { TeamProgressDto } from '../types';
 
 /**
@@ -24,17 +25,21 @@ const round2 = (value: number): number => Math.round(value * 100) / 100;
 const sumKm = sql<number>`coalesce(sum(${walks.distanceKm}), 0)`.mapWith(Number);
 
 /**
- * Позиция команды на виртуальном маршруте. Сумма — за всё время и по всем участникам:
- * это единственная механика, где сильный ходок складывается со слабым, а не отнимает.
+ * Team position on the virtual route. The sum is all-time across everyone:
+ * the only mechanic where a strong walker adds to a weak one, not competes.
+ *
+ * Since spec § 6.12 the route comes from the DB (with the static fallback) and
+ * the position is projected from `teamTotalKm − base_km` — a freshly activated
+ * route starts from zero without touching walk history.
  */
 export async function getTeamProgress(): Promise<TeamProgressDto> {
-  const [row] = await db
-    .select({ totalKm: sumKm })
-    .from(walks)
-    .where(eq(walks.status, 'finished'));
+  const [[row], activeRoute] = await Promise.all([
+    db.select({ totalKm: sumKm }).from(walks).where(eq(walks.status, 'finished')),
+    getActiveRoute(),
+  ]);
 
-  const totalKm = round2(row?.totalKm ?? 0);
-  const position = positionOnRoute(totalKm);
+  const totalKm = round2(Math.max(0, (row?.totalKm ?? 0) - activeRoute.baseKm));
+  const position = positionOnRoute(activeRoute.points, totalKm);
 
   return {
     totalKm,
@@ -42,8 +47,8 @@ export async function getTeamProgress(): Promise<TeamProgressDto> {
     next: position.next,
     kmLeft: position.kmLeft,
     progressRatio: position.progressRatio,
-    // Копия каталога: вызывающий код не должен иметь возможность испортить общий ROUTE.
-    route: ROUTE.map((city) => ({ ...city })),
+    route: activeRoute.points,
+    mapLayout: activeRoute.mapLayout,
   };
 }
 
