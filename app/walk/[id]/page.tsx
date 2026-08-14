@@ -287,9 +287,9 @@ export default function WalkPage({ params }: { params: Promise<{ id: string }> }
         />
       </header>
 
-      {/* Приглашение привязать Telegram — через минуту после старта, над таймером;
-          появившись, висит до конца прогулки (п. 6.10.2). */}
-      <TelegramNudge userId={walk.userId} startedAt={walk.startedAt} />
+      {/* Приглашение привязать Telegram — над таймером; видно всегда,
+          пока участник не привязан (п. 6.10.2). */}
+      <TelegramNudge userId={walk.userId} />
 
       <WalkTimer
         startedAt={walk.startedAt}

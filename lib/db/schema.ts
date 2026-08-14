@@ -26,10 +26,9 @@ export const users = pgTable(
     avatarId: text('avatar_id').notNull(),
     hintsOptOut: boolean('hints_opt_out').notNull().default(false),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-    /** Панель «Привяжи Telegram» на экране прогулки (п. 6.10.2): счётчики в БД,
-     * а не в localStorage, — отказ должен действовать с любого устройства. */
-    tgNudgeCount: smallint('tg_nudge_count').notNull().default(0),
-    tgNudgeLastAt: timestamp('tg_nudge_last_at', { withTimezone: true }),
+    /** «Больше не показывать» панели «Привяжи Telegram» (п. 6.10.2): в БД, а не
+     * в localStorage, — отказ действует с любого устройства; отвязка сбрасывает.
+     * Соседние tg_nudge_count/tg_nudge_last_at в БД остались, но упразднены. */
     tgNudgeDismissed: boolean('tg_nudge_dismissed').notNull().default(false),
   },
   (t) => [

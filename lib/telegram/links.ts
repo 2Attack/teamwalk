@@ -2,12 +2,7 @@ import { randomBytes } from 'node:crypto';
 
 import { and, eq, gt, isNull, not, or, sql } from 'drizzle-orm';
 
-import {
-  TELEGRAM_ENABLED,
-  TG_LINK_TOKEN_TTL_MINUTES,
-  TG_NUDGE_COOLDOWN_DAYS,
-  TG_NUDGE_MAX_SHOWS,
-} from '@/lib/config';
+import { TELEGRAM_ENABLED, TG_LINK_TOKEN_TTL_MINUTES } from '@/lib/config';
 import { db } from '@/lib/db';
 import { telegramLinkTokens, telegramLinks, users } from '@/lib/db/schema';
 import type { TelegramLink } from '@/lib/db/schema';
@@ -88,15 +83,11 @@ export async function upsertLink(
 }
 
 /**
- * Отвязка возвращает приглашение (п. 6.10.2): счётчики панели сбрасываются,
- * иначе кулдаун от прошлых показов прятал бы её и после осознанного `/stop`,
- * а постоянной кнопки привязки в интерфейсе пока нет.
+ * Отвязка возвращает приглашение (п. 6.10.2): «Больше не показывать» сбрасывается,
+ * иначе человек, осознанно отвязавшийся, не смог бы привязаться заново с панели.
  */
-async function resetNudgeCounters(userId: string): Promise<void> {
-  await db
-    .update(users)
-    .set({ tgNudgeCount: 0, tgNudgeLastAt: null, tgNudgeDismissed: false })
-    .where(eq(users.id, userId));
+async function resetNudgeDismissed(userId: string): Promise<void> {
+  await db.update(users).set({ tgNudgeDismissed: false }).where(eq(users.id, userId));
 }
 
 /** Полная отвязка из приложения (`DELETE /api/users/:id/telegram`). */
@@ -106,7 +97,7 @@ export async function unlink(userId: string): Promise<boolean> {
     .where(eq(telegramLinks.userId, userId))
     .returning({ userId: telegramLinks.userId });
   if (rows.length === 0) return false;
-  await resetNudgeCounters(rows[0].userId);
+  await resetNudgeDismissed(rows[0].userId);
   return true;
 }
 
@@ -117,8 +108,13 @@ export async function unlinkByChat(chatId: number): Promise<boolean> {
     .where(eq(telegramLinks.chatId, chatId))
     .returning({ userId: telegramLinks.userId });
   if (rows.length === 0) return false;
-  await resetNudgeCounters(rows[0].userId);
+  await resetNudgeDismissed(rows[0].userId);
   return true;
+}
+
+/** «Больше не показывать» панель-приглашение (п. 6.10.2). */
+export async function dismissNudge(userId: string): Promise<void> {
+  await db.update(users).set({ tgNudgeDismissed: true }).where(eq(users.id, userId));
 }
 
 export type PrefKey =
@@ -166,52 +162,22 @@ export async function setMutedUntil(chatId: number, until: Date | null): Promise
 }
 
 /**
- * Счётчики панели-приглашения (п. 6.10.2) — в БД на участнике, не в localStorage:
- * отказ должен действовать с любого устройства.
- */
-export async function recordNudge(userId: string, action: 'shown' | 'dismissed'): Promise<void> {
-  if (action === 'shown') {
-    await db
-      .update(users)
-      .set({ tgNudgeCount: sql`${users.tgNudgeCount} + 1`, tgNudgeLastAt: sql`now()` })
-      .where(eq(users.id, userId));
-    return;
-  }
-  await db.update(users).set({ tgNudgeDismissed: true }).where(eq(users.id, userId));
-}
-
-/**
- * Статус для карточки и панели-приглашения. `nudgeEligible` — правила п. 6.10.2:
- * не привязан, подсистема включена, не отказался, лимит показов не выбран,
- * с последнего показа прошло не меньше кулдауна.
+ * Статус для панели-приглашения и модалки привязки (п. 6.10.2): панель видна,
+ * пока участник не привязан и не нажал «Больше не показывать», — счётчиков
+ * и кулдаунов нет. `null` — участник не найден.
  */
 export async function getTelegramStatus(userId: string): Promise<TelegramStatusDto | null> {
   const userRows = await db
-    .select({
-      tgNudgeCount: users.tgNudgeCount,
-      tgNudgeLastAt: users.tgNudgeLastAt,
-      tgNudgeDismissed: users.tgNudgeDismissed,
-    })
+    .select({ tgNudgeDismissed: users.tgNudgeDismissed })
     .from(users)
     .where(eq(users.id, userId))
     .limit(1);
-
-  const user = userRows[0];
-  if (!user) return null;
+  if (!userRows[0]) return null;
 
   const link = await getLink(userId);
-  const linked = link !== null;
-
-  const cooldownMs = TG_NUDGE_COOLDOWN_DAYS * 86_400_000;
-  const cooledDown =
-    user.tgNudgeLastAt === null || Date.now() - user.tgNudgeLastAt.getTime() >= cooldownMs;
-
-  const nudgeEligible =
-    TELEGRAM_ENABLED &&
-    !linked &&
-    !user.tgNudgeDismissed &&
-    user.tgNudgeCount < TG_NUDGE_MAX_SHOWS &&
-    cooledDown;
-
-  return { enabled: TELEGRAM_ENABLED, linked, nudgeEligible };
+  return {
+    enabled: TELEGRAM_ENABLED,
+    linked: link !== null,
+    dismissed: userRows[0].tgNudgeDismissed,
+  };
 }

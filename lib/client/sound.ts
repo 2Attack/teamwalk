@@ -51,18 +51,9 @@ function playNotes(notes: readonly Note[], wave: OscillatorType = 'square'): voi
   }
 }
 
-/** Короткий чирп приглашения (панель «Привяжи Telegram», п. 6.10.2). */
-export function playChirp(): void {
-  playNotes([
-    { freqHz: 660, durSec: 0.09 },
-    { freqHz: 880, durSec: 0.11 },
-  ]);
-}
-
 /**
  * Фанфара выдачи достижения (п. 6.8.3): «та-да-да…ДА» — быстрый взлёт,
- * пауза-вдох и длинная высокая финальная. Волна — треугольная (канал NES),
- * а не прямоугольная: тембр сразу отличим от чирпа Telegram-панели.
+ * пауза-вдох и длинная высокая финальная. Волна — треугольная (канал NES).
  */
 export function playFanfare(): void {
   playNotes(
