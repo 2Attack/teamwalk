@@ -187,7 +187,7 @@ function TreadmillRow({ treadmill, toggling, onEdit, onDelete, onToggleActive }:
             out of the card on ordinary desktop widths. */}
         <span className="flex flex-col items-start gap-1">
           {treadmill.isActive ? (
-            <span className="text-sm text-text-dim">активна</span>
+            <Badge className="text-[10px]">активна</Badge>
           ) : (
             <Badge variant="secondary" className="text-[10px]">
               выключена
@@ -199,33 +199,48 @@ function TreadmillRow({ treadmill, toggling, onEdit, onDelete, onToggleActive }:
         </span>
       </TableCell>
       <TableCell>
+        {/* Icon-only actions: the icon is decorative (aria-hidden), so every
+            button carries an aria-label and a matching title tooltip. */}
         <span className="flex justify-end gap-2">
           <Button
             type="button"
             variant="secondary"
-            className="min-h-11 text-xs"
+            size="icon"
+            className="size-11"
+            aria-label={`Изменить дорожку «${treadmill.name}»`}
+            title="Изменить"
             onClick={onEdit}
           >
-            Изменить
+            <Icon name="edit" size={16} />
           </Button>
           {treadmill.walksCount === 0 ? (
             <Button
               type="button"
               variant="destructive"
-              className="min-h-11 text-xs"
+              size="icon"
+              className="size-11"
+              aria-label={`Удалить дорожку «${treadmill.name}»`}
+              title="Удалить"
               onClick={onDelete}
             >
-              Удалить
+              <Icon name="trash" size={16} />
             </Button>
           ) : (
             <Button
               type="button"
               variant="secondary"
-              className="min-h-11 text-xs"
+              size="icon"
+              className="size-11"
               disabled={toggling}
+              aria-label={
+                treadmill.isActive
+                  ? `Выключить дорожку «${treadmill.name}»`
+                  : `Включить дорожку «${treadmill.name}»`
+              }
+              title={treadmill.isActive ? 'Выключить' : 'Включить'}
               onClick={onToggleActive}
             >
-              {toggling ? '…' : treadmill.isActive ? 'Выключить' : 'Включить'}
+              <Icon name={treadmill.isActive ? 'powerOff' : 'power'} size={16} />
             </Button>
           )}
         </span>
