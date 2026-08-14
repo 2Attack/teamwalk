@@ -1,4 +1,4 @@
-import { asc, desc, eq, inArray, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, inArray, ne, sql } from 'drizzle-orm';
 
 import { db, sqlClient } from '@/lib/db';
 import { routePoints, routes, walks } from '@/lib/db/schema';
@@ -212,9 +212,12 @@ export async function saveMapLayout(id: string, layout: MapLayoutDto): Promise<b
 }
 
 /**
- * Route selection (spec § 6.12.2): one UPDATE over the whole table flips the
- * active flag atomically; `resetProgress` moves `base_km` to the current
- * all-time total so the new route starts from zero.
+ * Route selection (spec § 6.12.2). Two statements, deactivation first: a
+ * single whole-table UPDATE trips the `routes_one_active` partial unique
+ * index — Postgres checks uniqueness row by row, and the new active row can
+ * be flipped before the old one is cleared. The instant with no active route
+ * between the statements is harmless: `getActiveRoute` falls back, and a
+ * retry of the activation heals the state.
  */
 export async function activateRoute(
   id: string,
@@ -227,16 +230,26 @@ export async function activateRoute(
     .limit(1);
   if (!exists[0]) return null;
 
-  await sqlClient.query(
+  await db
+    .update(routes)
+    .set({ isActive: false })
+    .where(and(eq(routes.isActive, true), ne(routes.id, id)));
+
+  // `resetProgress` moves base_km to the current all-time total, so the
+  // freshly selected route starts from zero (spec § 6.12.1).
+  const rows = await sqlClient.query(
     `update routes set
-       is_active = (id = $1),
+       is_active = true,
        base_km = case
-         when id = $1 and $2 then coalesce(
+         when $2 then coalesce(
            (select sum(distance_km) from walks where status = 'finished'), 0)
          else base_km
-       end`,
+       end
+     where id = $1
+     returning id`,
     [id, resetProgress],
   );
+  if ((rows as unknown[]).length === 0) return null;
 
   return getRouteAdmin(id);
 }

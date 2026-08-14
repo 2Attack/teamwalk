@@ -59,6 +59,8 @@ export function RouteFormDialog({ open, route, llmEnabled, onClose }: RouteFormD
   const [aiPrompt, setAiPrompt] = useState('');
   const [aiBusy, setAiBusy] = useState(false);
   const [aiError, setAiError] = useState<string | null>(null);
+  const [mapBusy, setMapBusy] = useState(false);
+  const [mapError, setMapError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!open) return;
@@ -74,6 +76,7 @@ export function RouteFormDialog({ open, route, llmEnabled, onClose }: RouteFormD
     setFormError(null);
     setAiPrompt('');
     setAiError(null);
+    setMapError(null);
   }, [open, route]);
 
   function setPoint(index: number, patch: Partial<PointDraft>) {
@@ -172,6 +175,21 @@ export function RouteFormDialog({ open, route, llmEnabled, onClose }: RouteFormD
       setAiError(errorText(error));
     } finally {
       setAiBusy(false);
+    }
+  }
+
+  /** On-demand AI map layout for an existing route (spec § 6.12.5). */
+  async function handleRegenerateMap() {
+    if (mapBusy || !route) return;
+    setMapBusy(true);
+    setMapError(null);
+    try {
+      await apiSend<RouteAdminDto>('POST', `/api/routes/${route.id}/map`);
+      await revalidateRoutes();
+    } catch (error) {
+      setMapError(errorText(error));
+    } finally {
+      setMapBusy(false);
     }
   }
 
@@ -283,6 +301,29 @@ export function RouteFormDialog({ open, route, llmEnabled, onClose }: RouteFormD
                 Добавить город
               </Button>
             </div>
+
+            {llmEnabled && route && (
+              <div className="space-y-2">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  className="min-h-11 text-xs"
+                  onClick={() => void handleRegenerateMap()}
+                  disabled={mapBusy}
+                >
+                  {mapBusy ? 'Рисуем карту…' : 'Перегенерировать карту'}
+                </Button>
+                {mapError ? (
+                  <p role="alert" className="text-sm text-destructive">
+                    {mapError}
+                  </p>
+                ) : (
+                  <p className="text-xs text-text-dim">
+                    Карта на главной: {route.hasMapLayout ? 'раскладка ИИ' : 'автоматическая раскладка'}.
+                  </p>
+                )}
+              </div>
+            )}
 
             {formError && (
               <p

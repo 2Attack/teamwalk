@@ -36,7 +36,7 @@
 | `lib/api.ts` | `apiError, validationError, handle, isUniqueViolation, readJson` |
 | `lib/cn.ts` | `cn()` — слияние Tailwind-классов |
 | `lib/client/api.ts` | SWR-хуки и `apiSend` для всего UI |
-| `lib/hints/route.ts` | `ROUTE`, `positionOnRoute(totalKm)` |
+| `lib/hints/route.ts` | `ROUTE` (сид и фолбэк), `positionOnRoute(points, totalKm)` |
 | `app/globals.css` | палитра (`bg-deep, bg-panel, border-dim, citrus, lime, text-main, text-dim, silver, bronze`), классы `.pixel-panel`, `.pixel-btn`, `.font-pixel`, `.pixelated`, `.animate-blink` |
 
 Цвета в Tailwind: `bg-bg-panel`, `text-text-dim`, `border-citrus`, `text-lime` и т. п.
@@ -93,6 +93,24 @@ export async function runNotifySweep(now?: Date): Promise<void>; // напоми
 export async function getTelegramStatus(userId: string): Promise<TelegramStatusDto | null>;
 export async function dismissNudge(userId: string): Promise<void>; // «Больше не показывать» панель (п. 6.10.2)
 export async function processTelegramUpdate(update: unknown): Promise<void>; // webhook, дедуп по update_id
+
+// lib/db/queries/routes.ts — владелец: SETTINGS (п. 6.12 ТЗ)
+export async function getActiveRoute(): Promise<ActiveRoute>; // с фолбэком на ROUTE
+export async function listRoutesAdmin(): Promise<RouteAdminDto[]>;
+export async function createRoute(input: { name: string; points: RouteCityDto[] }): Promise<RouteAdminDto>;
+export async function updateRoute(id: string, patch: { name?: string; points?: RouteCityDto[] }): Promise<RouteAdminDto | null>;
+export async function activateRoute(id: string, resetProgress: boolean): Promise<RouteAdminDto | null>;
+export async function deleteRoute(id: string): Promise<'deleted' | 'not_found' | 'active' | 'last'>;
+export async function saveMapLayout(id: string, layout: MapLayoutDto): Promise<boolean>;
+
+// lib/map/layout.ts — владелец: SETTINGS (п. 6.12.5 ТЗ)
+export function fallbackLayout(points: RouteCityDto[], seedText?: string): MapLayoutDto;
+export function normalizeLayout(raw: MapLayoutDto, points: RouteCityDto[]): MapLayoutDto | null;
+
+// lib/routes/generate.ts — владелец: SETTINGS (п. 6.12.4–6.12.5 ТЗ)
+export async function generateRouteDraft(prompt: string, cities?: string[]): Promise<RouteDraftDto | null>;
+export async function generateMapLayout(points: RouteCityDto[]): Promise<MapLayoutDto | null>;
+export function scheduleMapLayout(routeId: string, points: RouteCityDto[]): void; // waitUntil, вне горячего пути
 
 // lib/db/queries/treadmills.ts — владелец: SETTINGS (п. 6.11 ТЗ)
 export async function listAllTreadmills(): Promise<TreadmillAdminDto[]>;
@@ -160,6 +178,6 @@ export function AvatarPicker(props: { value: string; onChange: (id: string) => v
 | **TELEGRAM** | `lib/telegram/*`, `app/api/telegram/**`, `app/api/users/[id]/telegram/**`, `app/api/cron/notify/route.ts`, `components/TelegramNudge.tsx`, `components/TelegramLinkDialog.tsx`, `tests/telegram.*.test.ts`, `vercel.json`, `drizzle/0002_telegram.sql` |
 | **UIKIT** | `components/ui/*`, `components/Avatar.tsx`, `components/AvatarPicker.tsx` |
 | **HOME** | `app/page.tsx`, `components/UserSelect.tsx`, `components/AddUserDialog.tsx`, `components/StartWalkCard.tsx`, `components/StartCountdown.tsx`, `components/TreadmillPicker.tsx` |
-| **SETTINGS** | `app/settings/page.tsx`, `app/api/treadmills/**`, `lib/db/queries/treadmills.ts`, `components/TreadmillSettings.tsx`, `components/TreadmillFormDialog.tsx`, `tests/treadmills.validation.test.ts` (п. 6.11 ТЗ; `GET /api/treadmills` без `scope` по-прежнему отдаёт форму зоны WALKS — `listActiveTreadmills`) |
+| **SETTINGS** | `app/settings/page.tsx`, `app/api/treadmills/**`, `app/api/routes/**`, `lib/db/queries/treadmills.ts`, `lib/db/queries/routes.ts`, `lib/map/layout.ts`, `lib/routes/generate.ts`, `components/TreadmillSettings.tsx`, `components/TreadmillFormDialog.tsx`, `components/RouteSettings.tsx`, `components/RouteFormDialog.tsx`, `components/RouteMap.tsx`, `tests/treadmills.validation.test.ts`, `tests/routes.validation.test.ts`, `tests/map.layout.test.ts` (п. 6.11 ТЗ; `GET /api/treadmills` без `scope` по-прежнему отдаёт форму зоны WALKS — `listActiveTreadmills`) |
 | **WALKSCREEN** | `app/walk/[id]/page.tsx`, `components/WalkTimer.tsx`, `components/FinishWalkDialog.tsx`, `components/WalkSuccess.tsx`, `components/WalkerSprite.tsx` |
 | **BOARDUI** | `components/Podium.tsx`, `components/Leaderboard.tsx`, `components/PeriodTabs.tsx`, `components/TeamProgress.tsx`, `components/StreakBadge.tsx`, `components/HintTicker.tsx`, `components/AchievementToast.tsx` |

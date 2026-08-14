@@ -156,7 +156,7 @@ function RouteRow({ route, onEdit, onActivate, onDelete }: RouteRowProps) {
           {route.progress && (
             <span className="text-xs whitespace-nowrap text-text-dim">
               {formatKm(route.progress.walkedKm)} км
-              {route.progress.nextCity ? ` · к ${route.progress.nextCity}` : ' · пройден'}
+              {route.progress.nextCity ? ` · → ${route.progress.nextCity}` : ' · пройден'}
             </span>
           )}
         </span>
