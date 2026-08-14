@@ -11,6 +11,7 @@ import type {
   StatsDto,
   TeamProgressDto,
   TelegramStatusDto,
+  TreadmillAdminDto,
   TreadmillDto,
   UserDto,
   UserStatsDto,
@@ -79,6 +80,13 @@ export function useTreadmills() {
   return useSWR<TreadmillDto[]>('/api/treadmills', apiGet, { refreshInterval: 15_000 });
 }
 
+/** Full treadmill list for the settings screen (spec § 6.11.2), inactive included. */
+export function useTreadmillsAdmin() {
+  return useSWR<TreadmillAdminDto[]>('/api/treadmills?scope=all', apiGet, {
+    revalidateOnFocus: true,
+  });
+}
+
 export function useActiveWalk(userId: string | null) {
   return useSWR<ActiveWalkDto | null>(
     userId ? `/api/walks/active?userId=${userId}` : null,
@@ -144,6 +152,18 @@ export function useAchievements(userId: string | null) {
  */
 export async function primeActiveWalk(walk: ActiveWalkDto): Promise<void> {
   await globalMutate(`/api/walks/active?userId=${walk.userId}`, walk, { revalidate: false });
+}
+
+/**
+ * Invalidate both treadmill lists after settings CRUD (spec § 6.11.3): the
+ * admin list on the settings screen and the picker in the start block.
+ */
+export async function revalidateTreadmills(): Promise<void> {
+  await globalMutate(
+    (key) => typeof key === 'string' && key.startsWith('/api/treadmills'),
+    undefined,
+    { revalidate: true },
+  );
 }
 
 /** Invalidate everything a finished walk affects. */

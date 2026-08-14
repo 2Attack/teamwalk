@@ -26,23 +26,28 @@ interface UserSelectProps {
 }
 
 /**
- * Комбобокс с поиском по вводу (п. 6.2): аватар + имя, фильтрация по подстроке,
- * управление с клавиатуры. Поле занимает всю ширину карточки — «+ Добавить
- * участника» живёт в её шапке. Клик по аватару выбранного участника открывает
- * смену персонажа (п. 6.5).
+ * Combobox with search-as-you-type (spec § 6.2): avatar + name, substring
+ * filtering, keyboard navigation. The field takes the card's full width —
+ * "+ Add participant" lives in the card header. Clicking the selected
+ * participant's avatar opens the character change dialog (spec § 6.5).
  *
- * Собран из `Popover` + `Command` 8bitcn — это рецепт комбобокса из их доков:
- * готового компонента там нет, страница «Combo Box» показывает ровно такую
- * композицию. Раньше выпадающий список был написан руками (`<ul role="listbox">`
- * плюс своя обработка стрелок и клика мимо) — теперь роли, `aria-activedescendant`
- * и перебор стрелками приходят из cmdk, а закрытие по клику мимо и возврат фокуса
- * на триггер — из поповера.
+ * Assembled from 8bitcn `Popover` + `Command` — the combobox recipe from their
+ * docs: there is no ready-made component, the "Combo Box" page shows exactly
+ * this composition, including the pixel check mark on the selected item and
+ * the underlined search row. The dropdown used to be hand-written
+ * (`<ul role="listbox">` plus custom arrow/outside-click handling) — now the
+ * roles, `aria-activedescendant` and arrow traversal come from cmdk, and
+ * outside-click closing plus focus return come from the popover.
  *
- * Шрифт: корень `Command` у 8bitcn жёстко помечен классом `.retro`, поэтому имена
- * в списке пришлось бы читать пиксельным. Имена — данные, их читают (п. 6.7.1),
- * так что `font-sans` проставлен на самих строках: правило `.retro` в globals.css
- * лежит вне слоёв и утилиту на том же элементе перебивает, а вот унаследованный
- * шрифт объявление на самом элементе перебивает всегда.
+ * Deliberate deviations from the docs example: pixel icons instead of lucide
+ * (spec § 6.7.4), sans for the names — they are data, people read them
+ * (spec § 6.7.1) — and the panel width follows the trigger, not a fixed 320px.
+ *
+ * Font: the 8bitcn `Command` root is hard-tagged with `.retro`, so list names
+ * would render in the pixel font. `font-sans` is set on the rows themselves:
+ * the `.retro` rule in globals.css sits outside layers and beats a utility on
+ * the same element, but a declaration on the element always beats an
+ * inherited font.
  */
 export function UserSelect({ users, value, onChange }: UserSelectProps) {
   const triggerId = useId();
@@ -59,19 +64,19 @@ export function UserSelect({ users, value, onChange }: UserSelectProps) {
   return (
     <div className="space-y-4">
       <div className="space-y-2">
-        {/* `font="normal"`: метка — sans, как и поле под ней (п. 6.7.1). */}
+        {/* `font="normal"`: the label is sans, like the field below (spec § 6.7.1). */}
         <Label htmlFor={triggerId} font="normal" className="block text-sm text-text-dim">
           Участник
         </Label>
 
-        {/* Поле занимает всю ширину карточки. Раньше здесь был flex-ряд
-            «поле + кнопка», и поле делило строку с «Добавить»; кнопка переехала
-            в шапку карточки, так что делить ширину больше не с кем. */}
+        {/* The field takes the card's full width. This used to be a flex row
+            "field + button" sharing the line with "Add"; the button moved to
+            the card header, so there is nothing left to share width with. */}
         <div className="min-w-0">
           <Popover open={open} onOpenChange={setOpen}>
             {/*
-              Base UI (стиль `base-nova` в components.json) подставляет свой
-              элемент через `render`, а не через `asChild` как Radix.
+              Base UI (the `base-nova` style in components.json) injects its
+              element via `render`, not via `asChild` like Radix.
             */}
             <PopoverTrigger
               render={
@@ -95,9 +100,9 @@ export function UserSelect({ users, value, onChange }: UserSelectProps) {
             </PopoverTrigger>
 
             {/*
-              `--anchor-width` — переменная позиционера Base UI: список ровно по
-              ширине триггера, иначе поповер остаётся на своих `w-72` и на
-              узком экране вылезает за поле.
+              `--anchor-width` is a Base UI positioner variable: the list is
+              exactly as wide as the trigger, otherwise the popover stays at
+              its own `w-72` and sticks out past the field on narrow screens.
             */}
             <PopoverContent
               font="normal"
@@ -106,41 +111,35 @@ export function UserSelect({ users, value, onChange }: UserSelectProps) {
               aria-label="Участники"
             >
               {/*
-                Две правки поверх `Command` из 8bitcn, обе — следствие того,
-                что он кладёт `className` и на внешнюю обёртку, и на сам
-                список:
+                Two fixes on top of the 8bitcn `Command`, both consequences of
+                it putting `className` on the outer wrapper AND on the list:
 
-                `h-auto` — у списка стоит `h-full`, а поповер своей высоты не
-                задаёт, и панель схлопывалась в полоску нулевой высоты.
+                `h-auto` — the list carries `h-full`, the popover sets no height
+                of its own, and the panel collapsed into a zero-height strip.
 
-                `[&>div.absolute]:hidden` — рамку рисует поповер, поэтому
-                пиксельные «уши» самого `Command` убраны, иначе на панели
-                оказались бы две рамки одна в другой. Селектор бьёт именно по
-                абсолютно спозиционированным потомкам: «все потомки, кроме
-                списка» здесь нельзя — на внутренней обёртке под это правило
-                попадало бы и поле поиска.
+                `[&>div.absolute]:hidden` — the frame is drawn by the popover,
+                so the pixel "ears" of `Command` itself are removed, otherwise
+                the panel would get two frames one inside the other (the docs
+                screenshot shows a single frame too). The selector targets
+                exactly the absolutely-positioned children: "everything except
+                the list" is not usable here — the search field wrapper would
+                match as well.
               */}
               <Command
                 filter={matchScore}
                 className={cn(
                   'h-auto [&>div.absolute]:hidden',
                   /*
-                    Строка поиска — без подчёркивающей линии. `CommandInput` из
-                    8bitcn вешает `border-b` на свою обёртку и наружу её не
-                    отдаёт (className уходит только на сам <input>), поэтому
-                    гасим правило отсюда, а не пропсом.
-                  */
-                  '[&_[data-slot=command-input-wrapper]]:border-b-0',
-                  /*
-                    И без рамки фокуса. Глобальный `:focus-visible` в
-                    globals.css рисует оранжевый outline на каждом поле — здесь
-                    он лишний и ничего не сообщает: поповер открывается сразу с
-                    фокусом в этом поле, фокус из него никуда не уходит (стрелки
-                    двигают подсветку строк, а не фокус), так что «где я» и без
-                    рамки видно по подсвеченной строке списка.
+                    No focus outline on the search row. The global
+                    `:focus-visible` in globals.css draws an orange outline on
+                    every field — here it is redundant and communicates
+                    nothing: the popover opens with focus already in this
+                    field and focus never leaves it (arrows move the row
+                    highlight, not focus), so "where am I" is visible from the
+                    highlighted list row anyway.
 
-                    `!` обязателен: правило в globals.css лежит вне слоёв и
-                    обычную утилиту перебивает.
+                    `!` is mandatory: the globals.css rule sits outside layers
+                    and beats a plain utility.
                   */
                   '**:data-[slot=command-input]:outline-none!',
                 )}
@@ -154,14 +153,22 @@ export function UserSelect({ users, value, onChange }: UserSelectProps) {
                     {users.map((user) => (
                       <CommandItem
                         key={user.id}
-                        // Значение, по которому идёт поиск, — имя участника.
-                        // Имена уникальны: сервер отвечает NAME_TAKEN на дубль.
+                        // The search value is the participant's name. Names
+                        // are unique: the server answers NAME_TAKEN on a dupe.
                         value={user.name}
                         onSelect={() => commit(user)}
                         className="min-h-11 gap-3 font-sans"
                       >
+                        {/* Leading pixel check for the selected row — the
+                            docs combobox pattern (hidden, not removed, so the
+                            names stay column-aligned). */}
+                        <Icon
+                          name="check"
+                          size={16}
+                          className={user.id === value ? 'opacity-100' : 'opacity-0'}
+                        />
                         <Avatar avatarId={user.avatarId} name={user.name} size={28} />
-                        {/* Имя — обычный sans: это данные, а не метка (п. 6.7.1). */}
+                        {/* The name is plain sans: data, not a label (spec § 6.7.1). */}
                         <span className="truncate text-base text-text-main">{user.name}</span>
                       </CommandItem>
                     ))}
@@ -181,10 +188,11 @@ export function UserSelect({ users, value, onChange }: UserSelectProps) {
             title="Сменить персонажа"
             aria-label={`Сменить персонажа: ${selected.name}`}
             /*
-              Кнопка без собственной рамки: аватар и есть её видимая часть.
-              min-h/min-w-11 оставлены — тач-таргет не меньше 44 px (п. 6.7.7),
-              а наведение подсвечивается самим портретом, не коробкой вокруг.
-              Фокус с клавиатуры рисует глобальный `:focus-visible` в globals.css.
+              A button without its own frame: the avatar is its visible part.
+              min-h/min-w-11 stay — the touch target is at least 44px
+              (spec § 6.7.7), and hover is signalled by the portrait itself,
+              not a box around it. Keyboard focus is drawn by the global
+              `:focus-visible` in globals.css.
             */
             className="inline-flex min-h-11 min-w-11 items-center justify-center touch-manipulation hover:brightness-110"
           >
@@ -198,10 +206,10 @@ export function UserSelect({ users, value, onChange }: UserSelectProps) {
       )}
 
       {/*
-        `AddUserDialog` здесь больше не живёт: кнопка, которая его открывает,
-        переехала в шапку карточки, а держать диалог отдельно от его кнопки —
-        значит тянуть состояние `open` через пропсы туда и обратно. Проще
-        поднять и то и другое в `StartWalkCard`.
+        `AddUserDialog` no longer lives here: the button that opens it moved to
+        the card header, and keeping the dialog away from its button means
+        threading `open` state through props back and forth. Easier to lift
+        both into `StartWalkCard`.
       */}
       <ChangeAvatarDialog
         open={avatarOpen}
@@ -214,11 +222,11 @@ export function UserSelect({ users, value, onChange }: UserSelectProps) {
 }
 
 /**
- * Фильтр для cmdk: 1 — строка подходит, 0 — нет.
+ * Filter for cmdk: 1 — the row matches, 0 — it does not.
  *
- * Поиск остаётся регистронезависимым по подстроке и одинаковым для кириллицы и
- * латиницы. Штатный фильтр cmdk считает «похожесть» и на кириллице пропускал бы
- * лишнее, поэтому правило задано явно.
+ * Search stays case-insensitive by substring and identical for Cyrillic and
+ * Latin. The stock cmdk filter scores "similarity" and would let extra rows
+ * through on Cyrillic, so the rule is spelled out explicitly.
  */
 export function matchScore(name: string, search: string): number {
   const needle = search.trim().toLocaleLowerCase('ru-RU');

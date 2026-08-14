@@ -1,6 +1,7 @@
 /**
- * DTO API — общий контракт между Route Handlers и UI.
- * Всё, что уходит клиенту, описано здесь; числа уже числа, даты — ISO-строки.
+ * API DTOs — the shared contract between Route Handlers and the UI.
+ * Everything sent to the client is described here; numbers are already numbers,
+ * dates are ISO strings.
  */
 import type { HintTone, Period, PeriodSelection } from './validation';
 
@@ -13,23 +14,23 @@ export interface UserDto {
   hintsOptOut: boolean;
 }
 
-/** Статус Telegram для карточки и панели-приглашения (п. 6.10.2). */
+/** Telegram status for the participant card and the invite panel (spec § 6.10.2). */
 export interface TelegramStatusDto {
-  /** Подсистема включена на сервере (есть токен бота и рубильник не опущен). */
+  /** The subsystem is enabled on the server (bot token present, kill switch up). */
   enabled: boolean;
   linked: boolean;
-  /** «Больше не показывать» нажата; панель видна при `enabled && !linked && !dismissed`. */
+  /** "Don't show again" was pressed; the panel is visible when `enabled && !linked && !dismissed`. */
   dismissed: boolean;
 }
 
-/** Ответ `POST /api/users/:id/telegram/link-token` (п. 6.10.3). */
+/** Response of `POST /api/users/:id/telegram/link-token` (spec § 6.10.3). */
 export interface TelegramLinkTokenDto {
-  /** `https://t.me/<бот>?start=<токен>` */
+  /** `https://t.me/<bot>?start=<token>` */
   url: string;
   expiresAt: string;
 }
 
-/** Кто сейчас занимает дорожку. `null` — свободна. */
+/** Who occupies the treadmill right now. `null` — free. */
 export interface TreadmillBusyDto {
   walkId: string;
   user: Pick<UserDto, 'id' | 'name' | 'avatarId'>;
@@ -45,10 +46,26 @@ export interface TreadmillDto {
   busy: TreadmillBusyDto | null;
 }
 
-/** Отрезок постоянной скорости внутри прогулки (п. 6.3). */
+/**
+ * A treadmill row on the settings screen (spec § 6.11.2): unlike `TreadmillDto`
+ * it includes inactive treadmills and the data the admin actions depend on —
+ * `walksCount` decides between "delete" and "deactivate" (spec § 6.11.4).
+ */
+export interface TreadmillAdminDto {
+  id: string;
+  name: string;
+  maxSpeedKmh: number;
+  sortOrder: number;
+  isActive: boolean;
+  /** Walks of any status referencing this treadmill; > 0 forbids deletion. */
+  walksCount: number;
+  busy: TreadmillBusyDto | null;
+}
+
+/** A constant-speed segment inside a walk (spec § 6.3). */
 export interface WalkSpeedSegmentDto {
   speedKmh: number;
-  /** ISO — момент, с которого действует эта скорость. */
+  /** ISO — the moment this speed takes effect. */
   startedAt: string;
 }
 
@@ -57,15 +74,16 @@ export interface ActiveWalkDto {
   userId: string;
   treadmillId: string;
   treadmillName: string;
-  /** ISO. Источник истины для таймера: клиент считает `Date.now() − startedAt`. */
+  /** ISO. Source of truth for the timer: the client computes `Date.now() − startedAt`. */
   startedAt: string;
-  /** Текущая скорость — последний отрезок из `speedSegments`. */
+  /** Current speed — the last segment of `speedSegments`. */
   speedKmh: number;
-  /** Потолок дорожки: выше него «+» на экране прогулки не поднимает (п. 6.9.3). */
+  /** Treadmill ceiling: "+" on the walk screen never goes above it (spec § 6.9.3). */
   treadmillMaxSpeedKmh: number;
   /**
-   * Все отрезки скорости по возрастанию времени; первый начинается в `startedAt`.
-   * По ним считается набежавшая дистанция: смена скорости не переписывает прошлое.
+   * All speed segments in chronological order; the first starts at `startedAt`.
+   * The accrued distance is computed from them: a speed change never rewrites
+   * the past.
    */
   speedSegments: WalkSpeedSegmentDto[];
   user: UserDto;
@@ -82,19 +100,19 @@ export interface WalkDto {
   endedAt: string | null;
   durationSec: number | null;
   distanceKm: number | null;
-  /** Скорость старта: даже если её меняли на ходу, это число не переписывается. */
+  /** Start speed: even if changed mid-walk, this number is never rewritten. */
   speedKmh: number;
   status: WalkStatus;
-  /** Можно ли ещё удалить запись (15-минутное окно, п. 7.7). */
+  /** Whether the record can still be deleted (15-minute window, spec § 7.7). */
   canDelete: boolean;
 }
 
 export interface StreakDto {
-  /** Длина серии в рабочих днях. */
+  /** Streak length in workdays. */
   days: number;
-  /** Осталось заморозок в текущем календарном месяце. */
+  /** Freezes left in the current calendar month. */
   freezesLeft: number;
-  /** Серия была спасена заморозкой при последнем расчёте. */
+  /** The streak was saved by a freeze during the last computation. */
   frozen: boolean;
 }
 
@@ -102,24 +120,24 @@ export interface AchievementDto {
   code: string;
   title: string;
   description: string;
-  /** ISO либо null, если ещё не получено. */
+  /** ISO, or null if not earned yet. */
   earnedAt: string | null;
 }
 
 export interface PersonalRecordDto {
-  /** Лучший день по километрам за всё время. */
+  /** Best day by kilometers of all time. */
   bestDayKm: number;
-  /** Рекорд побит только что. */
+  /** The record was just beaten. */
   isNew: boolean;
 }
 
-/** Ответ `POST /api/walks/:id/finish` — экран успеха рисуется без второго запроса. */
+/** Response of `POST /api/walks/:id/finish` — the success screen renders without a second request. */
 export interface FinishWalkResultDto {
   walk: WalkDto;
   newAchievements: AchievementDto[];
   streak: StreakDto;
   personalRecord: PersonalRecordDto;
-  /** Позиция в недельном рейтинге до и после прогулки. */
+  /** Position in the weekly leaderboard before and after the walk. */
   rank: { current: number; previous: number | null };
   teamProgress: TeamProgressDto;
 }
@@ -138,7 +156,7 @@ export interface LeaderboardRowDto {
 export interface LeaderboardDto {
   period: Period | 'custom';
   rows: LeaderboardRowDto[];
-  /** Всегда за всё время, независимо от периода (п. 5.3). */
+  /** Always all-time, regardless of the period (spec § 5.3). */
   teamTotalKm: number;
 }
 
@@ -146,7 +164,7 @@ export interface StatsDto {
   teamTotalKm: number;
   walksCount: number;
   usersCount: number;
-  /** Список: активных прогулок столько, сколько занятых дорожек (п. 7.2). */
+  /** A list: there are as many active walks as busy treadmills (spec § 7.2). */
   activeWalks: ActiveWalkDto[];
 }
 
@@ -169,12 +187,12 @@ export interface RouteCityDto {
 
 export interface TeamProgressDto {
   totalKm: number;
-  /** Последний пройденный город. */
+  /** The last city passed. */
   passed: RouteCityDto;
-  /** Следующий город; null — маршрут пройден целиком. */
+  /** The next city; null — the route is fully completed. */
   next: RouteCityDto | null;
   kmLeft: number;
-  /** Доля пути между `passed` и `next`, 0…1 — ширина полосы прогресса. */
+  /** Fraction of the way between `passed` and `next`, 0…1 — progress bar width. */
   progressRatio: number;
   route: RouteCityDto[];
 }
@@ -185,10 +203,10 @@ export interface UserStatsDto {
   personalRecord: { bestDayKm: number; bestWalkKm: number };
   totalKm: number;
   walksCount: number;
-  /** Позиция в недельном рейтинге. */
+  /** Position in the weekly leaderboard. */
   rank: number | null;
   achievements: AchievementDto[];
-  /** Скорость последней прогулки — для предвыбора (п. 6.2). */
+  /** Speed of the last walk — for preselection (spec § 6.2). */
   lastSpeedKmh: number | null;
   lastTreadmillId: string | null;
 }
