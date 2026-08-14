@@ -1,9 +1,9 @@
 import { NextResponse } from 'next/server';
 
 import { apiError, handle, type ApiErrorBody } from '@/lib/api';
-import { getRouteAdmin, saveMapLayout } from '@/lib/db/queries/routes';
+import { getRouteAdmin } from '@/lib/db/queries/routes';
 import { llmEnabled } from '@/lib/hints/providers';
-import { generateMapLayout } from '@/lib/routes/generate';
+import { generateMapArt } from '@/lib/routes/generate';
 import type { RouteAdminDto } from '@/lib/types';
 import { uuidSchema } from '@/lib/validation';
 
@@ -13,9 +13,9 @@ export const dynamic = 'force-dynamic';
 type RouteContext = { params: Promise<{ id: string }> };
 
 /**
- * POST /api/routes/:id/map — regenerate the AI map layout on demand
- * (spec § 6.12.5). Waits for the LLM like /generate does: an explicit admin
- * click in the editor, not a hot path.
+ * POST /api/routes/:id/map — regenerate the map art (layout + background
+ * image) on demand (spec § 6.12.5). Waits for the models like /generate does:
+ * an explicit admin click in the editor, not a hot path.
  */
 export function POST(_request: Request, context: RouteContext) {
   return handle<RouteAdminDto | ApiErrorBody>(async () => {
@@ -27,16 +27,15 @@ export function POST(_request: Request, context: RouteContext) {
     const route = await getRouteAdmin(id);
     if (!route) return apiError(404, 'NOT_FOUND', 'Маршрут не найден');
 
-    const layout = await generateMapLayout(route.points);
-    if (!layout) {
+    const produced = await generateMapArt(id, route.points);
+    if (produced === 'none') {
       return apiError(
         502,
         'INTERNAL_ERROR',
-        'Не удалось сгенерировать раскладку — карта останется автоматической',
+        'Не удалось сгенерировать карту — попробуйте ещё раз',
       );
     }
 
-    await saveMapLayout(id, layout);
     const updated = await getRouteAdmin(id);
     return NextResponse.json(updated ?? route);
   });

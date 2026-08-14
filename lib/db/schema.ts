@@ -51,6 +51,9 @@ export const routes = pgTable(
     /** Pixel map layout (spec § 6.12.5); null — deterministic layout is used. */
     mapLayout: jsonb('map_layout'),
     mapGeneratedAt: timestamp('map_generated_at', { withTimezone: true }),
+    /** Map background (spec § 6.12.5): base64 PNG from the image model, or null. */
+    mapImage: text('map_image'),
+    mapImageGeneratedAt: timestamp('map_image_generated_at', { withTimezone: true }),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [

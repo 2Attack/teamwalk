@@ -319,7 +319,13 @@ export function RouteFormDialog({ open, route, llmEnabled, onClose }: RouteFormD
                   </p>
                 ) : (
                   <p className="text-xs text-text-dim">
-                    Карта на главной: {route.hasMapLayout ? 'раскладка ИИ' : 'автоматическая раскладка'}.
+                    Карта на главной:{' '}
+                    {route.hasMapImage
+                      ? 'ИИ-картинка'
+                      : route.hasMapLayout
+                        ? 'раскладка ИИ'
+                        : 'автоматическая раскладка'}
+                    .
                   </p>
                 )}
               </div>

@@ -18,6 +18,12 @@ import type { MapDecorKind, MapLayoutDto, RouteCityDto } from '@/lib/types';
 interface RouteMapProps {
   route: RouteCityDto[];
   layout: MapLayoutDto | null;
+  /**
+   * Generated background picture (spec § 6.12.5). When present, the SVG layer
+   * draws only the dynamics — walked trail, labels, walker — and the artwork
+   * carries the parchment, terrain, city markers and the decorative trail.
+   */
+  mapImageUrl: string | null;
   /** Km walked on the route (already минус base_km). */
   walkedKm: number;
   /** aria-label of the decorative image. */
@@ -146,7 +152,7 @@ const FINISH_CELLS: Array<[number, number]> = [
   [2, -2],
 ];
 
-export function RouteMap({ route, layout, walkedKm, label, className }: RouteMapProps) {
+export function RouteMap({ route, layout, mapImageUrl, walkedKm, label, className }: RouteMapProps) {
   const resolved = layout ?? fallbackLayout(route);
   const positions = new Map(resolved.cities.map((c) => [c.city, { x: c.x, y: c.y }]));
   const segments = buildSegments(route, resolved);
@@ -186,27 +192,46 @@ export function RouteMap({ route, layout, walkedKm, label, className }: RouteMap
     ),
   );
 
+  // With a generated background the SVG keeps only the dynamic layer: the
+  // artwork already draws parchment, terrain, city markers and the trail.
+  const artMode = mapImageUrl !== null;
+
   return (
     <div className={className}>
       <div className="relative w-full">
+        {artMode && (
+          <img
+            src={mapImageUrl}
+            alt=""
+            aria-hidden
+            width={768}
+            height={384}
+            className="pixelated block h-auto w-full"
+          />
+        )}
         <svg
           role="img"
           aria-label={label}
           viewBox={`0 0 ${MAP_GRID_W} ${MAP_GRID_H}`}
           shapeRendering="crispEdges"
-          className="block h-auto w-full"
+          className={artMode ? 'absolute inset-0 h-full w-full' : 'block h-auto w-full'}
         >
-          {/* Parchment with a darker frame — the map is a deliberate light spot. */}
-          <rect x={0} y={0} width={MAP_GRID_W} height={MAP_GRID_H} fill="var(--map-frame)" />
-          <rect
-            x={1.5}
-            y={1.5}
-            width={MAP_GRID_W - 3}
-            height={MAP_GRID_H - 3}
-            fill="var(--map-parchment)"
-          />
+          {!artMode && (
+            <>
+              {/* Parchment with a darker frame — the map is a deliberate light spot. */}
+              <rect x={0} y={0} width={MAP_GRID_W} height={MAP_GRID_H} fill="var(--map-frame)" />
+              <rect
+                x={1.5}
+                y={1.5}
+                width={MAP_GRID_W - 3}
+                height={MAP_GRID_H - 3}
+                fill="var(--map-parchment)"
+              />
+            </>
+          )}
 
-          {resolved.decor.map((piece, index) => (
+          {!artMode &&
+            resolved.decor.map((piece, index) => (
             <g key={`decor-${index}`} opacity={0.5} fill="var(--map-ink)">
               {DECOR_CELLS[piece.kind].map(([dx, dy]) => (
                 <rect key={`${dx}-${dy}`} x={piece.x + dx} y={piece.y + dy} width={1} height={1} />
@@ -214,6 +239,8 @@ export function RouteMap({ route, layout, walkedKm, label, className }: RouteMap
             </g>
           ))}
 
+          {/* In art mode the remaining trail is drawn by the artwork; the SVG
+              adds only the walked (green) part on top of it. */}
           {dots.map((dot, index) =>
             dot.walked ? (
               <rect
@@ -224,7 +251,7 @@ export function RouteMap({ route, layout, walkedKm, label, className }: RouteMap
                 height={1.6}
                 fill="var(--map-trail-walked)"
               />
-            ) : (
+            ) : artMode ? null : (
               <rect
                 key={`dot-${index}`}
                 x={dot.x - 0.6}
@@ -245,7 +272,7 @@ export function RouteMap({ route, layout, walkedKm, label, className }: RouteMap
             return (
               <g key={point.city}>
                 <title>{`${point.city} — ${point.km} км`}</title>
-                {isFinish ? (
+                {artMode ? null : isFinish ? (
                   <g fill="var(--map-trail)">
                     {FINISH_CELLS.map(([dx, dy]) => (
                       <rect
@@ -297,6 +324,10 @@ export function RouteMap({ route, layout, walkedKm, label, className }: RouteMap
                     fontSize={3.4}
                     fontFamily="var(--font-ui)"
                     fill="var(--map-ink)"
+                    /* A parchment halo keeps labels readable over artwork. */
+                    stroke="var(--map-parchment)"
+                    strokeWidth={0.5}
+                    paintOrder="stroke"
                     /* Labels are readable data — no crispEdges distortion. */
                     shapeRendering="auto"
                   >

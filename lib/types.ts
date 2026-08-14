@@ -208,6 +208,8 @@ export interface RouteAdminDto {
   isActive: boolean;
   points: RouteCityDto[];
   hasMapLayout: boolean;
+  /** A generated background picture is stored (spec § 6.12.5). */
+  hasMapImage: boolean;
   /** Present only on the active route: km walked on it and what is next. */
   progress: { walkedKm: number; nextCity: string | null; kmLeft: number } | null;
 }
@@ -241,6 +243,12 @@ export interface TeamProgressDto {
   route: RouteCityDto[];
   /** Pixel-map layout of the active route, null → deterministic fallback (spec § 6.12.5). */
   mapLayout: MapLayoutDto | null;
+  /**
+   * Versioned URL of the map background (`GET /api/routes/:id/image?v=…`),
+   * null → the SVG-only map. Only the URL travels here: the progress endpoint
+   * is polled and must not carry the image itself (spec § 6.12.5).
+   */
+  mapImageUrl: string | null;
 }
 
 export interface UserStatsDto {

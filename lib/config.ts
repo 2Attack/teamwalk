@@ -43,6 +43,17 @@ export const MAP_BENDS_PER_SEGMENT_MAX = 3;
  */
 export const ROUTE_LLM_TIMEOUT_MS = 45_000;
 
+/**
+ * Map background image (spec § 6.12.5): the model is env-tunable like the
+ * text one; the output is normalized to a fixed 2:1 geometry so the SVG
+ * overlay and the picture always share one coordinate system.
+ */
+export const AI_GATEWAY_IMAGE_MODEL =
+  process.env.AI_GATEWAY_IMAGE_MODEL ?? 'google/gemini-3.1-flash-image-preview';
+export const MAP_IMAGE_WIDTH = 768;
+export const MAP_IMAGE_HEIGHT = 384;
+export const MAP_IMAGE_TIMEOUT_MS = 90_000;
+
 /** Default speed for a new participant (spec § 6.2). */
 export const DEFAULT_SPEED_KMH = 4;
 

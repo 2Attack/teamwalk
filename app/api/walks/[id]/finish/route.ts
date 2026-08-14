@@ -34,7 +34,7 @@ async function safe<T>(run: () => Promise<T>, fallback: T, label: string): Promi
 
 function fallbackProgress(): TeamProgressDto {
   const position = positionOnRoute(ROUTE, 0);
-  return { totalKm: 0, ...position, route: ROUTE, mapLayout: null };
+  return { totalKm: 0, ...position, route: ROUTE, mapLayout: null, mapImageUrl: null };
 }
 
 /** Сводка для экрана успеха: собирается без второго запроса от клиента (п. 6.8.6). */

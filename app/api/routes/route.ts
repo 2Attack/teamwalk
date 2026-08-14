@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server';
 import { apiError, handle, isUniqueViolation, readJson, type ApiErrorBody } from '@/lib/api';
 import { createRoute, listRoutesAdmin } from '@/lib/db/queries/routes';
 import { llmEnabled } from '@/lib/hints/providers';
-import { scheduleMapLayout } from '@/lib/routes/generate';
+import { scheduleMapArt } from '@/lib/routes/generate';
 import type { RouteAdminDto, RoutesAdminResponseDto } from '@/lib/types';
 import { createRouteSchema } from '@/lib/validation';
 
@@ -26,7 +26,7 @@ export async function POST(request: Request) {
       const created = await createRoute(input);
       // Map layout arrives in the background (spec § 6.12.5); until then the
       // deterministic layout serves the map.
-      scheduleMapLayout(created.id, created.points);
+      scheduleMapArt(created.id, created.points);
       return NextResponse.json(created, { status: 201 });
     } catch (error) {
       if (isUniqueViolation(error, 'routes_name_uniq')) {

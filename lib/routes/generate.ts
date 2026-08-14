@@ -3,9 +3,10 @@ import { generateObject } from 'ai';
 import { z } from 'zod';
 
 import { MAP_GRID_H, MAP_GRID_W, ROUTE_LLM_TIMEOUT_MS, ROUTE_POINTS_MAX } from '@/lib/config';
-import { saveMapLayout } from '@/lib/db/queries/routes';
+import { saveMapImage, saveMapLayout } from '@/lib/db/queries/routes';
 import { GATEWAY_MODEL, llmEnabled } from '@/lib/hints/providers';
-import { normalizeLayout } from '@/lib/map/layout';
+import { fallbackLayout, normalizeLayout } from '@/lib/map/layout';
+import { generateMapImage } from '@/lib/routes/map-image';
 import type { MapLayoutDto, RouteCityDto, RouteDraftDto } from '@/lib/types';
 import { mapLayoutSchema, routePointsSchema, treadmillNameSchema } from '@/lib/validation';
 
@@ -103,23 +104,38 @@ export async function generateRouteDraft(
 }
 
 /**
+ * Full map art pipeline (spec § 6.12.5): layout first, then the background
+ * image drawn from a sketch of that layout (or of the deterministic one when
+ * the layout call fails). Each stage saves what it produced — a partial
+ * success still improves the map one degradation step.
+ */
+export async function generateMapArt(
+  routeId: string,
+  points: RouteCityDto[],
+): Promise<'image' | 'layout' | 'none'> {
+  const layout = await generateMapLayout(points);
+  if (layout) await saveMapLayout(routeId, layout);
+
+  const image = await generateMapImage(points, layout ?? fallbackLayout(points));
+  if (image) await saveMapImage(routeId, image);
+
+  return image ? 'image' : layout ? 'layout' : 'none';
+}
+
+/**
  * Background map generation after a route save (spec § 6.12.5): runs via
  * waitUntil after the response, never in the hot path, never throws. Without
  * LLM credentials it is a no-op — the deterministic layout serves the map.
  */
-export function scheduleMapLayout(routeId: string, points: RouteCityDto[]): void {
+export function scheduleMapArt(routeId: string, points: RouteCityDto[]): void {
   if (!llmEnabled()) return;
   waitUntil(
-    generateMapLayout(points)
-      .then(async (layout) => {
-        if (layout) await saveMapLayout(routeId, layout);
-      })
-      .catch((error) => {
-        console.warn('[routes] background layout failed', {
-          routeId,
-          error: error instanceof Error ? error.message : String(error),
-        });
-      }),
+    generateMapArt(routeId, points).catch((error) => {
+      console.warn('[routes] background map art failed', {
+        routeId,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }),
   );
 }
 

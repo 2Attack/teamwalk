@@ -61,7 +61,7 @@ function ProgressBar({ ratio, label }: { ratio: number; label: string }) {
 }
 
 function ProgressBody({ data }: { data: TeamProgressDto }) {
-  const { totalKm, passed, next, kmLeft, progressRatio, route, mapLayout } = data;
+  const { totalKm, passed, next, kmLeft, progressRatio, route, mapLayout, mapImageUrl } = data;
 
   // Пройденное — без округления: команда честно заработала каждую сотку.
   const caption = next
@@ -76,6 +76,7 @@ function ProgressBody({ data }: { data: TeamProgressDto }) {
         <RouteMap
           route={route}
           layout={mapLayout}
+          mapImageUrl={mapImageUrl}
           walkedKm={totalKm}
           label={`Карта маршрута: ${caption}`}
         />
