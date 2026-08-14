@@ -2,6 +2,7 @@
 
 import { useId } from 'react';
 
+import { RouteMap } from '@/components/RouteMap';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/8bit/card';
 import { Progress } from '@/components/ui/8bit/progress';
 import { Skeleton } from '@/components/ui/8bit/skeleton';
@@ -60,12 +61,28 @@ function ProgressBar({ ratio, label }: { ratio: number; label: string }) {
 }
 
 function ProgressBody({ data }: { data: TeamProgressDto }) {
-  const { totalKm, passed, next, kmLeft, progressRatio } = data;
+  const { totalKm, passed, next, kmLeft, progressRatio, route, mapLayout } = data;
 
   // Пройденное — без округления: команда честно заработала каждую сотку.
   const caption = next
     ? `${formatKm(totalKm)} км пройдено, до ${next.city} ${routeKm(kmLeft)} км`
-    : `${formatKm(totalKm)} км пройдено — маршрут пройден целиком`;
+    : `${formatKm(totalKm)} км пройдено — маршрут пройден целиком. Выберите следующий в настройках`;
+
+  // Пиксельная карта (п. 6.12.5); полоса остаётся фолбэком на вырожденный
+  // маршрут — ступень 3 деградации.
+  if (route.length >= 2) {
+    return (
+      <>
+        <RouteMap
+          route={route}
+          layout={mapLayout}
+          walkedKm={totalKm}
+          label={`Карта маршрута: ${caption}`}
+        />
+        <p className="mt-3 text-sm text-text-dim">{caption}</p>
+      </>
+    );
+  }
 
   return (
     <>

@@ -299,6 +299,19 @@ img.pixel,
   animation: count-ring 600ms steps(5) both;
 }
 
+/*
+  Pixel route map palette (spec 6.12.5): parchment paper. Deliberately
+  theme-independent — the map is a paper artifact, a light spot in a dark
+  room, and must not re-tint with the UI theme.
+*/
+:root {
+  --map-parchment: #e6c793;
+  --map-frame: #6b4a2b;
+  --map-ink: #5b3d21;
+  --map-trail: #c2402e;
+  --map-trail-walked: #5d9021;
+}
+
 * {
   scrollbar-width: thin;
   scrollbar-color: var(--color-border-dim) transparent;
