@@ -280,6 +280,21 @@ img.pixel,
   animation: count-pop 240ms steps(4) both;
 }
 
+/* Screen entrance: short stepped fade so route transitions don't hard-cut.
+   Ends fully visible — safe under the reduced-motion duration collapse. */
+@keyframes screen-in {
+  0% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+.animate-screen-in {
+  animation: screen-in 180ms steps(3) both;
+}
+
 .animate-count-ring {
   animation: count-ring 600ms steps(5) both;
 }

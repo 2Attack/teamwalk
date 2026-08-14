@@ -12,7 +12,15 @@ import { Button } from '@/components/ui/8bit/button';
 import { Card, CardAction, CardContent, CardHeader, CardTitle } from '@/components/ui/8bit/card';
 import { Icon } from '@/components/ui/icon';
 import { Skeleton } from '@/components/ui/8bit/skeleton';
-import { ApiError, apiGet, apiSend, useTreadmills, useUserStats } from '@/lib/client/api';
+import {
+  ApiError,
+  apiGet,
+  apiSend,
+  primeActiveWalk,
+  useTelegramStatus,
+  useTreadmills,
+  useUserStats,
+} from '@/lib/client/api';
 import { DEFAULT_SPEED_KMH, MAX_SPEED_KMH_ABS } from '@/lib/config';
 import { formatDuration } from '@/lib/format';
 import type { ActiveWalkDto, TreadmillBusyDto, TreadmillDto, UserDto } from '@/lib/types';
@@ -21,10 +29,28 @@ interface StartWalkCardProps {
   users: UserDto[];
   userId: string | null;
   onSelectUser: (userId: string) => void;
+  /**
+   * Countdown/start in progress. Home pauses its active-walk subscription
+   * while true, so seeding the SWR cache before navigation doesn't trigger
+   * its own redirect and race ours.
+   */
+  onStartFlowChange?: (active: boolean) => void;
 }
 
+/**
+ * How long "GO!" stays on screen before navigation. Gives the prefetched
+ * route payload time to land, so the push usually commits straight to the
+ * walk screen without flashing the route-level loading screen.
+ */
+const GO_DWELL_MS = 400;
+
 /** Walk start block: participant → treadmill → speed → «Start walk» (§ 6.1). */
-export function StartWalkCard({ users, userId, onSelectUser }: StartWalkCardProps) {
+export function StartWalkCard({
+  users,
+  userId,
+  onSelectUser,
+  onStartFlowChange,
+}: StartWalkCardProps) {
   const router = useRouter();
   const { data: treadmills, isLoading, mutate: reloadTreadmills } = useTreadmills();
   const { data: userStats } = useUserStats(userId);
@@ -50,6 +76,11 @@ export function StartWalkCard({ users, userId, onSelectUser }: StartWalkCardProp
   // the list, so the speed row does not grow to the absolute sanity limit.
   const maxSpeed = selectedTreadmill?.maxSpeedKmh ?? list[0]?.maxSpeedKmh ?? MAX_SPEED_KMH_ABS;
   const now = useNowTick(list.some((t) => t.busy !== null));
+
+  // Warm the Telegram-status cache while the countdown runs: the walk screen
+  // shows the invite panel from this data, and fetching it there after mount
+  // would insert the panel late, shifting the layout under the user.
+  useTelegramStatus(counting ? userId : null);
 
   // Treadmill preselection: the participant's last treadmill if free,
   // otherwise the first free one by sortOrder (§ 6.9.3).
@@ -83,10 +114,17 @@ export function StartWalkCard({ users, userId, onSelectUser }: StartWalkCardProp
         // server substitutes it itself (§ 6.9.2).
         ...(activeTreadmillId ? { treadmillId: activeTreadmillId } : {}),
       });
+      // Seamless landing (§ 6.2): the walk screen renders from this cache
+      // entry without a refetch, and prefetch + one "GO!" beat let the route
+      // payload arrive so the push commits without a loading-screen flash.
+      await primeActiveWalk(walk);
+      router.prefetch(`/walk/${walk.id}`);
+      await new Promise((resolve) => window.setTimeout(resolve, GO_DWELL_MS));
       router.push(`/walk/${walk.id}`);
     } catch (err) {
       // Drop the countdown overlay so the error is visible on the card.
       setCounting(false);
+      onStartFlowChange?.(false);
       await handleStartError(err);
     } finally {
       setStarting(false);
@@ -169,6 +207,7 @@ export function StartWalkCard({ users, userId, onSelectUser }: StartWalkCardProp
             if (!canStart || starting || counting) return;
             setError(null);
             setCounting(true);
+            onStartFlowChange?.(true);
           }}
         >
           {starting || counting ? (
@@ -194,7 +233,13 @@ export function StartWalkCard({ users, userId, onSelectUser }: StartWalkCardProp
       {/* The overlay lives until navigation succeeds; `handleStart` closes it
           itself on error, so the message under the button is not covered. */}
       {counting && (
-        <StartCountdown onGo={() => void handleStart()} onCancel={() => setCounting(false)} />
+        <StartCountdown
+          onGo={() => void handleStart()}
+          onCancel={() => {
+            setCounting(false);
+            onStartFlowChange?.(false);
+          }}
+        />
       )}
 
       <AddUserDialog

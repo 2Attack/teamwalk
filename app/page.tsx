@@ -16,11 +16,11 @@ import { LAST_USER_STORAGE_KEY } from '@/lib/config';
 import type { PeriodSelection } from '@/lib/types';
 
 /**
- * Главная (п. 6.1): шапка → лента хинтов → прогресс команды → блок старта →
- * пьедестал → период + таблица лидеров.
+ * Home (§ 6.1): header → team progress → start block → podium → period +
+ * leaderboard.
  *
- * Период живёт здесь и общий для пьедестала и таблицы: иначе на экране
- * висели бы два противоречащих топ-3 (п. 6.2).
+ * The period lives here and is shared by the podium and the table: otherwise
+ * two contradicting top-3s would hang on screen at once (§ 6.2).
  */
 export default function HomePage() {
   const router = useRouter();
@@ -28,33 +28,38 @@ export default function HomePage() {
 
   const [period, setPeriod] = useState<PeriodSelection>({ period: 'week' });
   const [userId, setUserId] = useState<string | null>(null);
-  /** До первого эффекта localStorage не читаем — иначе разъедется гидратация. */
+  /** Don't read localStorage before the first effect — hydration would diverge. */
   const [restored, setRestored] = useState(false);
+  // The start flow (countdown → POST → navigation) owns the redirect while it
+  // runs: it seeds the active-walk SWR cache before navigating, and the
+  // auto-redirect below reacting to that would race it with a second
+  // navigation. Pausing the subscription keeps exactly one navigator.
+  const [startFlowActive, setStartFlowActive] = useState(false);
 
   useEffect(() => {
     setUserId(readLastUserId());
     setRestored(true);
   }, []);
 
-  // Сохраняем выбор: на общем планшете это экономит шаг, на телефоне работает как «вход».
+  // Persist the choice: saves a step on the shared tablet, acts as "login" on a phone.
   useEffect(() => {
     if (!restored) return;
     try {
       if (userId) window.localStorage.setItem(LAST_USER_STORAGE_KEY, userId);
       else window.localStorage.removeItem(LAST_USER_STORAGE_KEY);
     } catch {
-      // Приватный режим/переполнение — не повод ронять экран.
+      // Private mode / quota — no reason to crash the screen.
     }
   }, [restored, userId]);
 
-  // Участника могли удалить из БД — тогда сохранённый id больше не выбор.
+  // The participant may have been deleted from the DB — then the saved id is no longer a choice.
   useEffect(() => {
     if (!restored || !users || userId === null) return;
     if (!users.some((u) => u.id === userId)) setUserId(null);
   }, [restored, users, userId]);
 
-  // Если у выбранного участника уже идёт прогулка — сразу её экран (п. 6.3).
-  const { data: activeWalk } = useActiveWalk(restored ? userId : null);
+  // If the selected participant already has a walk in progress — straight to its screen (§ 6.3).
+  const { data: activeWalk } = useActiveWalk(restored && !startFlowActive ? userId : null);
   useEffect(() => {
     if (activeWalk) router.replace(`/walk/${activeWalk.id}`);
   }, [activeWalk, router]);
@@ -62,8 +67,8 @@ export default function HomePage() {
   return (
     <main className="mx-auto w-full max-w-3xl space-y-6 px-4 py-6 sm:space-y-8 sm:px-6 sm:py-8">
       <AppHeader />
-      {/* Хинт-лента с главной снята: она осталась на экране прогулки,
-          где человек реально смотрит в экран минутами (п. 6.6). */}
+      {/* The hint ticker is removed from home: it stays on the walk screen,
+          where a person actually watches the screen for minutes (§ 6.6). */}
       <TeamProgress />
 
       {error ? (
@@ -71,7 +76,12 @@ export default function HomePage() {
       ) : isLoading || !users ? (
         <StartWalkCardSkeleton />
       ) : (
-        <StartWalkCard users={users} userId={userId} onSelectUser={setUserId} />
+        <StartWalkCard
+          users={users}
+          userId={userId}
+          onSelectUser={setUserId}
+          onStartFlowChange={setStartFlowActive}
+        />
       )}
 
       <Podium period={period} currentUserId={userId} />
@@ -84,12 +94,12 @@ export default function HomePage() {
   );
 }
 
-/** Сеть отвалилась: понятный текст и явная кнопка повтора вместо пустого экрана. */
+/** Network is down: a clear text and an explicit retry button instead of an empty screen. */
 function NetworkError({ onRetry }: { onRetry: () => void }) {
   return (
     <Card font="normal">
       <CardHeader>
-        {/* `retro` в классе обязателен: className в 8bitcn перекрывает его. */}
+        {/* `retro` in the class is mandatory: className in 8bitcn overrides it. */}
         <CardTitle className="retro text-sm leading-snug break-words sm:text-base">
           Нет связи с сервером
         </CardTitle>
@@ -106,7 +116,7 @@ function NetworkError({ onRetry }: { onRetry: () => void }) {
   );
 }
 
-/** Последний выбранный участник из localStorage; ошибки хранилища не роняют экран. */
+/** Last selected participant from localStorage; storage errors don't crash the screen. */
 function readLastUserId(): string | null {
   try {
     return window.localStorage.getItem(LAST_USER_STORAGE_KEY);

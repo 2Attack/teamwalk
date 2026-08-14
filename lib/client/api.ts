@@ -17,7 +17,7 @@ import type {
   WalkDto,
 } from '@/lib/types';
 
-/** Ошибка API в конверте `{ error: { code, message, field } }` (п. 5 ТЗ). */
+/** API error in the `{ error: { code, message, field } }` envelope (spec § 5). */
 export class ApiError extends Error {
   constructor(
     readonly status: number,
@@ -111,7 +111,7 @@ export function useUserStats(userId: string | null) {
   return useSWR<UserStatsDto>(userId ? `/api/users/${userId}/stats` : null, apiGet);
 }
 
-/** Статус Telegram участника — для карточки и панели-приглашения (п. 6.10.2). */
+/** Participant's Telegram status — for the card and the invite panel (§ 6.10.2). */
 export function useTelegramStatus(userId: string | null) {
   return useSWR<TelegramStatusDto>(userId ? `/api/users/${userId}/telegram` : null, apiGet, {
     revalidateOnFocus: true,
@@ -136,7 +136,17 @@ export function useAchievements(userId: string | null) {
   );
 }
 
-/** Инвалидация всего, на что влияет завершённая прогулка. */
+/**
+ * Seed the active-walk cache with a freshly started walk (§ 6.2): the walk
+ * screen then renders from cache instantly instead of refetching what the
+ * start POST already returned. Home pauses its active-walk subscription for
+ * the duration of the start flow, so seeding doesn't trigger its redirect.
+ */
+export async function primeActiveWalk(walk: ActiveWalkDto): Promise<void> {
+  await globalMutate(`/api/walks/active?userId=${walk.userId}`, walk, { revalidate: false });
+}
+
+/** Invalidate everything a finished walk affects. */
 export async function revalidateAfterWalk(): Promise<void> {
   await globalMutate(
     (key) =>
