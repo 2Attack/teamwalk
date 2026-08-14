@@ -91,6 +91,7 @@ export async function notifyTreadmillFreed(input: { walkId: string; treadmillNam
 export function ensureNotifySweep(): void; // ленивый фолбэк cron: лок notify_meta, не чаще раза в час
 export async function runNotifySweep(now?: Date): Promise<void>; // напоминания + дайджест (вызывает cron)
 export async function getTelegramStatus(userId: string): Promise<TelegramStatusDto | null>;
+export async function dismissNudge(userId: string): Promise<void>; // «Больше не показывать» панель (п. 6.10.2)
 export async function processTelegramUpdate(update: unknown): Promise<void>; // webhook, дедуп по update_id
 
 // components/ui/* — владелец: UIKIT (см. ниже)

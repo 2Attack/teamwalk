@@ -26,8 +26,10 @@ export const users = pgTable(
     avatarId: text('avatar_id').notNull(),
     hintsOptOut: boolean('hints_opt_out').notNull().default(false),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-    // Колонки tg_nudge_* (счётчики показов панели, старая ред. п. 6.10.2) в БД
-    // остались, но кодом больше не используются: панель видна всегда до привязки.
+    /** «Больше не показывать» панели «Привяжи Telegram» (п. 6.10.2): в БД, а не
+     * в localStorage, — отказ действует с любого устройства; отвязка сбрасывает.
+     * Соседние tg_nudge_count/tg_nudge_last_at в БД остались, но упразднены. */
+    tgNudgeDismissed: boolean('tg_nudge_dismissed').notNull().default(false),
   },
   (t) => [
     uniqueIndex('users_name_uniq').on(

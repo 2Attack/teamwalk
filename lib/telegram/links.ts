@@ -82,13 +82,23 @@ export async function upsertLink(
   return { displacedChatId };
 }
 
+/**
+ * Отвязка возвращает приглашение (п. 6.10.2): «Больше не показывать» сбрасывается,
+ * иначе человек, осознанно отвязавшийся, не смог бы привязаться заново с панели.
+ */
+async function resetNudgeDismissed(userId: string): Promise<void> {
+  await db.update(users).set({ tgNudgeDismissed: false }).where(eq(users.id, userId));
+}
+
 /** Полная отвязка из приложения (`DELETE /api/users/:id/telegram`). */
 export async function unlink(userId: string): Promise<boolean> {
   const rows = await db
     .delete(telegramLinks)
     .where(eq(telegramLinks.userId, userId))
     .returning({ userId: telegramLinks.userId });
-  return rows.length > 0;
+  if (rows.length === 0) return false;
+  await resetNudgeDismissed(rows[0].userId);
+  return true;
 }
 
 /** Полная отвязка командой `/stop` из бота. */
@@ -97,7 +107,14 @@ export async function unlinkByChat(chatId: number): Promise<boolean> {
     .delete(telegramLinks)
     .where(eq(telegramLinks.chatId, chatId))
     .returning({ userId: telegramLinks.userId });
-  return rows.length > 0;
+  if (rows.length === 0) return false;
+  await resetNudgeDismissed(rows[0].userId);
+  return true;
+}
+
+/** «Больше не показывать» панель-приглашение (п. 6.10.2). */
+export async function dismissNudge(userId: string): Promise<void> {
+  await db.update(users).set({ tgNudgeDismissed: true }).where(eq(users.id, userId));
 }
 
 export type PrefKey =
@@ -145,18 +162,22 @@ export async function setMutedUntil(chatId: number, until: Date | null): Promise
 }
 
 /**
- * Статус для панели-приглашения и модалки привязки (п. 6.10.2): панель видна
- * всегда, пока участник не привязан, — счётчиков и кулдаунов нет.
- * `null` — участник не найден.
+ * Статус для панели-приглашения и модалки привязки (п. 6.10.2): панель видна,
+ * пока участник не привязан и не нажал «Больше не показывать», — счётчиков
+ * и кулдаунов нет. `null` — участник не найден.
  */
 export async function getTelegramStatus(userId: string): Promise<TelegramStatusDto | null> {
   const userRows = await db
-    .select({ id: users.id })
+    .select({ tgNudgeDismissed: users.tgNudgeDismissed })
     .from(users)
     .where(eq(users.id, userId))
     .limit(1);
   if (!userRows[0]) return null;
 
   const link = await getLink(userId);
-  return { enabled: TELEGRAM_ENABLED, linked: link !== null };
+  return {
+    enabled: TELEGRAM_ENABLED,
+    linked: link !== null,
+    dismissed: userRows[0].tgNudgeDismissed,
+  };
 }
