@@ -147,7 +147,7 @@ export function AvatarPicker(props: { value: string; onChange: (id: string) => v
 | **LEADERBOARD** | `app/api/leaderboard/route.ts`, `app/api/stats/route.ts`, `lib/db/queries/leaderboard.ts` |
 | **HINTS** | `lib/hints/*` (кроме `route.ts`), `app/api/hints/route.ts`, `tests/hints.filter.test.ts`, `vitest.config.ts` |
 | **GAME** | `lib/game/*`, `app/api/users/[id]/stats/route.ts`, `app/api/achievements/route.ts`, `app/api/team/progress/route.ts`, `tests/streak.test.ts` |
-| **TELEGRAM** | `lib/telegram/*`, `app/api/telegram/**`, `app/api/users/[id]/telegram/**`, `app/api/cron/notify/route.ts`, `components/TelegramNudge.tsx`, `tests/telegram.*.test.ts`, `vercel.json`, `drizzle/0002_telegram.sql` |
+| **TELEGRAM** | `lib/telegram/*`, `app/api/telegram/**`, `app/api/users/[id]/telegram/**`, `app/api/cron/notify/route.ts`, `components/TelegramNudge.tsx`, `components/TelegramLinkDialog.tsx`, `tests/telegram.*.test.ts`, `vercel.json`, `drizzle/0002_telegram.sql` |
 | **UIKIT** | `components/ui/*`, `components/Avatar.tsx`, `components/AvatarPicker.tsx` |
 | **HOME** | `app/page.tsx`, `components/UserSelect.tsx`, `components/AddUserDialog.tsx`, `components/StartWalkCard.tsx`, `components/TreadmillPicker.tsx` |
 | **WALKSCREEN** | `app/walk/[id]/page.tsx`, `components/WalkTimer.tsx`, `components/FinishWalkDialog.tsx`, `components/WalkSuccess.tsx`, `components/WalkerSprite.tsx` |

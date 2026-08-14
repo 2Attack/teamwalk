@@ -17,9 +17,8 @@ export interface UserDto {
 export interface TelegramStatusDto {
   /** Подсистема включена на сервере (есть токен бота и рубильник не опущен). */
   enabled: boolean;
+  /** Привязан ли Telegram; панель-приглашение видна, пока `enabled && !linked`. */
   linked: boolean;
-  /** Панель можно показывать: не привязан, не отказался, лимиты показов не выбраны. */
-  nudgeEligible: boolean;
 }
 
 /** Ответ `POST /api/users/:id/telegram/link-token` (п. 6.10.3). */

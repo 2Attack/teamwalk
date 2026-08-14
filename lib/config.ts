@@ -72,11 +72,6 @@ export const TELEGRAM_ENABLED =
 /** TTL одноразового токена привязки (п. 6.10.3). */
 export const TG_LINK_TOKEN_TTL_MINUTES = 15;
 
-/** Панель «Привяжи Telegram» на экране прогулки (п. 6.10.2). */
-export const TG_NUDGE_AFTER_SEC = 60;
-export const TG_NUDGE_COOLDOWN_DAYS = 3;
-export const TG_NUDGE_MAX_SHOWS = 5;
-
 /** Напоминания «пора размяться» (п. 6.10.4): все интервалы — в рабочих днях. */
 export const REMIND_IDLE_WORKDAYS = 2;
 export const REMIND_COOLDOWN_WORKDAYS = 3;

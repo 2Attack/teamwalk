@@ -26,11 +26,8 @@ export const users = pgTable(
     avatarId: text('avatar_id').notNull(),
     hintsOptOut: boolean('hints_opt_out').notNull().default(false),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-    /** Панель «Привяжи Telegram» на экране прогулки (п. 6.10.2): счётчики в БД,
-     * а не в localStorage, — отказ должен действовать с любого устройства. */
-    tgNudgeCount: smallint('tg_nudge_count').notNull().default(0),
-    tgNudgeLastAt: timestamp('tg_nudge_last_at', { withTimezone: true }),
-    tgNudgeDismissed: boolean('tg_nudge_dismissed').notNull().default(false),
+    // Колонки tg_nudge_* (счётчики показов панели, старая ред. п. 6.10.2) в БД
+    // остались, но кодом больше не используются: панель видна всегда до привязки.
   },
   (t) => [
     uniqueIndex('users_name_uniq').on(
