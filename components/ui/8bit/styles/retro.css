@@ -1,10 +1,10 @@
 /*
-  @import Google Fonts из библиотеки снят: Press Start 2P подключён через
-  next/font с кириллическим subset (app/layout.tsx), а вариант с CDN кириллицу
-  не содержит. Правило .retro переопределено в app/globals.css.
+  The library's Google Fonts @import is removed: Press Start 2P is loaded via
+  next/font with the Cyrillic subset (app/layout.tsx); the CDN variant has no
+  Cyrillic. The .retro rule is overridden in app/globals.css.
 
-  Осторожно: `npx shadcn add @8bitcn/<name>` перезаписывает этот файл целиком
-  и возвращает @import обратно — после каждой установки его нужно снять снова.
+  Careful: `npx shadcn add @8bitcn/<name>` rewrites this file wholesale and
+  brings the @import back — remove it again after every install.
 */
 
 .retro {

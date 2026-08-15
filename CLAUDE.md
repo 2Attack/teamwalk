@@ -2,68 +2,68 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## Что это
+## What this is
 
-TeamWalk — внутренний трекер ходьбы на беговой дорожке (Next.js App Router, TypeScript strict, React 19, Tailwind 4, Drizzle + Neon Postgres HTTP-драйвер, Zod, SWR). Требования — в `TeamWalk_TZ.md` (в коде и доках ссылки вида «п. 6.7.1» указывают на его пункты). Авторизации нет намеренно — модель доверия «свои люди».
+TeamWalk — an internal office treadmill walking tracker (Next.js App Router, TypeScript strict, React 19, Tailwind 4, Drizzle + Neon Postgres HTTP driver, Zod, SWR). Requirements live in `TeamWalk_TZ.md` (references like "spec § 6.7.1" in code and docs point to its sections). No authorization by design — the trust model is "our own people".
 
-**Язык:** UI-тексты — только через словари `lib/i18n` (en/ru/es, см. «Локализация»). Комментарии в коде и сообщения коммитов — **только английский**; типы и имена — английские. Комментарии писать **короткими**: одно-два предложения, только неочевидное ограничение или «почему» — без пересказа кода, истории правок и очевидных пояснений.
+**Language:** UI texts go only through the `lib/i18n` dictionaries (en/ru/es, see "Localization"). Code comments and commit messages — **English only**; types and names in English. Keep comments **short**: one or two sentences, only a non-obvious constraint or the "why" — no restating the code, no edit history, no obvious explanations.
 
-## Команды
+## Commands
 
 ```bash
-npm run dev          # дев-сервер
-npm run build        # прод-сборка
-npm run typecheck    # tsc --noEmit — основная проверка
+npm run dev          # dev server
+npm run build        # production build
+npm run typecheck    # tsc --noEmit — the primary check
 npm test             # vitest run (tests/*.test.ts)
-npx vitest run tests/streak.test.ts   # один тестовый файл
-npm run db:migrate   # применяет drizzle/*.sql по порядку, идемпотентно
-npm run gen:assets   # перегенерация статики: аватары, спрайты, иконки
+npx vitest run tests/streak.test.ts   # a single test file
+npm run db:migrate   # applies drizzle/*.sql in order, idempotent
+npm run gen:assets   # regenerate static assets: avatars, sprites, icons
 ```
 
-Нужен `DATABASE_URL` (Neon) в `.env.local`. Локальная БД без облака — docker-связка «Postgres + neon-http-proxy», описана в README (включая обязательную таблицу `neon_control_plane.endpoints`); её `DATABASE_URL` кладётся в `.env.development.local`, драйвер переключается на локальный эндпоинт по хосту `localtest.me`. LLM-креды опциональны: локально — `AI_GATEWAY_API_KEY` (Vercel AI Gateway), на деплоях Vercel — автоматический `VERCEL_OIDC_TOKEN`; без них хинты крутят статический каталог.
+Requires `DATABASE_URL` (Neon) in `.env.local`. A cloud-free local DB is the "Postgres + neon-http-proxy" docker pair described in the README (including the mandatory `neon_control_plane.endpoints` table); its `DATABASE_URL` goes into `.env.development.local`, and the driver switches to the local endpoint on the `localtest.me` host. LLM credentials are optional: locally `AI_GATEWAY_API_KEY` (Vercel AI Gateway), on Vercel deploys the automatic `VERCEL_OIDC_TOKEN`; without them hints rotate the static catalog.
 
-## Git-флоу
+## Git flow
 
-**Каждая новая фича — своя ветка.** В `main` напрямую не коммитить: `main` — это прод, пуш в него сразу деплоит и мигрирует боевую БД.
+**Every new feature gets its own branch.** Never commit to `main` directly: `main` is production — a push deploys and migrates the production DB immediately.
 
-1. `git checkout -b feature/<имя>` → работа → пуш ветки.
-2. Пуш ветки даёт preview-деплой с уникальным URL и **собственной веткой БД** (Neon-интеграция автоматически создаёт `preview/<ветка>` — copy-on-write копию боевой — и подставляет её `DATABASE_URL` только в этот деплой). Превью защищены Vercel Authentication.
-3. Миграции руками не гонять: `buildCommand` выполняет `db:migrate` перед сборкой на каждом деплое — превью мигрирует свою ветку, прод свою.
-4. Проверка на превью → merge в `main` → пуш: прод деплоится и мигрируется сам.
+1. `git checkout -b feature/<name>` → work → push the branch.
+2. Pushing a branch produces a preview deploy with a unique URL and **its own DB branch** (the Neon integration automatically creates `preview/<branch>` — a copy-on-write clone of production — and injects its `DATABASE_URL` into that deploy only). Previews are protected by Vercel Authentication.
+3. Never run migrations by hand: `buildCommand` runs `db:migrate` before every deploy build — a preview migrates its own branch, prod migrates its own.
+4. Verify on the preview → merge into `main` → push: prod deploys and migrates itself.
 
-Особенности окружений: крон (`/api/cron/notify`) работает только на проде — на превью его заменяет ленивый фолбэк; Telegram на превью выключен (нет переменных бота), боевой бот живёт только на проде, `@teamwalk_staging_bot` — для локального `npm run dev:tg`.
+Environment quirks: cron (`/api/cron/notify`) runs only in production — previews use the lazy fallback instead; Telegram is off on previews (no bot variables), the production bot lives only on prod, `@teamwalk_staging_bot` is for local `npm run dev:tg`.
 
-## Архитектура
+## Architecture
 
-- **Никакого состояния в памяти процесса.** Источник истины таймера — `walks.started_at`; клиент считает `Date.now() − startedAt`.
-- **Конкурентность держит БД.** Два partial unique index'а: одна активная прогулка на участника и одна на дорожку. API переводит ошибку `23505` в `409 WALK_ALREADY_ACTIVE` / `409 TREADMILL_BUSY`.
-- **Серии, рекорды, позиция на маршруте не хранятся** — вычисляются из `walks` на лету.
-- **«Зависшие» прогулки** закрывает `lib/walks/autoclose.ts` лениво при обращении к API — cron не используется (Hobby-план Vercel).
-- **LLM никогда не в горячем пути.** Пул хинтов в `hints_cache`, отдаётся сразу, регенерируется в фоне (stale-while-revalidate под строкой-мьютексом). Деградация: AI Gateway (AI SDK, модель в `AI_GATEWAY_MODEL`) → прошлый пул → статический каталог. В LLM уходит обезличенный снапшот (слоты `u1…uN`), имена подставляются на нашей стороне.
-- **Время** — всегда через `lib/time.ts` (`Europe/Moscow`, «офисные дни» `YYYY-MM-DD`, рабочие дни без производственного календаря). Не считать даты руками.
+- **No state in process memory.** The timer's source of truth is `walks.started_at`; the client computes `Date.now() − startedAt`.
+- **The DB owns concurrency.** Two partial unique indexes: one active walk per participant and one per treadmill. The API maps error `23505` to `409 WALK_ALREADY_ACTIVE` / `409 TREADMILL_BUSY`.
+- **Streaks, records and route position are never stored** — computed from `walks` on the fly.
+- **Stale walks** are closed lazily by `lib/walks/autoclose.ts` on API access — no cron (Vercel Hobby plan).
+- **The LLM is never on the hot path.** The hint pool lives in `hints_cache`, is served immediately and regenerated in the background (stale-while-revalidate under a single-row mutex). Degradation: AI Gateway (AI SDK, model in `AI_GATEWAY_MODEL`) → previous pool → static catalog. The LLM receives an anonymized snapshot (slots `u1…uN`); names are substituted on our side.
+- **Time** — always through `lib/time.ts` (`Europe/Moscow`, "office days" as `YYYY-MM-DD`, workdays without a holiday calendar). Never compute dates by hand.
 
-Слои: `app/api/**` (Route Handlers) → `lib/db/queries/*` (агрегации) и `lib/game/*` (серии/достижения/прогресс) → `lib/db/schema.ts`. Клиент ходит только через SWR-хуки и `apiSend` из `lib/client/api.ts`. Все DTO — в `lib/types.ts`, Zod-схемы — в `lib/validation.ts`, константы — в `lib/config.ts`.
+Layers: `app/api/**` (Route Handlers) → `lib/db/queries/*` (aggregations) and `lib/game/*` (streaks/achievements/progress) → `lib/db/schema.ts`. The client goes only through SWR hooks and `apiSend` from `lib/client/api.ts`. All DTOs are in `lib/types.ts`, Zod schemas in `lib/validation.ts`, constants in `lib/config.ts`.
 
-- **Локализация.** Язык всего продукта задаёт `NEXT_PUBLIC_LOCALE` (`en` по умолчанию, `ru`, `es`) — одна локаль на деплой, без переключателя в UI. Тестовый прогон закреплён на `ru` в `vitest.config.ts` — контентные тесты утверждают русские строки. Строки UI — только через `m`/`fmt`/`plural` из `lib/i18n` (словари `lib/i18n/messages/{ru,en,es}.ts`; `ru` — эталон, тип `Messages` требует полного паритета ключей). Каталог хинтов (`lib/hints/catalog/*`), промпты LLM и тексты бота (`lib/telegram/texts/*`) — тоже per-locale. Новый пользовательский текст хардкодить нельзя — добавлять во все три словаря. Переменная инлайнится при сборке: смена локали = redeploy.
+- **Localization.** The product language is set by `NEXT_PUBLIC_LOCALE` (`en` by default, `ru`, `es`) — one locale per deployment, no UI switcher. The test run is pinned to `ru` in `vitest.config.ts` — content tests assert Russian strings. UI strings go only through `m`/`fmt`/`plural` from `lib/i18n` (dictionaries in `lib/i18n/messages/{ru,en,es}.ts`; `ru` is the reference, the `Messages` type enforces full key parity). The hint catalog (`lib/hints/catalog/*`), LLM prompts and bot texts (`lib/telegram/texts/*`) are per-locale too. Never hardcode new user-facing text — add it to all three dictionaries. The variable is inlined at build time: changing the locale = redeploy.
 
-`docs/CONTRACT.md` — карта зон и межмодульных сигнатур: где что лежит и кто что экспортирует. Фундамент (`lib/api.ts`, `lib/format.ts`, `lib/time.ts`, `lib/db/*` и т. д.) использовать, не дублировать.
+`docs/CONTRACT.md` is the map of zones and cross-module signatures: what lives where and who exports what. Use the foundation (`lib/api.ts`, `lib/format.ts`, `lib/time.ts`, `lib/db/*`, etc.) — do not duplicate it.
 
-## Правила API-слоя
+## API-layer rules
 
-- Route Handlers: `export const runtime = 'nodejs'` и `export const dynamic = 'force-dynamic'`.
-- Ошибки — только через `apiError` / `validationError` / `handle` из `lib/api.ts`.
-- В Next 16 `params` — это `Promise`: `{ params }: { params: Promise<{ id: string }> }`.
-- `numeric` из Drizzle приходит **строкой** — приводить `Number(...)` перед выдачей клиенту.
-- Ответы строго соответствуют DTO из `lib/types.ts`.
+- Route Handlers: `export const runtime = 'nodejs'` and `export const dynamic = 'force-dynamic'`.
+- Errors only through `apiError` / `validationError` / `handle` from `lib/api.ts`.
+- In Next 16 `params` is a `Promise`: `{ params }: { params: Promise<{ id: string }> }`.
+- Drizzle `numeric` arrives as a **string** — convert with `Number(...)` before returning to the client.
+- Responses must match the DTOs in `lib/types.ts` exactly.
 
 ## UI
 
-UI-кит — 8bitcn (copy-paste поверх shadcn): `components/ui/8bit/*` оборачивает базу `components/ui/*` (базу вручную не править). Все мины и правила — в `docs/8BITCN.md`; главные:
+The UI kit is 8bitcn (copy-paste on top of shadcn): `components/ui/8bit/*` wraps the base `components/ui/*` (never edit the base by hand). All the landmines and rules are in `docs/8BITCN.md`; the key ones:
 
-- `font="normal"` для всего, что читают (имена, тексты); пиксельный `retro` — только метки кнопок, числа, заголовки, бейджи.
-- База Tabs собрана на **Base UI**, а не Radix: активное состояние — `data-active:`, и его надо дублировать `dark:`-вариантом (тема всегда тёмная).
-- Модалки — только через `components/DialogShell.tsx`.
-- После `npx shadcn add @8bitcn/<name>` из `components/ui/8bit/styles/retro.css` нужно снимать вернувшийся `@import` Google Fonts.
-- Палитра — токены из `app/globals.css` (`bg-bg-panel`, `text-text-dim`, `text-citrus`, `text-lime`…), никаких `bg-[#...]`. Скругление 0, тени без blur, анимировать только `transform`/`opacity`, тач-таргеты ≥ 44 px.
-- Иконки — только `@/components/ui/icon` (пиксельные 16×16); `lucide-react` не использовать. `Select` из 8bitcn не ставим сознательно.
-- Статика (аватары DiceBear, спрайты, `lib/icons.generated.ts`) генерируется скриптами и лежит в репозитории — в рантайме сторонних запросов нет; не редактировать сгенерированное руками.
+- `font="normal"` for anything people read (names, texts); pixel `retro` only for button labels, numbers, headings, badges.
+- The base Tabs are built on **Base UI**, not Radix: the active state is `data-active:`, and it must be duplicated with a `dark:` variant (the theme is always dark).
+- Dialogs only through `components/DialogShell.tsx`.
+- After `npx shadcn add @8bitcn/<name>`, remove the Google Fonts `@import` that comes back in `components/ui/8bit/styles/retro.css`.
+- Palette — tokens from `app/globals.css` (`bg-bg-panel`, `text-text-dim`, `text-citrus`, `text-lime`…), never `bg-[#...]`. Zero border radius, shadows without blur, animate only `transform`/`opacity`, touch targets ≥ 44 px.
+- Icons only via `@/components/ui/icon` (pixel 16×16); never `lucide-react`. The 8bitcn `Select` is deliberately not installed.
+- Static assets (DiceBear avatars, sprites, `lib/icons.generated.ts`) are script-generated and committed — no third-party requests at runtime; never edit generated files by hand.
