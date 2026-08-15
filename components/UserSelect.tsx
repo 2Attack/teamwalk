@@ -17,6 +17,7 @@ import { Label } from '@/components/ui/8bit/label';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/8bit/popover';
 import { Icon } from '@/components/ui/icon';
 import { cn } from '@/lib/cn';
+import { fmt, INTL_LOCALE, m } from '@/lib/i18n';
 import type { UserDto } from '@/lib/types';
 
 interface UserSelectProps {
@@ -66,7 +67,7 @@ export function UserSelect({ users, value, onChange }: UserSelectProps) {
       <div className="space-y-2">
         {/* `font="normal"`: the label is sans, like the field below (spec § 6.7.1). */}
         <Label htmlFor={triggerId} font="normal" className="block text-sm text-text-dim">
-          Участник
+          {m.userSelect.label}
         </Label>
 
         {/* The field takes the card's full width. This used to be a flex row
@@ -94,7 +95,7 @@ export function UserSelect({ users, value, onChange }: UserSelectProps) {
             >
               <span className={cn('truncate', selected === null && 'text-text-dim')}>
                 {selected?.name ??
-                  (users.length === 0 ? 'Пока никого нет' : 'Начните вводить имя')}
+                  (users.length === 0 ? m.userSelect.emptyList : m.userSelect.typeName)}
               </span>
               <Icon name="chevronDown" size={16} />
             </PopoverTrigger>
@@ -108,7 +109,7 @@ export function UserSelect({ users, value, onChange }: UserSelectProps) {
               font="normal"
               align="start"
               className="w-(--anchor-width) p-0"
-              aria-label="Участники"
+              aria-label={m.userSelect.listAria}
             >
               {/*
                 Two fixes on top of the 8bitcn `Command`, both consequences of
@@ -144,10 +145,10 @@ export function UserSelect({ users, value, onChange }: UserSelectProps) {
                   '**:data-[slot=command-input]:outline-none!',
                 )}
               >
-                <CommandInput placeholder="Начните вводить имя" className="font-sans text-base" />
+                <CommandInput placeholder={m.userSelect.typeName} className="font-sans text-base" />
                 <CommandList>
                   <CommandEmpty className="px-3 py-6 text-center font-sans text-sm text-text-dim">
-                    Никого не нашлось
+                    {m.userSelect.nobodyFound}
                   </CommandEmpty>
                   <CommandGroup>
                     {users.map((user) => (
@@ -185,8 +186,8 @@ export function UserSelect({ users, value, onChange }: UserSelectProps) {
           <button
             type="button"
             onClick={() => setAvatarOpen(true)}
-            title="Сменить персонажа"
-            aria-label={`Сменить персонажа: ${selected.name}`}
+            title={m.userSelect.changeAvatarTitle}
+            aria-label={fmt(m.userSelect.changeAvatarAria, { name: selected.name })}
             /*
               A button without its own frame: the avatar is its visible part.
               min-h/min-w-11 stay — the touch target is at least 44px
@@ -200,7 +201,7 @@ export function UserSelect({ users, value, onChange }: UserSelectProps) {
           </button>
           <div className="min-w-0">
             <p className="truncate text-base text-text-main">{selected.name}</p>
-            <p className="text-xs text-text-dim">нажмите на аватар, чтобы сменить персонажа</p>
+            <p className="text-xs text-text-dim">{m.userSelect.changeAvatarHint}</p>
           </div>
         </div>
       )}
@@ -229,7 +230,7 @@ export function UserSelect({ users, value, onChange }: UserSelectProps) {
  * through on Cyrillic, so the rule is spelled out explicitly.
  */
 export function matchScore(name: string, search: string): number {
-  const needle = search.trim().toLocaleLowerCase('ru-RU');
+  const needle = search.trim().toLocaleLowerCase(INTL_LOCALE);
   if (needle === '') return 1;
-  return name.toLocaleLowerCase('ru-RU').includes(needle) ? 1 : 0;
+  return name.toLocaleLowerCase(INTL_LOCALE).includes(needle) ? 1 : 0;
 }

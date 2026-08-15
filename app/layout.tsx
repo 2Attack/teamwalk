@@ -5,24 +5,24 @@ import { Inter, Press_Start_2P } from 'next/font/google';
 
 import { APP_NAME, IS_VERCEL_PREVIEW } from '@/lib/config';
 import { cn } from '@/lib/cn';
+import { LOCALE, m } from '@/lib/i18n';
 
 import './globals.css';
 
 /*
-  Кириллица проверена до включения в макет (п. 6.7.2): у обоих шрифтов
-  подключён subset 'cyrillic', иначе имена рассыпались бы на «Ё», «Й», «Щ».
-  Geist, который предлагает shadcn по умолчанию, не ставим: кириллицы в нём
-  нет, а интерфейс целиком русский.
+  Both fonts ship the 'cyrillic' subset — names would fall apart on «Ё», «Й»,
+  «Щ» otherwise (spec § 6.7.2) — plus 'latin-ext' for Spanish diacritics.
+  Geist, the shadcn default, is not used: it has no Cyrillic.
 */
 const pixel = Press_Start_2P({
   weight: '400',
-  subsets: ['latin', 'cyrillic'],
+  subsets: ['latin', 'latin-ext', 'cyrillic'],
   variable: '--font-pixel-family',
   display: 'swap',
 });
 
 const ui = Inter({
-  subsets: ['latin', 'cyrillic'],
+  subsets: ['latin', 'latin-ext', 'cyrillic'],
   variable: '--font-ui-family',
   display: 'swap',
 });
@@ -33,8 +33,8 @@ export const metadata: Metadata = {
     тестовым окружением нельзя было спутать с продом (шапка помечается так же —
     см. AppHeader).
   */
-  title: IS_VERCEL_PREVIEW ? `${APP_NAME} — PREVIEW` : `${APP_NAME} — трекер ходьбы`,
-  description: 'Корпоративный трекер ходьбы на беговой дорожке',
+  title: IS_VERCEL_PREVIEW ? `${APP_NAME} — PREVIEW` : `${APP_NAME} — ${m.app.titleSuffix}`,
+  description: m.app.description,
   /*
     iOS манифест игнорирует и режим установки читает из своих мета-тегов: без
     `capable` ярлык на домашнем экране открывался бы обычной вкладкой Safari с
@@ -60,7 +60,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     /* `dark` статичен: приложение живёт в тёмном углу опенспейса и светлой темы
        в MVP не имеет — класс нужен, чтобы работали dark:-варианты 8bitcn. */
-    <html lang="ru" className={cn('dark', pixel.variable, ui.variable)}>
+    <html lang={LOCALE} className={cn('dark', pixel.variable, ui.variable)}>
       <body className="min-h-dvh antialiased">
         {children}
         {/* Vercel Analytics: просмотры страниц и посетители. */}

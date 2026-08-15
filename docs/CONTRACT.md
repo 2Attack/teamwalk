@@ -29,7 +29,8 @@
 | `lib/db/schema.ts` | таблицы `users, treadmills, walks, achievements, streakFreezes, hintsCache, hintsMeta` |
 | `lib/types.ts` | все DTO ответов API |
 | `lib/validation.ts` | Zod-схемы: `createUserSchema, patchUserSchema, startWalkSchema, finishWalkSchema, periodSchema, llmHintsSchema` |
-| `lib/format.ts` | `formatDuration, formatKm, calcDistanceKm, avgSpeedKmh, normalizeName, plural, parseDecimalInput` |
+| `lib/format.ts` | `formatDuration, formatKm, calcDistanceKm, avgSpeedKmh, normalizeName, parseDecimalInput` |
+| `lib/i18n` | `LOCALE, INTL_LOCALE, m` (словарь активной локали), `fmt(template, params)`, `plural(forms, count)`; словари — `lib/i18n/messages/{ru,en,es}.ts`, эталон ключей — `ru` |
 | `lib/time.ts` | `toOfficeDay, officeDayStart, addOfficeDays, diffOfficeDays, isWeekend, prevWorkday, periodStart, officeMonth` |
 | `lib/config.ts` | все константы (лимиты, TTL, окна) |
 | `lib/avatars.ts` | каталог 24 пресетов, `isAvatarId`, `avatarSrc`, `randomAvatarId` |

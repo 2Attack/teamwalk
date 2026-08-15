@@ -1,5 +1,6 @@
 import LoadingScreenBlock from '@/components/ui/8bit/blocks/loading-screen';
 import { STATIC_HINTS } from '@/lib/hints/registry';
+import { m } from '@/lib/i18n';
 
 /**
  * Межстраничная загрузка (route-level): тот же игровой загрузочный экран,
@@ -11,7 +12,7 @@ export default function Loading() {
   return (
     <LoadingScreenBlock
       variant="fullscreen"
-      title="ЗАГРУЗКА"
+      title={m.common.loading}
       tips={STATIC_HINTS.map((hint) => hint.text)}
       autoProgress
       autoProgressDuration={2000}

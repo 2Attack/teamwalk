@@ -13,6 +13,7 @@
  */
 
 import { cn } from '@/lib/cn';
+import { m } from '@/lib/i18n';
 
 const FRAME_PX = 32;
 const SHEET_PX = 256;
@@ -45,7 +46,7 @@ export function WalkerSprite({ speedKmh, size = 64, className }: WalkerSpritePro
       className={cn('block shrink-0 overflow-hidden', className)}
       style={{ width: size, height: size }}
       role="img"
-      aria-label="Пиксельный человечек идёт по дорожке"
+      aria-label={m.walkerSprite.aria}
     >
       <div
         className="pixelated"

@@ -28,6 +28,7 @@ import {
   formatSpeedTrail,
   parseDecimalInput,
 } from '@/lib/format';
+import { fmt, m } from '@/lib/i18n';
 import type { FinishWalkResultDto } from '@/lib/types';
 
 /**
@@ -56,7 +57,7 @@ interface FinishWalkDialogProps {
 
 function errorMessage(error: unknown): string {
   if (error instanceof Error && error.message) return error.message;
-  return 'Не получилось связаться с сервером. Данные не потеряны — попробуйте ещё раз.';
+  return m.finishDialog.submitFailed;
 }
 
 export function FinishWalkDialog({
@@ -96,29 +97,33 @@ export function FinishWalkDialog({
 
   const inputError =
     value.trim() === ''
-      ? 'Без дистанции прогулку не сохранить'
+      ? m.finishDialog.errorRequired
       : parsed === null
-        ? 'Только число: 1.25 или 1,25'
+        ? m.finishDialog.errorNotANumber
         : outOfRange
-          ? `Допустимо от ${formatKm(MIN_DISTANCE_KM)} до ${formatKm(MAX_DISTANCE_KM)} км`
+          ? fmt(m.finishDialog.errorOutOfRange, {
+              min: formatKm(MIN_DISTANCE_KM),
+              max: formatKm(MAX_DISTANCE_KM),
+            })
           : undefined;
 
   const warnings: string[] = [];
   if (valid && rounded !== null) {
     if (calculated > 0 && Math.abs(rounded - calculated) / calculated > DISTANCE_MISMATCH_RATIO) {
       warnings.push(
-        `Рассчитали ${formatKm(calculated)} км, вы ввели ${formatKm(rounded)}. Всё верно?`,
+        fmt(m.finishDialog.warnMismatch, {
+          calculated: formatKm(calculated),
+          entered: formatKm(rounded),
+        }),
       );
     }
     const factual = avgSpeedKmh(rounded, durationSec);
     if (factual > SUSPICIOUS_AVG_SPEED_KMH) {
-      warnings.push(
-        `Получилось ${Math.round(factual)} км/ч, а дорожка так не умеет. Проверьте число`,
-      );
+      warnings.push(fmt(m.finishDialog.warnTooFast, { speed: Math.round(factual) }));
     }
   }
   if (durationSec < SHORT_WALK_WARN_SEC) {
-    warnings.push('Прогулка короче минуты — сохраним, но она почти ничего не добавит');
+    warnings.push(m.finishDialog.warnShort);
   }
 
   async function submit() {
@@ -153,16 +158,19 @@ export function FinishWalkDialog({
     >
       <DialogShell>
         <DialogHeader>
-          <DialogTitle className="text-[16px] leading-relaxed">Завершить прогулку</DialogTitle>
+          <DialogTitle className="text-[16px] leading-relaxed">{m.finishDialog.title}</DialogTitle>
           <DialogDescription className="font-sans">
-            Длительность {formatDurationHuman(durationSec)} · скорость {speedLabel}
+            {fmt(m.finishDialog.summary, {
+              duration: formatDurationHuman(durationSec),
+              speeds: speedLabel,
+            })}
           </DialogDescription>
         </DialogHeader>
 
         <DialogBody className="space-y-3">
           {/* `font="normal"`: метка — sans, как и поле под ней (п. 6.7.1). */}
           <Label htmlFor={fieldId} font="normal" className="block font-sans text-sm text-text-main">
-            Дистанция, км
+            {m.finishDialog.distanceLabel}
           </Label>
 
           <Input
@@ -190,7 +198,7 @@ export function FinishWalkDialog({
           />
 
           <p id={hintId} className="text-sm text-text-dim">
-            рассчитано по {speedLabel} — поправьте, если на дорожке другое число
+            {fmt(m.finishDialog.hint, { speeds: speedLabel })}
           </p>
 
           {inputError !== undefined ? (
@@ -208,7 +216,7 @@ export function FinishWalkDialog({
 
           {failure !== null ? (
             <p role="alert" className="text-sm text-citrus">
-              {failure} Нажмите «Сохранить» ещё раз — повтор не создаст дубль.
+              {failure} {m.finishDialog.retrySafe}
             </p>
           ) : null}
         </DialogBody>
@@ -221,7 +229,7 @@ export function FinishWalkDialog({
             type="button"
             className="min-h-11 w-full sm:w-auto"
           >
-            Назад
+            {m.common.back}
           </Button>
           <Button
             variant="default"
@@ -230,7 +238,7 @@ export function FinishWalkDialog({
             type="button"
             className="min-h-11 w-full sm:w-auto"
           >
-            {submitting ? 'Сохраняем…' : 'Сохранить'}
+            {submitting ? m.common.saving : m.common.save}
           </Button>
         </DialogFooter>
       </DialogShell>

@@ -1,9 +1,10 @@
 import { waitUntil } from '@vercel/functions';
-import { desc, lt, sql } from 'drizzle-orm';
+import { desc, eq, lt, sql } from 'drizzle-orm';
 
 import { HINTS_POOL_MAX, HINTS_POOL_MIN, HINTS_TTL_MINUTES } from '@/lib/config';
 import { db } from '@/lib/db';
 import { hintsCache, hintsMeta } from '@/lib/db/schema';
+import { LOCALE } from '@/lib/i18n';
 import { shuffle } from '@/lib/random';
 import type { HintDto, HintsResponseDto } from '@/lib/types';
 import { hintToneSchema } from '@/lib/validation';
@@ -65,9 +66,12 @@ function applySelectionRules(rows: readonly CacheRow[], userId?: string): CacheR
 
 /** Пул из 8–12 строк. Никогда не пустой: на дне цепочки статический каталог. */
 export async function getHintsPool(userId?: string): Promise<HintsResponseDto> {
+  // Rows of another locale (left over after a NEXT_PUBLIC_LOCALE switch) are
+  // ignored: static filler in the new language is better than a mixed feed.
   const rows = (await db
     .select()
     .from(hintsCache)
+    .where(eq(hintsCache.locale, LOCALE))
     .orderBy(desc(hintsCache.generatedAt))
     .limit(HINTS_POOL_MAX * 4)) as CacheRow[];
 
@@ -83,11 +87,16 @@ export async function getHintsPool(userId?: string): Promise<HintsResponseDto> {
   return { hints, generatedAt };
 }
 
-/** Пул считается устаревшим, если самая свежая строка старше TTL. */
+/**
+ * The pool is stale when the freshest row of the active locale is older than
+ * the TTL. Counting only the active locale makes a locale switch regenerate
+ * immediately instead of waiting out the old pool's TTL.
+ */
 async function isStale(): Promise<boolean> {
   const rows = await db
     .select({ latest: sql<string | null>`max(${hintsCache.generatedAt})` })
-    .from(hintsCache);
+    .from(hintsCache)
+    .where(eq(hintsCache.locale, LOCALE));
   const latest = rows[0]?.latest;
   if (!latest) return true;
   return Date.now() - new Date(latest).getTime() > HINTS_TTL_MINUTES * 60_000;

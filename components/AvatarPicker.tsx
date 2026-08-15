@@ -12,6 +12,7 @@ import * as React from 'react';
 
 import { AVATARS, avatarLabel } from '@/lib/avatars';
 import { cn } from '@/lib/cn';
+import { fmt, m } from '@/lib/i18n';
 
 import { Avatar } from './Avatar';
 
@@ -77,7 +78,7 @@ export function AvatarPicker({
     <div className="flex flex-col gap-3">
       <div
         role="radiogroup"
-        aria-label="Пиксельный персонаж"
+        aria-label={m.avatarPicker.gridAria}
         className="grid grid-cols-6 gap-1.5 sm:gap-2"
       >
         {AVATARS.map((preset, index) => {
@@ -94,7 +95,7 @@ export function AvatarPicker({
               type="button"
               role="radio"
               aria-checked={selected}
-              aria-label={isTaken ? `${preset.label} — занят` : preset.label}
+              aria-label={isTaken ? fmt(m.avatarPicker.takenAria, { label: preset.label }) : preset.label}
               tabIndex={index === focusIndex ? 0 : -1}
               onClick={() => select(preset.id)}
               onKeyDown={(e) => handleKeyDown(e, index)}
@@ -126,7 +127,7 @@ export function AvatarPicker({
               {isTaken && (
                 // Подпись — слой «данные», поэтому обычный sans (п. 6.7.1).
                 <span className="absolute inset-x-0 bottom-0 bg-bg-deep/85 text-center text-[10px] leading-tight text-text-dim">
-                  занят
+                  {m.avatarPicker.takenBadge}
                 </span>
               )}
             </button>

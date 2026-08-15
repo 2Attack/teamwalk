@@ -9,6 +9,7 @@ import {
 import { Icon } from '@/components/ui/icon';
 import { achievementIcon } from '@/lib/achievement-icons';
 import { cn } from '@/lib/cn';
+import { fmt, m } from '@/lib/i18n';
 import type { AchievementDto } from '@/lib/types';
 
 interface AchievementIconsProps {
@@ -31,7 +32,7 @@ export function AchievementIcons({ achievements, className }: AchievementIconsPr
   return (
     <TooltipProvider>
       <ul
-        aria-label="Полученные достижения"
+        aria-label={m.achievementsUi.rowAria}
         // Отрицательные поля гасят припуски тач-зоны (44 px вокруг иконки
         // 16 px), чтобы ряд не раздувал шапку карточки по вертикали.
         className={cn('-my-3 -ml-3 flex flex-wrap items-center', className)}
@@ -41,7 +42,7 @@ export function AchievementIcons({ achievements, className }: AchievementIconsPr
             <Tooltip>
               {/* Триггер Base UI сам рендерит <button> — свой не нужен. */}
               <TooltipTrigger
-                aria-label={`${item.title} — ${item.description}`}
+                aria-label={fmt(m.achievementsUi.tooltipAria, { title: item.title, description: item.description })}
                 className="flex min-h-11 min-w-11 items-center justify-center text-citrus focus-visible:outline-2 focus-visible:outline-citrus"
               >
                 <Icon name={achievementIcon(item.code)} size={16} />

@@ -20,7 +20,8 @@ import { Icon } from '@/components/ui/icon';
 import { achievementIcon } from '@/lib/achievement-icons';
 import { apiSend, revalidateAfterWalk, useHints } from '@/lib/client/api';
 import { DELETE_WINDOW_MINUTES } from '@/lib/config';
-import { formatDuration, formatKm, plural } from '@/lib/format';
+import { formatDuration, formatKm } from '@/lib/format';
+import { fmt, m, plural } from '@/lib/i18n';
 import type { FinishWalkResultDto } from '@/lib/types';
 
 /**
@@ -66,10 +67,10 @@ function useCountUp(target: number): number {
 /** Короткая метка места — пиксельная. Сама фраза о перемещении идёт ниже, sans. */
 function rankDelta(rank: FinishWalkResultDto['rank']): string {
   const { current, previous } = rank;
-  if (previous === null) return 'первая позиция в недельном рейтинге';
-  if (previous > current) return `поднялись с ${previous} места в недельном рейтинге`;
-  if (previous < current) return `опустились с ${previous} места в недельном рейтинге`;
-  return 'позиция в недельном рейтинге не изменилась';
+  if (previous === null) return m.walkSuccess.rankFirst;
+  if (previous > current) return fmt(m.walkSuccess.rankUp, { previous });
+  if (previous < current) return fmt(m.walkSuccess.rankDown, { previous });
+  return m.walkSuccess.rankSame;
 }
 
 export function WalkSuccess({ result }: { result: FinishWalkResultDto }) {
@@ -110,7 +111,7 @@ export function WalkSuccess({ result }: { result: FinishWalkResultDto }) {
       setDeleteError(
         error instanceof Error && error.message
           ? error.message
-          : 'Запись удалить не вышло — окно в 15 минут могло уже закрыться',
+          : fmt(m.walkSuccess.deleteFailed, { minutes: DELETE_WINDOW_MINUTES }),
       );
       setDeleting(false);
     }
@@ -129,10 +130,13 @@ export function WalkSuccess({ result }: { result: FinishWalkResultDto }) {
         className="text-center"
       >
         <p className="font-pixel text-[32px] leading-none tabular-nums text-lime sm:text-[48px]">
-          +{formatKm(shown)} км
+          +{formatKm(shown)} {m.units.km}
         </p>
         <p className="mt-3 text-sm text-text-dim">
-          {formatDuration(walk.durationSec ?? 0)} на дорожке «{walk.treadmillName}»
+          {fmt(m.walkSuccess.durationOnTreadmill, {
+            duration: formatDuration(walk.durationSec ?? 0),
+            treadmill: walk.treadmillName,
+          })}
         </p>
       </motion.div>
 
@@ -141,7 +145,7 @@ export function WalkSuccess({ result }: { result: FinishWalkResultDto }) {
       <Card font="normal">
         <CardHeader font="normal">
           <CardTitle className="text-[16px] leading-relaxed">
-            {result.rank.current} МЕСТО
+            {fmt(m.walkSuccess.placeTitle, { rank: result.rank.current })}
           </CardTitle>
           <CardDescription font="normal" className="font-sans">
             {rankDelta(result.rank)}
@@ -151,26 +155,26 @@ export function WalkSuccess({ result }: { result: FinishWalkResultDto }) {
 
       <Card font="normal">
         <CardHeader font="normal">
-          <CardTitle className="text-[16px] leading-relaxed">СЕРИЯ</CardTitle>
+          <CardTitle className="text-[16px] leading-relaxed">{m.walkSuccess.streakTitle}</CardTitle>
         </CardHeader>
         <CardContent font="normal" className="flex flex-wrap items-center gap-3">
           <StreakBadge days={streakDays} />
           <span className="text-sm text-text-dim">
             {streakDays === 0
-              ? 'серия начнётся со следующей прогулки'
-              : `${streakDays} ${plural(streakDays, 'день', 'дня', 'дней')} подряд`}
-            {streak.frozen ? ' · серию спасла заморозка' : ''}
+              ? m.walkSuccess.streakNone
+              : plural(m.walkSuccess.streakDays, streakDays)}
+            {streak.frozen ? m.walkSuccess.streakFrozen : ''}
           </span>
         </CardContent>
         <CardFooter font="normal">
           {personalRecord.isNew ? (
             <p className="flex items-center gap-2 text-sm text-lime">
               <Icon name="trophy" size={16} />
-              Новый личный рекорд дня — {formatKm(personalRecord.bestDayKm)} км
+              {fmt(m.walkSuccess.newDayRecord, { km: formatKm(personalRecord.bestDayKm) })}
             </p>
           ) : (
             <p className="text-sm text-text-dim">
-              Лучший день — {formatKm(personalRecord.bestDayKm)} км
+              {fmt(m.walkSuccess.bestDay, { km: formatKm(personalRecord.bestDayKm) })}
             </p>
           )}
         </CardFooter>
@@ -183,7 +187,7 @@ export function WalkSuccess({ result }: { result: FinishWalkResultDto }) {
           <AchievementToast achievements={newAchievements} />
           <Card font="normal">
             <CardHeader font="normal">
-              <CardTitle className="text-[16px] leading-relaxed">НОВЫЕ НАГРАДЫ</CardTitle>
+              <CardTitle className="text-[16px] leading-relaxed">{m.walkSuccess.newAwardsTitle}</CardTitle>
             </CardHeader>
             <CardContent font="normal">
               <ul className="space-y-4">
@@ -215,7 +219,7 @@ export function WalkSuccess({ result }: { result: FinishWalkResultDto }) {
           type="button"
           className="min-h-14 w-full text-base"
         >
-          На главную
+          {m.common.home}
         </Button>
 
         {canDelete ? (
@@ -227,7 +231,7 @@ export function WalkSuccess({ result }: { result: FinishWalkResultDto }) {
             type="button"
             className="min-h-11 w-full text-sm tabular-nums text-text-dim"
           >
-            {deleting ? 'Удаляем…' : `Отменить запись (${formatDuration(secondsLeft)})`}
+            {deleting ? m.common.deleting : fmt(m.walkSuccess.deleteEntry, { timer: formatDuration(secondsLeft) })}
           </Button>
         ) : null}
 

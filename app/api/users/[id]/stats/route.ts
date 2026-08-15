@@ -9,6 +9,7 @@ import { getPersonalRecord, getUserTotals } from '@/lib/game/progress';
 import { getStreak } from '@/lib/game/streak';
 import type { UserStatsDto } from '@/lib/types';
 import { uuidSchema } from '@/lib/validation';
+import { m } from '@/lib/i18n';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -22,7 +23,7 @@ export function GET(_request: Request, context: RouteContext) {
     const id = uuidSchema.parse((await context.params).id);
 
     const user = await getUser(id);
-    if (!user) return apiError(404, 'NOT_FOUND', 'Участник не найден');
+    if (!user) return apiError(404, 'NOT_FOUND', m.apiMessages.userNotFound);
 
     // Блоки независимы — считаем параллельно, чтобы уложиться в бюджет ответа (п. 8).
     const [streak, personalRecord, totals, rank, achievements] = await Promise.all([

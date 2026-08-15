@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 
 import { cn } from '@/lib/cn';
+import { m } from '@/lib/i18n';
 import { playCountGo, playCountTick } from '@/lib/client/sound';
 
 /**
@@ -80,7 +81,7 @@ export function StartCountdown({ onGo, onCancel }: StartCountdownProps) {
     <button
       ref={buttonRef}
       type="button"
-      aria-label="Отменить старт"
+      aria-label={m.countdown.cancelAria}
       onClick={cancel}
       onKeyDown={(event) => {
         if (event.key === 'Escape') cancel();
@@ -103,11 +104,11 @@ export function StartCountdown({ onGo, onCancel }: StartCountdownProps) {
             isGo ? 'text-6xl text-lime sm:text-7xl' : 'text-8xl text-citrus sm:text-9xl',
           )}
         >
-          {isGo ? 'GO!' : DIGITS[step]}
+          {isGo ? m.countdown.go : DIGITS[step]}
         </span>
       </span>
       <span className="font-pixel text-[10px] leading-relaxed text-text-dim">
-        {isGo ? 'Стартуем…' : 'Нажмите, чтобы отменить'}
+        {isGo ? m.countdown.starting : m.countdown.tapToCancel}
       </span>
     </button>
   );

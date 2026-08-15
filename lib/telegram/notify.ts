@@ -10,7 +10,7 @@ import type { ActiveWalkDto, FinishWalkResultDto } from '@/lib/types';
 
 import { sendMessage, telegramEnabled } from './client';
 import { getLink } from './links';
-import { autocloseText, finishText, freeText, startText } from './texts';
+import { autocloseText, finishText, freeText, startText, uiText } from './texts';
 
 /**
  * Событийные уведомления: старт, финиш, автозакрытие (п. 6.10.4, 6.10.5 ТЗ).
@@ -77,7 +77,7 @@ export async function notifyWalkStarted(walk: ActiveWalkDto): Promise<void> {
     await sendMessage(link.chatId, startText({ speedKmh: walk.speedKmh, treadmillName: walk.treadmillName }), {
       silent: true,
       replyMarkup: {
-        inline_keyboard: [[{ text: 'Это не я — отменить', callback_data: `cancel:${walk.id}` }]],
+        inline_keyboard: [[{ text: uiText.cancelWalkButton, callback_data: `cancel:${walk.id}` }]],
       },
     });
   } catch (error) {
@@ -110,7 +110,7 @@ export async function notifyWalkFinished(result: FinishWalkResultDto): Promise<v
 
     if (link.attachHints) {
       const hint = await pickHint(walk.userId);
-      if (hint !== null) text += `\n\nP.S. ${hint}`;
+      if (hint !== null) text += `\n\n${uiText.hintPrefix} ${hint}`;
     }
 
     await sendMessage(link.chatId, text);

@@ -9,15 +9,16 @@ import { Skeleton } from '@/components/ui/8bit/skeleton';
 import { useTeamProgress } from '@/lib/client/api';
 import { cn } from '@/lib/cn';
 import { formatKm } from '@/lib/format';
+import { fmt, INTL_LOCALE, m } from '@/lib/i18n';
 import type { TeamProgressDto } from '@/lib/types';
 
 interface TeamProgressProps {
   className?: string;
 }
 
-/** Остаток до города — целыми: расстояния маршрута ориентировочные (п. 6.6.8). */
+/** Distance left to a city — whole km: route distances are approximate (spec § 6.6.8). */
 function routeKm(km: number): string {
-  return Math.round(Math.max(0, km)).toLocaleString('ru-RU');
+  return Math.round(Math.max(0, km)).toLocaleString(INTL_LOCALE);
 }
 
 /** Жёсткий контур в четыре стороны — пиксельная обводка без blur (п. 6.7.6). */
@@ -68,19 +69,23 @@ function ProgressBody({ data }: { data: TeamProgressDto }) {
   if (!passed || route.length < 2) {
     return (
       <p className="text-sm text-text-dim">
-        Команда прошла {formatKm(totalKm)} км. Маршрут не выбран — добавьте его в{' '}
+        {fmt(m.teamProgress.noRoutePrefix, { km: formatKm(totalKm) })}
         <Link href="/settings" className="text-citrus underline-offset-4 hover:underline">
-          настройках
+          {m.teamProgress.noRouteLink}
         </Link>
-        .
+        {m.teamProgress.noRouteSuffix}
       </p>
     );
   }
 
   // Пройденное — без округления: команда честно заработала каждую сотку.
   const caption = next
-    ? `${formatKm(totalKm)} км пройдено, до ${next.city} ${routeKm(kmLeft)} км`
-    : `${formatKm(totalKm)} км пройдено — маршрут пройден целиком. Выберите следующий в настройках`;
+    ? fmt(m.teamProgress.captionNext, {
+        km: formatKm(totalKm),
+        city: next.city,
+        left: routeKm(kmLeft),
+      })
+    : fmt(m.teamProgress.captionDone, { km: formatKm(totalKm) });
 
   return (
     <>
@@ -89,8 +94,8 @@ function ProgressBody({ data }: { data: TeamProgressDto }) {
         <span className="min-w-0 truncate font-medium text-citrus" title={passed.city}>
           {passed.city}
         </span>
-        <span className="min-w-0 truncate text-text-dim" title={next?.city ?? 'Финиш'}>
-          {next?.city ?? 'Финиш'}
+        <span className="min-w-0 truncate text-text-dim" title={next?.city ?? m.teamProgress.finishLabel}>
+          {next?.city ?? m.teamProgress.finishLabel}
         </span>
       </div>
 
@@ -109,7 +114,7 @@ function ProgressBody({ data }: { data: TeamProgressDto }) {
             <span key={point.city} className="flex items-center gap-x-1.5">
               {index > 0 && <span aria-hidden>→</span>}
               <span
-                title={`${point.km} км от старта`}
+                title={fmt(m.teamProgress.kmFromStart, { km: point.km })}
                 className={cn(
                   point.km <= totalKm && 'opacity-50',
                   next?.city === point.city && 'font-medium text-citrus',
@@ -151,7 +156,7 @@ export function TeamProgress({ className }: TeamProgressProps) {
             id={titleId}
             className="retro text-sm leading-snug break-words sm:text-base"
           >
-            Маршрут команды
+            {m.teamProgress.title}
           </CardTitle>
         </CardHeader>
         <CardContent font="normal">
@@ -165,7 +170,7 @@ export function TeamProgress({ className }: TeamProgressProps) {
 
           {!isLoading && !data ? (
             <p className="text-sm text-text-dim">
-              {error ? 'Прогресс команды пока недоступен' : 'Команда ещё не вышла в путь'}
+              {error ? m.teamProgress.unavailable : m.teamProgress.notStarted}
             </p>
           ) : null}
 

@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/8bit/badge';
 import { Icon } from '@/components/ui/icon';
 import { achievementIcon } from '@/lib/achievement-icons';
 import { playFanfare } from '@/lib/client/sound';
+import { fmt, m } from '@/lib/i18n';
 import type { AchievementDto } from '@/lib/types';
 
 interface AchievementToastProps {
@@ -87,19 +88,19 @@ export function AchievementToast({ achievements, onDismiss }: AchievementToastPr
             <div className="min-w-0 flex-1">
               {/* Метка — слой идентичности, поэтому пиксельный шрифт бейджа (п. 6.7.1). */}
               <Badge variant="default" className="mx-1.5 min-h-6 text-[16px]">
-                Новая награда
+                {m.achievementsUi.toastBadge}
               </Badge>
               {/* Название и описание — данные, значит обычный sans. */}
               <p className="mt-2 truncate font-semibold text-text-main" title={current.title}>
                 {current.title}
               </p>
               <p className="text-sm text-text-dim">{current.description}</p>
-              {rest > 0 ? <p className="mt-1 text-xs text-text-dim">Ещё наград: {rest}</p> : null}
+              {rest > 0 ? <p className="mt-1 text-xs text-text-dim">{fmt(m.achievementsUi.toastMore, { count: rest })}</p> : null}
             </div>
 
             <button
               type="button"
-              aria-label="Закрыть уведомление"
+              aria-label={m.achievementsUi.toastCloseAria}
               onClick={() => setQueue((prev) => prev.slice(1))}
               className="min-h-11 min-w-11 shrink-0 text-text-dim hover:text-text-main"
             >

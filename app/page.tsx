@@ -13,6 +13,7 @@ import { Button } from '@/components/ui/8bit/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/8bit/card';
 import { useActiveWalk, useUsers } from '@/lib/client/api';
 import { LAST_USER_STORAGE_KEY } from '@/lib/config';
+import { m } from '@/lib/i18n';
 import type { PeriodSelection } from '@/lib/types';
 
 /**
@@ -101,15 +102,13 @@ function NetworkError({ onRetry }: { onRetry: () => void }) {
       <CardHeader>
         {/* `retro` in the class is mandatory: className in 8bitcn overrides it. */}
         <CardTitle className="retro text-sm leading-snug break-words sm:text-base">
-          Нет связи с сервером
+          {m.home.networkErrorTitle}
         </CardTitle>
       </CardHeader>
       <CardContent font="normal" className="space-y-4">
-        <p className="text-sm text-text-dim">
-          Не удалось загрузить список участников. Проверьте подключение и повторите.
-        </p>
+        <p className="text-sm text-text-dim">{m.home.networkErrorBody}</p>
         <Button type="button" className="min-h-11 text-xs" onClick={onRetry}>
-          Повторить
+          {m.common.retry}
         </Button>
       </CardContent>
     </Card>

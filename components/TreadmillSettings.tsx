@@ -25,6 +25,7 @@ import {
 } from '@/components/ui/8bit/table';
 import { Icon } from '@/components/ui/icon';
 import { ApiError, apiSend, revalidateTreadmills, useTreadmillsAdmin } from '@/lib/client/api';
+import { fmt, m } from '@/lib/i18n';
 import type { TreadmillAdminDto } from '@/lib/types';
 
 /**
@@ -67,17 +68,15 @@ export function TreadmillSettings() {
     <Card font="normal">
       <CardHeader>
         <CardTitle className="retro text-sm leading-snug break-words sm:text-base">
-          Дорожки
+          {m.treadmills.title}
         </CardTitle>
       </CardHeader>
       <CardContent font="normal" className="space-y-4">
         {error ? (
           <div className="space-y-4">
-            <p className="text-sm text-text-dim">
-              Не удалось загрузить список дорожек. Проверьте подключение и повторите.
-            </p>
+            <p className="text-sm text-text-dim">{m.treadmills.loadFailed}</p>
             <Button type="button" className="min-h-11 text-xs" onClick={() => void reload()}>
-              Повторить
+              {m.common.retry}
             </Button>
           </div>
         ) : isLoading || !treadmills ? (
@@ -88,9 +87,7 @@ export function TreadmillSettings() {
         ) : (
           <>
             {treadmills.length === 0 ? (
-              <p className="text-sm text-text-dim">
-                Дорожек пока нет. Добавьте первую — и на главной появится блок старта.
-              </p>
+              <p className="text-sm text-text-dim">{m.treadmills.empty}</p>
             ) : (
               /*
                 The 8bit Table wrapper is `w-fit`; the `[&>div]:w-full` override
@@ -106,15 +103,15 @@ export function TreadmillSettings() {
                 <Table font="normal" variant="borderless" className="w-full">
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="retro text-[10px] text-text-dim">Название</TableHead>
+                      <TableHead className="retro text-[10px] text-text-dim">{m.treadmills.colName}</TableHead>
                       <TableHead className="retro w-px text-right text-[10px] text-text-dim">
-                        Км/ч
+                        {m.treadmills.colKmh}
                       </TableHead>
                       <TableHead className="retro w-px text-right text-[10px] text-text-dim">
-                        Прогулок
+                        {m.treadmills.colWalks}
                       </TableHead>
-                      <TableHead className="retro text-[10px] text-text-dim">Статус</TableHead>
-                      <TableHead className="sr-only">Действия</TableHead>
+                      <TableHead className="retro text-[10px] text-text-dim">{m.treadmills.colStatus}</TableHead>
+                      <TableHead className="sr-only">{m.treadmills.colActions}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -142,7 +139,7 @@ export function TreadmillSettings() {
               onClick={() => setFormTarget(null)}
             >
               <Icon name="plus" size={16} />
-              Добавить дорожку
+              {m.treadmills.add}
             </Button>
           </>
         )}
@@ -187,14 +184,14 @@ function TreadmillRow({ treadmill, toggling, onEdit, onDelete, onToggleActive }:
             out of the card on ordinary desktop widths. */}
         <span className="flex flex-col items-start gap-1">
           {treadmill.isActive ? (
-            <Badge className="text-[10px]">активна</Badge>
+            <Badge className="text-[10px]">{m.treadmills.badgeActive}</Badge>
           ) : (
             <Badge variant="secondary" className="text-[10px]">
-              выключена
+              {m.treadmills.badgeInactive}
             </Badge>
           )}
           {treadmill.busy && (
-            <span className="text-sm text-citrus">идёт {treadmill.busy.user.name}</span>
+            <span className="text-sm text-citrus">{fmt(m.treadmills.busyWith, { name: treadmill.busy.user.name })}</span>
           )}
         </span>
       </TableCell>
@@ -207,8 +204,8 @@ function TreadmillRow({ treadmill, toggling, onEdit, onDelete, onToggleActive }:
             variant="secondary"
             size="icon"
             className="size-11"
-            aria-label={`Изменить дорожку «${treadmill.name}»`}
-            title="Изменить"
+            aria-label={fmt(m.treadmills.editAria, { name: treadmill.name })}
+            title={m.treadmills.editTitle}
             onClick={onEdit}
           >
             <Icon name="edit" size={16} />
@@ -219,8 +216,8 @@ function TreadmillRow({ treadmill, toggling, onEdit, onDelete, onToggleActive }:
               variant="destructive"
               size="icon"
               className="size-11"
-              aria-label={`Удалить дорожку «${treadmill.name}»`}
-              title="Удалить"
+              aria-label={fmt(m.treadmills.deleteAria, { name: treadmill.name })}
+              title={m.treadmills.deleteTitle}
               onClick={onDelete}
             >
               <Icon name="trash" size={16} />
@@ -232,12 +229,11 @@ function TreadmillRow({ treadmill, toggling, onEdit, onDelete, onToggleActive }:
               size="icon"
               className="size-11"
               disabled={toggling}
-              aria-label={
-                treadmill.isActive
-                  ? `Выключить дорожку «${treadmill.name}»`
-                  : `Включить дорожку «${treadmill.name}»`
-              }
-              title={treadmill.isActive ? 'Выключить' : 'Включить'}
+              aria-label={fmt(
+                treadmill.isActive ? m.treadmills.turnOffAria : m.treadmills.turnOnAria,
+                { name: treadmill.name },
+              )}
+              title={treadmill.isActive ? m.treadmills.turnOffTitle : m.treadmills.turnOnTitle}
               onClick={onToggleActive}
             >
               <Icon name={treadmill.isActive ? 'powerOff' : 'power'} size={16} />
@@ -288,19 +284,16 @@ function DeleteTreadmillDialog({ treadmill, treadmills, onClose }: DeleteTreadmi
       <DialogShell>
         <DialogHeader>
           <DialogTitle className="retro text-sm leading-snug break-words sm:text-base">
-            Удалить дорожку?
+            {m.treadmills.deleteConfirmTitle}
           </DialogTitle>
           <DialogDescription>
-            «{treadmill.name}» будет удалена насовсем. Отменить действие нельзя.
+            {fmt(m.treadmills.deleteConfirmBody, { name: treadmill.name })}
           </DialogDescription>
         </DialogHeader>
 
         <DialogBody className="space-y-4">
           {lastActive && (
-            <p className="text-sm text-text-dim">
-              Это последняя активная дорожка: после удаления стартовать прогулки будет нельзя,
-              пока не добавите новую.
-            </p>
+            <p className="text-sm text-text-dim">{m.treadmills.deleteLastActiveWarn}</p>
           )}
           {error && <ActionError text={error} />}
         </DialogBody>
@@ -313,7 +306,7 @@ function DeleteTreadmillDialog({ treadmill, treadmills, onClose }: DeleteTreadmi
             onClick={onClose}
             disabled={deleting}
           >
-            Отмена
+            {m.common.cancel}
           </Button>
           <Button
             type="button"
@@ -322,7 +315,7 @@ function DeleteTreadmillDialog({ treadmill, treadmills, onClose }: DeleteTreadmi
             onClick={() => void handleDelete()}
             disabled={deleting}
           >
-            {deleting ? 'Удаляем…' : 'Удалить'}
+            {deleting ? m.common.deleting : m.common.delete}
           </Button>
         </DialogFooter>
       </DialogShell>
@@ -345,5 +338,5 @@ function ActionError({ text }: { text: string }) {
 /** Human error text: the API message or a neutral fallback. */
 function errorText(error: unknown): string {
   if (error instanceof ApiError) return error.message;
-  return 'Не удалось связаться с сервером. Проверьте сеть и повторите.';
+  return m.common.networkError;
 }

@@ -17,6 +17,7 @@ import {
 } from '@/lib/telegram/notify';
 import type { FinishWalkResultDto, TeamProgressDto, WalkDto } from '@/lib/types';
 import { finishWalkSchema, uuidSchema } from '@/lib/validation';
+import { m } from '@/lib/i18n';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -77,12 +78,12 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
 
   return handle<FinishWalkResultDto | ApiErrorBody>(async () => {
     const before = await getWalkById(walkId);
-    if (!before) return apiError(404, 'NOT_FOUND', 'Прогулка не найдена');
+    if (!before) return apiError(404, 'NOT_FOUND', m.apiMessages.walkNotFound);
     if (before.status === 'finished') {
       return NextResponse.json(await buildResult(before, null));
     }
     if (before.status === 'cancelled') {
-      return apiError(409, 'WALK_NOT_ACTIVE', 'Прогулка отменена — сохранить результат нельзя');
+      return apiError(409, 'WALK_NOT_ACTIVE', m.apiMessages.walkCancelledUnsavable);
     }
 
     // Позицию «до» читаем строго до апдейта, иначе она уже учтёт эту прогулку.
@@ -112,16 +113,16 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     if (updated.length === 0) {
       // Ноль строк — либо параллельный повтор, либо статус успели сменить.
       const current = await getWalkById(walkId);
-      if (!current) return apiError(404, 'NOT_FOUND', 'Прогулка не найдена');
+      if (!current) return apiError(404, 'NOT_FOUND', m.apiMessages.walkNotFound);
       if (current.status === 'finished') {
         return NextResponse.json(await buildResult(current, previousRank));
       }
-      return apiError(409, 'WALK_NOT_ACTIVE', 'Прогулка больше не активна');
+      return apiError(409, 'WALK_NOT_ACTIVE', m.apiMessages.walkNotActive);
     }
 
     const finished = await getWalkById(walkId);
     if (!finished) {
-      return apiError(500, 'INTERNAL_ERROR', 'Прогулка сохранена, но её не удалось прочитать');
+      return apiError(500, 'INTERNAL_ERROR', m.apiMessages.walkSavedUnreadable);
     }
 
     const result = await buildResult(finished, previousRank);

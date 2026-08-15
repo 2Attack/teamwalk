@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/8bit/button';
 import { Icon } from '@/components/ui/icon';
 import { apiSend } from '@/lib/client/api';
 import { MIN_SPEED_KMH } from '@/lib/config';
+import { m } from '@/lib/i18n';
 import type { ActiveWalkDto } from '@/lib/types';
 
 /**
@@ -72,7 +73,7 @@ export function SpeedControl({
       setError(
         err instanceof Error && err.message
           ? err.message
-          : 'Не вышло сменить скорость — проверьте связь',
+          : m.speedControl.changeFailed,
       );
     } finally {
       sending.current = false;
@@ -96,7 +97,7 @@ export function SpeedControl({
         <Button
           type="button"
           variant="outline"
-          aria-label="Сбросить скорость на 1 км/ч"
+          aria-label={m.speedControl.decreaseAria}
           disabled={disabled || pending || shown <= min}
           onClick={() => bump(-1)}
           className="h-auto min-h-14 w-16 px-0"
@@ -115,13 +116,13 @@ export function SpeedControl({
           className="min-w-28 text-center font-pixel text-[24px] leading-none tabular-nums text-text-main"
         >
           {shown}
-          <span className="ml-2 text-[12px] text-text-dim">км/ч</span>
+          <span className="ml-2 text-[12px] text-text-dim">{m.units.kmh}</span>
         </p>
 
         <Button
           type="button"
           variant="outline"
-          aria-label="Прибавить скорость на 1 км/ч"
+          aria-label={m.speedControl.increaseAria}
           disabled={disabled || pending || shown >= max}
           onClick={() => bump(1)}
           className="h-auto min-h-14 w-16 px-0"
@@ -135,7 +136,7 @@ export function SpeedControl({
       </div>
 
       {/* Подпись читают — обычный sans (п. 6.7.1). */}
-      <p className="text-sm text-text-dim">скорость дорожки</p>
+      <p className="text-sm text-text-dim">{m.speedControl.caption}</p>
 
       {error !== null ? (
         <p role="alert" className="text-center text-sm text-citrus">

@@ -4,6 +4,7 @@ import { apiError, handle, isUniqueViolation, readJson, type ApiErrorBody } from
 import { deleteRoute, updateRoute } from '@/lib/db/queries/routes';
 import type { RouteAdminDto } from '@/lib/types';
 import { patchRouteSchema, uuidSchema } from '@/lib/validation';
+import { m } from '@/lib/i18n';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -18,11 +19,11 @@ export function PATCH(request: Request, context: RouteContext) {
 
     try {
       const updated = await updateRoute(id, patch);
-      if (!updated) return apiError(404, 'NOT_FOUND', 'Маршрут не найден');
+      if (!updated) return apiError(404, 'NOT_FOUND', m.apiMessages.routeNotFound);
       return NextResponse.json(updated);
     } catch (error) {
       if (isUniqueViolation(error, 'routes_name_uniq')) {
-        return apiError(409, 'NAME_TAKEN', 'Маршрут с таким названием уже есть', {
+        return apiError(409, 'NAME_TAKEN', m.apiMessages.routeNameTaken, {
           field: 'name',
         });
       }
@@ -41,7 +42,7 @@ export function DELETE(_request: Request, context: RouteContext) {
     const id = uuidSchema.parse((await context.params).id);
 
     const deleted = await deleteRoute(id);
-    if (!deleted) return apiError(404, 'NOT_FOUND', 'Маршрут не найден');
+    if (!deleted) return apiError(404, 'NOT_FOUND', m.apiMessages.routeNotFound);
     return NextResponse.json({ ok: true });
   });
 }

@@ -13,6 +13,7 @@ import {
   TREADMILL_SORT_ORDER_MIN,
 } from './config';
 import { normalizeName } from './format';
+import { fmt, INTL_LOCALE, m } from './i18n';
 
 /** Zod schemas — the same ones on the client and in the API (spec § 3). */
 
@@ -23,17 +24,17 @@ export const nameSchema = z
   .string()
   .transform((v) => normalizeName(v))
   .refine((v) => v.length >= 2 && v.length <= 60, {
-    message: 'Имя должно быть от 2 до 60 символов',
+    message: m.validation.nameLength,
   })
   .refine((v) => NAME_ALLOWED.test(v), {
-    message: 'Допустимы только буквы, цифры, пробел, дефис, апостроф и точка',
+    message: m.validation.nameChars,
   });
 
 export const avatarIdSchema = z.enum(AVATAR_IDS as unknown as [string, ...string[]], {
-  message: 'Неизвестный персонаж',
+  message: m.validation.unknownAvatar,
 });
 
-export const uuidSchema = z.uuid({ message: 'Некорректный идентификатор' });
+export const uuidSchema = z.uuid({ message: m.validation.invalidId });
 
 export const createUserSchema = z.object({
   name: nameSchema,
@@ -47,14 +48,14 @@ export const patchUserSchema = z
     hintsOptOut: z.boolean().optional(),
   })
   .refine((v) => v.name !== undefined || v.avatarId !== undefined || v.hintsOptOut !== undefined, {
-    message: 'Нечего обновлять',
+    message: m.validation.nothingToUpdate,
   });
 
 export const speedSchema = z
   .number()
-  .int({ message: 'Скорость — целое число' })
-  .min(MIN_SPEED_KMH, { message: `Минимум ${MIN_SPEED_KMH} км/ч` })
-  .max(MAX_SPEED_KMH_ABS, { message: `Максимум ${MAX_SPEED_KMH_ABS} км/ч` });
+  .int({ message: m.validation.speedInteger })
+  .min(MIN_SPEED_KMH, { message: fmt(m.validation.minKmh, { min: MIN_SPEED_KMH }) })
+  .max(MAX_SPEED_KMH_ABS, { message: fmt(m.validation.maxKmh, { max: MAX_SPEED_KMH_ABS }) });
 
 export const startWalkSchema = z.object({
   userId: uuidSchema,
@@ -77,23 +78,23 @@ export const treadmillNameSchema = z
   .string()
   .transform((v) => v.trim().replace(/\s+/g, ' '))
   .refine((v) => v.length >= 2 && v.length <= 60, {
-    message: 'Название должно быть от 2 до 60 символов',
+    message: m.validation.titleLength,
   })
   .refine((v) => NAME_ALLOWED.test(v), {
-    message: 'Допустимы только буквы, цифры, пробел, дефис, апостроф и точка',
+    message: m.validation.nameChars,
   });
 
 export const treadmillMaxSpeedSchema = z
   .number()
-  .int({ message: 'Потолок скорости — целое число' })
-  .min(MIN_SPEED_KMH, { message: `Минимум ${MIN_SPEED_KMH} км/ч` })
-  .max(MAX_SPEED_KMH_ABS, { message: `Максимум ${MAX_SPEED_KMH_ABS} км/ч` });
+  .int({ message: m.validation.speedCeilingInteger })
+  .min(MIN_SPEED_KMH, { message: fmt(m.validation.minKmh, { min: MIN_SPEED_KMH }) })
+  .max(MAX_SPEED_KMH_ABS, { message: fmt(m.validation.maxKmh, { max: MAX_SPEED_KMH_ABS }) });
 
 export const treadmillSortOrderSchema = z
   .number()
-  .int({ message: 'Порядок — целое число' })
-  .min(TREADMILL_SORT_ORDER_MIN, { message: `Минимум ${TREADMILL_SORT_ORDER_MIN}` })
-  .max(TREADMILL_SORT_ORDER_MAX, { message: `Максимум ${TREADMILL_SORT_ORDER_MAX}` });
+  .int({ message: m.validation.orderInteger })
+  .min(TREADMILL_SORT_ORDER_MIN, { message: fmt(m.validation.min, { min: TREADMILL_SORT_ORDER_MIN }) })
+  .max(TREADMILL_SORT_ORDER_MAX, { message: fmt(m.validation.max, { max: TREADMILL_SORT_ORDER_MAX }) });
 
 export const createTreadmillSchema = z.object({
   name: treadmillNameSchema,
@@ -109,7 +110,7 @@ export const patchTreadmillSchema = z
     isActive: z.boolean().optional(),
   })
   .refine((v) => Object.values(v).some((field) => field !== undefined), {
-    message: 'Нечего обновлять',
+    message: m.validation.nothingToUpdate,
   });
 
 /**
@@ -121,25 +122,25 @@ export const routePointSchema = z.object({
   city: treadmillNameSchema,
   km: z
     .number()
-    .int({ message: 'Километры — целое число' })
-    .min(0, { message: 'Километры не могут быть отрицательными' })
-    .max(ROUTE_POINT_KM_MAX, { message: `Максимум ${ROUTE_POINT_KM_MAX} км` }),
+    .int({ message: m.validation.kmInteger })
+    .min(0, { message: m.validation.kmNegative })
+    .max(ROUTE_POINT_KM_MAX, { message: fmt(m.validation.maxKm, { max: ROUTE_POINT_KM_MAX }) }),
 });
 
 export const routePointsSchema = z
   .array(routePointSchema)
-  .min(ROUTE_POINTS_MIN, { message: `Минимум ${ROUTE_POINTS_MIN} точки: старт и цель` })
-  .max(ROUTE_POINTS_MAX, { message: `Максимум ${ROUTE_POINTS_MAX} точек` })
+  .min(ROUTE_POINTS_MIN, { message: fmt(m.validation.routePointsMin, { min: ROUTE_POINTS_MIN }) })
+  .max(ROUTE_POINTS_MAX, { message: fmt(m.validation.routePointsMax, { max: ROUTE_POINTS_MAX }) })
   .refine((points) => points[0]?.km === 0, {
-    message: 'Маршрут начинается со старта — точки с 0 км',
+    message: m.validation.routeStartsAtZero,
   })
   .refine((points) => points.every((p, i) => i === 0 || p.km > points[i - 1].km), {
-    message: 'Километры должны строго возрастать',
+    message: m.validation.kmStrictlyIncreasing,
   })
   .refine(
     (points) =>
-      new Set(points.map((p) => p.city.toLocaleLowerCase('ru-RU'))).size === points.length,
-    { message: 'Города в маршруте не должны повторяться' },
+      new Set(points.map((p) => p.city.toLocaleLowerCase(INTL_LOCALE))).size === points.length,
+    { message: m.validation.citiesUnique },
   );
 
 export const createRouteSchema = z.object({
@@ -153,7 +154,7 @@ export const patchRouteSchema = z
     points: routePointsSchema.optional(),
   })
   .refine((v) => v.name !== undefined || v.points !== undefined, {
-    message: 'Нечего обновлять',
+    message: m.validation.nothingToUpdate,
   });
 
 export const activateRouteSchema = z.object({
@@ -166,7 +167,7 @@ export const generateRouteSchema = z.object({
     .string()
     .transform((v) => v.trim())
     .refine((v) => v.length >= 3 && v.length <= 300, {
-      message: 'Опишите маршрут (от 3 до 300 символов)',
+      message: m.validation.describeRoute,
     }),
   cities: z.array(treadmillNameSchema).max(ROUTE_POINTS_MAX).optional(),
 });
@@ -174,10 +175,10 @@ export const generateRouteSchema = z.object({
 /** Distance: 0.01–50.00, step 0.01. Dot and comma are both accepted at the UI level. */
 export const distanceSchema = z
   .number()
-  .min(MIN_DISTANCE_KM, { message: `Минимум ${MIN_DISTANCE_KM} км` })
-  .max(MAX_DISTANCE_KM, { message: `Максимум ${MAX_DISTANCE_KM} км` })
+  .min(MIN_DISTANCE_KM, { message: fmt(m.validation.minKm, { min: MIN_DISTANCE_KM }) })
+  .max(MAX_DISTANCE_KM, { message: fmt(m.validation.maxKm, { max: MAX_DISTANCE_KM }) })
   .refine((v) => Math.round(v * 100) === Number((v * 100).toFixed(0)), {
-    message: 'Шаг — 0.01 км',
+    message: m.validation.distanceStep,
   });
 
 export const finishWalkSchema = z.object({
@@ -194,7 +195,7 @@ export type Period = z.infer<typeof periodSchema>;
  */
 export const officeDaySchema = z
   .string()
-  .regex(/^\d{4}-\d{2}-\d{2}$/, { message: 'Дата — в формате ГГГГ-ММ-ДД' })
+  .regex(/^\d{4}-\d{2}-\d{2}$/, { message: m.validation.dateFormat })
   .refine(
     (v) => {
       const [y, m, d] = v.split('-').map(Number);
@@ -203,7 +204,7 @@ export const officeDaySchema = z
         date.getUTCFullYear() === y && date.getUTCMonth() === m - 1 && date.getUTCDate() === d
       );
     },
-    { message: 'Несуществующая дата' },
+    { message: m.validation.dateInvalid },
   );
 
 /**
@@ -218,7 +219,7 @@ export const periodSelectionSchema = z.union([
       to: officeDaySchema,
     })
     .refine((v) => v.from <= v.to, {
-      message: 'Начало периода позже его конца',
+      message: m.validation.periodInverted,
       path: ['from'],
     }),
   z.object({ period: periodSchema }),

@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/8bit/button';
 import { Icon } from '@/components/ui/icon';
 import { cn } from '@/lib/cn';
 import { formatDuration } from '@/lib/format';
+import { fmt, m } from '@/lib/i18n';
 import type { TreadmillBusyDto, TreadmillDto } from '@/lib/types';
 
 interface TreadmillPickerProps {
@@ -33,7 +34,7 @@ export function TreadmillPicker({ treadmills, value, onChange }: TreadmillPicker
   return (
     <div className="space-y-2">
       <p id={labelId} className="text-sm text-text-dim">
-        Дорожка
+        {m.treadmillPicker.label}
       </p>
       <div
         role="radiogroup"
@@ -70,7 +71,7 @@ export function TreadmillPicker({ treadmills, value, onChange }: TreadmillPicker
                 )}
               >
                 {busy && <Icon name="clock" size={16} />}
-                {busy ? busyLabel(busy, now) : `до ${treadmill.maxSpeedKmh} км/ч`}
+                {busy ? busyLabel(busy, now) : fmt(m.treadmillPicker.capUpTo, { max: treadmill.maxSpeedKmh })}
               </span>
             </Button>
           );
@@ -80,9 +81,12 @@ export function TreadmillPicker({ treadmills, value, onChange }: TreadmillPicker
   );
 }
 
-/** «занята: Егор, идёт 14:32» — отвечает на вопрос «долго ли ждать» (п. 6.9.3). */
+/** «занята: Егор, идёт 14:32» — answers "how long is the wait" (spec § 6.9.3). */
 export function busyLabel(busy: TreadmillBusyDto, now: number): string {
-  return `занята: ${busy.user.name}, идёт ${formatDuration(elapsedSec(busy.startedAt, now))}`;
+  return fmt(m.treadmillPicker.busyLabel, {
+    name: busy.user.name,
+    duration: formatDuration(elapsedSec(busy.startedAt, now)),
+  });
 }
 
 /** Прошло секунд с момента старта; отрицательные значения гасятся до нуля. */

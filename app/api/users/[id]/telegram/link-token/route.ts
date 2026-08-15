@@ -6,6 +6,7 @@ import { getBotUsername, telegramEnabled } from '@/lib/telegram/client';
 import { createLinkToken, getTelegramStatus } from '@/lib/telegram/links';
 import type { TelegramLinkTokenDto } from '@/lib/types';
 import { uuidSchema } from '@/lib/validation';
+import { m } from '@/lib/i18n';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -22,16 +23,16 @@ export function POST(_request: Request, context: RouteContext) {
 
     // Нет токена бота или рубильник опущен — вся подсистема выключена (п. 6.10.7).
     if (!telegramEnabled()) {
-      return apiError(409, 'TELEGRAM_DISABLED', 'Telegram-бот не настроен');
+      return apiError(409, 'TELEGRAM_DISABLED', m.apiMessages.telegramNotConfigured);
     }
 
     // Токен не выдаётся несуществующему участнику — иначе вставка упала бы по FK с 500.
     const status = await getTelegramStatus(id);
-    if (!status) return apiError(404, 'NOT_FOUND', 'Участник не найден');
+    if (!status) return apiError(404, 'NOT_FOUND', m.apiMessages.userNotFound);
 
     const username = await getBotUsername();
     if (!username) {
-      return apiError(500, 'INTERNAL_ERROR', 'Не удалось узнать имя бота — попробуйте позже');
+      return apiError(500, 'INTERNAL_ERROR', m.apiMessages.botNameUnavailable);
     }
 
     const { token, expiresAt } = await createLinkToken(id);

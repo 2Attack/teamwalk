@@ -1,15 +1,19 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { MAX_HINT_LENGTH, isSafe, rejectReason } from '@/lib/hints/filter';
 import { STATIC_HINTS } from '@/lib/hints/registry';
 
 /**
- * Постфильтр — единственная гарантия тона (п. 6.6.4, критерий приёмки в п. 12).
- * Тесты держат обе границы: заведомо плохие фразы не проходят, а нормальные
- * шутки про ходьбу не должны отсекаться «на всякий случай».
+ * The post-filter is the only tone guarantee (spec 6.6.4, acceptance in 12).
+ * Tests hold both boundaries: known-bad phrases must not pass, while normal
+ * walking jokes must not be rejected "just in case".
+ *
+ * The default test locale is ru (no NEXT_PUBLIC_LOCALE in the test env), so
+ * the main suites exercise the Russian rules; en/es rules are loaded via
+ * `vi.stubEnv` + `vi.resetModules` in a dedicated suite below.
  */
 
-/** Заведомо плохие фразы: [текст, ожидаемая категория причины]. */
+/** Known-bad phrases: [text, expected reason category]. */
 const BAD: ReadonlyArray<readonly [string, string]> = [
   ['{{u1}} за неделю не сделал ни шага, наверное, прибавил 20 кг', 'banned:вес'],
   ['{{u1}} похудел на 5 килограмм за месяц ходьбы', 'banned:вес'],
@@ -33,7 +37,7 @@ const BAD: ReadonlyArray<readonly [string, string]> = [
   ['{{u1}} ест на ходу и всё равно первый', 'banned:еда'],
 ];
 
-/** Нормальные фразы: шутка про ходьбу, дорожку, кресло и статистику. */
+/** Normal phrases: jokes about walking, the treadmill, the chair and stats. */
 const GOOD: readonly string[] = [
   '{{u1}} прошёл 20 км, ни разу не сдвинувшись с места. У физики вопросы.',
   '{{u1}} на этой неделе прошёл 0 км. Кресло победило со счётом 1:0.',
@@ -84,10 +88,69 @@ describe('rejectReason: нормальные фразы', () => {
 });
 
 describe('статический каталог', () => {
-  // Каталог — последний рубеж деградации: если фильтр его отбраковывает,
-  // пул может остаться пустым в самый неподходящий момент.
+  // The catalog is the last degradation line: if the filter rejects it,
+  // the pool can end up empty at the worst possible moment.
   it.each(STATIC_HINTS.map((hint) => hint.text))('фраза каталога проходит фильтр: «%s»', (text) => {
     expect(rejectReason(text)).toBeNull();
+  });
+});
+
+describe('en/es locales', () => {
+  // The locale is fixed at module load, so each case stubs the env and
+  // re-imports the modules. Static top-level imports above stay bound to the
+  // default ru locale and are unaffected.
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    vi.resetModules();
+  });
+
+  async function loadLocale(locale: 'en' | 'es') {
+    vi.stubEnv('NEXT_PUBLIC_LOCALE', locale);
+    vi.resetModules();
+    const filter = await import('@/lib/hints/filter');
+    const registry = await import('@/lib/hints/registry');
+    return { ...filter, staticHints: registry.STATIC_HINTS };
+  }
+
+  it('en: banned topics are rejected with English categories', async () => {
+    const { rejectReason: reject } = await loadLocale('en');
+    expect(reject('{{u1}} probably gained 20 kg this week')).toBe('banned:weight');
+    expect(reject('No diet beats 5 km a day')).toBe('banned:food');
+    expect(reject('Walking is good for your health')).toBe('banned:health');
+    expect(reject('At their age 5 km is quite the feat')).toBe('banned:age');
+    expect(reject('{{u1}} is a loser stuck at 3 km/h')).toBe('banned:insult');
+  });
+
+  it('en: normal walking jokes pass', async () => {
+    const { isSafe: safe } = await loadLocale('en');
+    expect(safe('{{u1}} walked 20 km without leaving the office. Physics has questions.')).toBe(true);
+    expect(safe('The treadmill greets {{u1}} by name now')).toBe(true);
+    expect(safe('Music at 120 beats per minute sets a steady stride')).toBe(true);
+  });
+
+  it('en: the full static catalog passes the English rules', async () => {
+    const { rejectReason: reject, staticHints } = await loadLocale('en');
+    expect(staticHints.filter((hint) => reject(hint.text) !== null)).toEqual([]);
+  });
+
+  it('es: banned topics are rejected, diacritics do not bypass the filter', async () => {
+    const { rejectReason: reject } = await loadLocale('es');
+    expect(reject('{{u1}} engordó este mes en vez de caminar')).toBe('banned:weight');
+    expect(reject('Ninguna dieta sustituye 5 km al día')).toBe('banned:food');
+    expect(reject('Caminar es bueno para la salud')).toBe('banned:health');
+    expect(reject('Ningún médico aprobaría este ritmo')).toBe('banned:health');
+    expect(reject('{{u1}} es tonto por ir a 3 km/h')).toBe('banned:insult');
+  });
+
+  it('es: «saluda» (greets) is not caught as «salud» (health)', async () => {
+    const { isSafe: safe } = await loadLocale('es');
+    expect(safe('La cinta ya saluda a {{u1}} al llegar')).toBe(true);
+    expect(safe('{{u1}} presume de salud tras el paseo')).toBe(false);
+  });
+
+  it('es: the full static catalog passes the Spanish rules', async () => {
+    const { rejectReason: reject, staticHints } = await loadLocale('es');
+    expect(staticHints.filter((hint) => reject(hint.text) !== null)).toEqual([]);
   });
 });
 

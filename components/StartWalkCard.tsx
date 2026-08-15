@@ -23,6 +23,7 @@ import {
 } from '@/lib/client/api';
 import { DEFAULT_SPEED_KMH, MAX_SPEED_KMH_ABS } from '@/lib/config';
 import { formatDuration } from '@/lib/format';
+import { fmt, m } from '@/lib/i18n';
 import type { ActiveWalkDto, TreadmillBusyDto, TreadmillDto, UserDto } from '@/lib/types';
 
 interface StartWalkCardProps {
@@ -142,13 +143,13 @@ export function StartWalkCard({
     }
     if (err instanceof ApiError && err.code === 'TREADMILL_BUSY') {
       await reloadTreadmills();
-      setError('Эту дорожку только что заняли. Выберите свободную.');
+      setError(m.startCard.treadmillJustTaken);
       return;
     }
     setError(
       err instanceof ApiError
         ? err.message
-        : 'Не удалось начать прогулку. Проверьте сеть и повторите.',
+        : m.startCard.startFailed,
     );
   }
 
@@ -159,13 +160,10 @@ export function StartWalkCard({
   // The only scenario where starting is impossible at all (§ 6.9.6).
   if (list.length === 0) {
     return (
-      <StartCard title="Дорожек сейчас нет">
+      <StartCard title={m.startCard.noTreadmillsTitle}>
         <div className="flex items-start gap-3">
           <Icon name="pin" size={16} className="mt-0.5" />
-          <p className="text-sm text-text-dim">
-            Все дорожки выведены из строя. Когда дорожку вернут, блок старта появится сам —
-            обновлять страницу не нужно.
-          </p>
+          <p className="text-sm text-text-dim">{m.startCard.noTreadmillsBody}</p>
         </div>
       </StartCard>
     );
@@ -175,13 +173,11 @@ export function StartWalkCard({
   const canStart = userId !== null && speed !== null && blocker === null;
 
   return (
-    <StartCard title="Старт прогулки" action={<AddUserButton onClick={() => setAddOpen(true)} />}>
+    <StartCard title={m.startCard.title} action={<AddUserButton onClick={() => setAddOpen(true)} />}>
       <UserSelect users={users} value={userId} onChange={onSelectUser} />
 
       {users.length === 0 && (
-        <p className="text-sm text-text-dim">
-          В команде пока никого. Нажмите «Добавить участника» и заведите первого.
-        </p>
+        <p className="text-sm text-text-dim">{m.startCard.emptyTeam}</p>
       )}
 
       <TreadmillPicker treadmills={list} value={activeTreadmillId} onChange={setTreadmillId} />
@@ -211,11 +207,11 @@ export function StartWalkCard({
           }}
         >
           {starting || counting ? (
-            'Стартуем…'
+            m.startCard.starting
           ) : (
             <>
               <Icon name="play" size={16} />
-              Start walk
+              {m.startCard.startWalk}
             </>
           )}
         </Button>
@@ -314,13 +310,13 @@ function AddUserButton({ onClick }: { onClick: () => void }) {
       type="button"
       variant="outline"
       size="sm"
-      aria-label="Добавить участника"
+      aria-label={m.startCard.addUserFull}
       className="h-auto min-h-8 shrink-0 gap-1.5 px-2 text-[10px]"
       onClick={onClick}
     >
       <Icon name="plus" size={16} />
-      <span className="sm:hidden">Добавить</span>
-      <span className="hidden sm:inline">Добавить участника</span>
+      <span className="sm:hidden">{m.startCard.addUserShort}</span>
+      <span className="hidden sm:inline">{m.startCard.addUserFull}</span>
     </Button>
   );
 }
@@ -328,7 +324,7 @@ function AddUserButton({ onClick }: { onClick: () => void }) {
 /** Start-block placeholder: same frame, so the screen doesn't "jump" after load. */
 export function StartWalkCardSkeleton() {
   return (
-    <StartCard title="Старт прогулки" action={<Skeleton className="h-11 w-40" />}>
+    <StartCard title={m.startCard.title} action={<Skeleton className="h-11 w-40" />}>
       <div className="space-y-3">
         <Skeleton className="h-3 w-20" />
         <Skeleton className="h-11 w-full" />
@@ -356,7 +352,10 @@ function startBlocker(
   if (list.length === 1) {
     const busy = list[0].busy;
     if (busy) {
-      return `сейчас на дорожке ${busy.user.name}, идёт ${formatDuration(elapsedSec(busy.startedAt, now))}`;
+      return fmt(m.startCard.blockerSingleBusy, {
+        name: busy.user.name,
+        duration: formatDuration(elapsedSec(busy.startedAt, now)),
+      });
     }
   }
   if (free.length === 0) {
@@ -365,10 +364,10 @@ function startBlocker(
       .map((t) => t.busy)
       .filter((b): b is TreadmillBusyDto => b !== null)
       .sort((a, b) => elapsedSec(b.startedAt, now) - elapsedSec(a.startedAt, now));
-    const tail = busyList[0] ? ` Дольше всех — ${busyLabel(busyList[0], now)}.` : '';
-    return `все дорожки заняты, подождите.${tail}`;
+    const tail = busyList[0] ? fmt(m.startCard.blockerAllBusyTail, { label: busyLabel(busyList[0], now) }) : '';
+    return `${m.startCard.blockerAllBusy}${tail}`;
   }
-  if (selected === null) return 'выберите свободную дорожку';
+  if (selected === null) return m.startCard.blockerChooseFree;
   if (selected.busy) return busyLabel(selected.busy, now);
   return null;
 }

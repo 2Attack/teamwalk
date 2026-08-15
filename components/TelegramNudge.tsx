@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/8bit/button';
 import { Icon } from '@/components/ui/icon';
 import { TelegramLinkDialog } from '@/components/TelegramLinkDialog';
 import { apiSend, useTelegramStatus } from '@/lib/client/api';
+import { m } from '@/lib/i18n';
 
 interface TelegramNudgeProps {
   userId: string;
@@ -39,7 +40,7 @@ export function TelegramNudge({ userId }: TelegramNudgeProps) {
 
   return (
     <section
-      aria-label="Приглашение привязать Telegram"
+      aria-label={m.telegram.nudgeAria}
       // px-1.5 — место под боковые пиксели рамки Alert.
       className="px-1.5"
     >
@@ -49,11 +50,11 @@ export function TelegramNudge({ userId }: TelegramNudgeProps) {
         <AlertTitle className="flex items-center gap-2 font-pixel text-[12px] leading-none text-citrus">
           {/* Речевой пузырь из общего пиксельного набора — бот же пишет (п. 6.7.4). */}
           <Icon name="hint" size={16} />
-          TELEGRAM
+          {m.telegram.nudgeTitle}
         </AlertTitle>
 
         <AlertDescription className="w-full text-sm leading-relaxed text-text-main">
-          <p>Бот пришлёт итоги прогулок, ачивки и напомнит размяться.</p>
+          <p>{m.telegram.nudgeBody}</p>
 
           <div className="flex w-full flex-col gap-1 pt-1">
             <Button
@@ -61,7 +62,7 @@ export function TelegramNudge({ userId }: TelegramNudgeProps) {
               onClick={() => setDialogOpen(true)}
               className="min-h-11 w-full"
             >
-              Подключить
+              {m.telegram.connect}
             </Button>
             <Button
               variant="ghost"
@@ -70,7 +71,7 @@ export function TelegramNudge({ userId }: TelegramNudgeProps) {
               onClick={dismissForever}
               className="min-h-11 w-full text-sm text-text-dim"
             >
-              Больше не показывать
+              {m.telegram.dontShowAgain}
             </Button>
           </div>
         </AlertDescription>

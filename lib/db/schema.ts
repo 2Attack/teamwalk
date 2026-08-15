@@ -174,6 +174,8 @@ export const hintsCache = pgTable(
     tone: text('tone').notNull(),
     subjectId: uuid('subject_id').references(() => users.id, { onDelete: 'cascade' }),
     source: text('source').notNull(),
+    /** Deployment locale the row was generated in (see NEXT_PUBLIC_LOCALE). */
+    locale: text('locale').notNull().default('ru'),
     generatedAt: timestamp('generated_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [index('hints_cache_generated_idx').on(t.generatedAt.desc())],

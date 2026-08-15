@@ -10,6 +10,7 @@ import { getUser } from '@/lib/db/queries/users';
 import { treadmills, walks } from '@/lib/db/schema';
 import type { WalkDto, WalkStatus } from '@/lib/types';
 import { uuidSchema } from '@/lib/validation';
+import { fmt, m } from '@/lib/i18n';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -20,10 +21,10 @@ const DEFAULT_LIMIT = 20;
 const MAX_LIMIT = 100;
 
 const limitSchema = z.coerce
-  .number({ message: 'limit — целое число' })
-  .int({ message: 'limit — целое число' })
-  .min(1, { message: `limit — от 1 до ${MAX_LIMIT}` })
-  .max(MAX_LIMIT, { message: `limit — от 1 до ${MAX_LIMIT}` })
+  .number({ message: m.apiMessages.limitInteger })
+  .int({ message: m.apiMessages.limitInteger })
+  .min(1, { message: fmt(m.apiMessages.limitRange, { max: MAX_LIMIT }) })
+  .max(MAX_LIMIT, { message: fmt(m.apiMessages.limitRange, { max: MAX_LIMIT }) })
   .default(DEFAULT_LIMIT);
 
 const deleteWindowMs = DELETE_WINDOW_MINUTES * 60 * 1000;
@@ -42,7 +43,7 @@ export function GET(request: Request, context: RouteContext) {
     const limit = limitSchema.parse(rawLimit ?? undefined);
 
     const user = await getUser(id);
-    if (!user) return apiError(404, 'NOT_FOUND', 'Участник не найден');
+    if (!user) return apiError(404, 'NOT_FOUND', m.apiMessages.userNotFound);
 
     const rows = await db
       .select({

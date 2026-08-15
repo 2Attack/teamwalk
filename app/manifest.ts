@@ -1,6 +1,7 @@
 import type { MetadataRoute } from 'next';
 
 import { APP_NAME } from '@/lib/config';
+import { LOCALE, m } from '@/lib/i18n';
 
 /**
  * Веб-манифест: без него планшет предлагает «добавить ярлык», а не установить
@@ -11,10 +12,10 @@ import { APP_NAME } from '@/lib/config';
  */
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: `${APP_NAME} — трекер ходьбы`,
+    name: `${APP_NAME} — ${m.app.titleSuffix}`,
     // На домашнем экране подпись обрезается примерно на 12 символах.
     short_name: APP_NAME,
-    description: 'Корпоративный трекер ходьбы на беговой дорожке',
+    description: m.app.description,
     start_url: '/',
     /*
       `standalone`, а не `fullscreen`: приложение живёт на общем планшете, и
@@ -33,7 +34,7 @@ export default function manifest(): MetadataRoute.Manifest {
       Ориентацию не фиксируем: планшет у дорожки может стоять и вертикально, и
       горизонтально, а вёрстка резиновая.
     */
-    lang: 'ru',
+    lang: LOCALE,
     dir: 'ltr',
     icons: [
       { src: '/icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },

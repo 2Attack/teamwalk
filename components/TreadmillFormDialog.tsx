@@ -15,6 +15,7 @@ import { Input } from '@/components/ui/8bit/input';
 import { Label } from '@/components/ui/8bit/label';
 import { ApiError, apiSend, revalidateTreadmills } from '@/lib/client/api';
 import { MAX_SPEED_KMH_ABS, MIN_SPEED_KMH } from '@/lib/config';
+import { fmt, m } from '@/lib/i18n';
 import type { TreadmillAdminDto } from '@/lib/types';
 import {
   treadmillMaxSpeedSchema,
@@ -80,7 +81,7 @@ export function TreadmillFormDialog({ open, treadmill, onClose }: TreadmillFormD
     const errors: typeof fieldErrors = {};
     const parsedName = treadmillNameSchema.safeParse(name);
     if (!parsedName.success) {
-      errors.name = parsedName.error.issues[0]?.message ?? 'Некорректное название';
+      errors.name = parsedName.error.issues[0]?.message ?? m.treadmills.invalidName;
     }
     const speedNumber = parseIntStrict(maxSpeed);
     const parsedSpeed =
@@ -88,13 +89,13 @@ export function TreadmillFormDialog({ open, treadmill, onClose }: TreadmillFormD
     if (!parsedSpeed || !parsedSpeed.success) {
       errors.maxSpeed =
         parsedSpeed?.error.issues[0]?.message ??
-        `Целое число от ${MIN_SPEED_KMH} до ${MAX_SPEED_KMH_ABS}`;
+        fmt(m.treadmills.speedError, { min: MIN_SPEED_KMH, max: MAX_SPEED_KMH_ABS });
     }
     const orderNumber = parseIntStrict(sortOrder);
     const parsedOrder =
       orderNumber === null ? null : treadmillSortOrderSchema.safeParse(orderNumber);
     if (!parsedOrder || !parsedOrder.success) {
-      errors.sortOrder = parsedOrder?.error.issues[0]?.message ?? 'Целое число от 0 до 999';
+      errors.sortOrder = parsedOrder?.error.issues[0]?.message ?? fmt(m.treadmills.orderError, { min: 0, max: 999 });
     }
     setFieldErrors(errors);
     if (!parsedName.success || !parsedSpeed?.success || !parsedOrder?.success) return;
@@ -124,7 +125,7 @@ export function TreadmillFormDialog({ open, treadmill, onClose }: TreadmillFormD
       } else if (error instanceof ApiError) {
         setFormError(error.message);
       } else {
-        setFormError('Не удалось связаться с сервером. Проверьте сеть и повторите.');
+        setFormError(m.common.networkError);
       }
     } finally {
       setSaving(false);
@@ -136,11 +137,9 @@ export function TreadmillFormDialog({ open, treadmill, onClose }: TreadmillFormD
       <DialogShell>
         <DialogHeader>
           <DialogTitle className="retro text-sm leading-snug break-words sm:text-base">
-            {treadmill ? 'Изменить дорожку' : 'Новая дорожка'}
+            {treadmill ? m.treadmills.formEditTitle : m.treadmills.formNewTitle}
           </DialogTitle>
-          <DialogDescription>
-            Название видно в селекторе старта, потолок ограничивает выбор скорости.
-          </DialogDescription>
+          <DialogDescription>{m.treadmills.formDescription}</DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col gap-5">
@@ -148,9 +147,9 @@ export function TreadmillFormDialog({ open, treadmill, onClose }: TreadmillFormD
             <FormField
               id={nameId}
               errorId={nameErrorId}
-              label="Название *"
+              label={m.treadmills.nameLabel}
               error={fieldErrors.name}
-              hint="От 2 до 60 символов, например «У окна»."
+              hint={m.treadmills.nameHint}
             >
               <Input
                 id={nameId}
@@ -169,9 +168,9 @@ export function TreadmillFormDialog({ open, treadmill, onClose }: TreadmillFormD
             <FormField
               id={speedId}
               errorId={speedErrorId}
-              label="Потолок скорости, км/ч *"
+              label={m.treadmills.speedLabel}
               error={fieldErrors.maxSpeed}
-              hint={`Целое от ${MIN_SPEED_KMH} до ${MAX_SPEED_KMH_ABS} — как на шильдике дорожки.`}
+              hint={fmt(m.treadmills.speedHint, { min: MIN_SPEED_KMH, max: MAX_SPEED_KMH_ABS })}
             >
               <Input
                 id={speedId}
@@ -192,9 +191,9 @@ export function TreadmillFormDialog({ open, treadmill, onClose }: TreadmillFormD
             <FormField
               id={orderId}
               errorId={orderErrorId}
-              label="Порядок в списке"
+              label={m.treadmills.orderLabel}
               error={fieldErrors.sortOrder}
-              hint="Меньше — выше в селекторе старта."
+              hint={m.treadmills.orderHint}
             >
               <Input
                 id={orderId}
@@ -222,7 +221,7 @@ export function TreadmillFormDialog({ open, treadmill, onClose }: TreadmillFormD
                 className="min-h-11 w-full text-xs sm:w-auto"
                 onClick={() => setIsActive((v) => !v)}
               >
-                {isActive ? 'Дорожка активна' : 'Дорожка выключена'}
+                {isActive ? m.treadmills.toggleActiveOn : m.treadmills.toggleActiveOff}
               </Button>
             )}
 
@@ -244,14 +243,14 @@ export function TreadmillFormDialog({ open, treadmill, onClose }: TreadmillFormD
               onClick={onClose}
               disabled={saving}
             >
-              Отмена
+              {m.common.cancel}
             </Button>
             <Button
               type="submit"
               className="min-h-11 w-full text-xs sm:w-auto"
               disabled={saving || name.trim().length === 0}
             >
-              {saving ? 'Сохраняем…' : treadmill ? 'Сохранить' : 'Создать'}
+              {saving ? m.common.saving : treadmill ? m.common.save : m.common.create}
             </Button>
           </DialogFooter>
         </form>

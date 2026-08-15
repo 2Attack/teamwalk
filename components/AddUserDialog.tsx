@@ -16,6 +16,7 @@ import {
 import { Input } from '@/components/ui/8bit/input';
 import { Label } from '@/components/ui/8bit/label';
 import { randomAvatarId } from '@/lib/avatars';
+import { m } from '@/lib/i18n';
 import { ApiError, apiSend } from '@/lib/client/api';
 import type { UserDto } from '@/lib/types';
 import { nameSchema } from '@/lib/validation';
@@ -68,7 +69,7 @@ export function AddUserDialog({ open, onClose, users, onCreated }: AddUserDialog
     // Те же правила, что и на сервере: 2–60 символов, разрешённые символы.
     const parsed = nameSchema.safeParse(name);
     if (!parsed.success) {
-      setNameError(parsed.error.issues[0]?.message ?? 'Некорректное имя');
+      setNameError(parsed.error.issues[0]?.message ?? m.addUser.invalidName);
       return;
     }
 
@@ -85,7 +86,7 @@ export function AddUserDialog({ open, onClose, users, onCreated }: AddUserDialog
       onClose();
     } catch (error) {
       if (error instanceof ApiError && error.code === 'NAME_TAKEN') {
-        setNameError('Участник с таким именем уже есть в списке');
+        setNameError(m.addUser.nameTaken);
       } else {
         setFormError(errorText(error));
       }
@@ -99,11 +100,9 @@ export function AddUserDialog({ open, onClose, users, onCreated }: AddUserDialog
       <DialogShell>
         <DialogHeader>
           <DialogTitle className="retro text-sm leading-snug break-words sm:text-base">
-            Новый участник
+            {m.addUser.title}
           </DialogTitle>
-          <DialogDescription>
-            Имя видно в рейтинге и хинтах, персонажа можно сменить позже.
-          </DialogDescription>
+          <DialogDescription>{m.addUser.description}</DialogDescription>
         </DialogHeader>
 
         {/* Форма забирает остаток высоты: сетка персонажей прокручивается внутри,
@@ -113,7 +112,7 @@ export function AddUserDialog({ open, onClose, users, onCreated }: AddUserDialog
             <div className="space-y-2">
               {/* `font="normal"`: метка — sans, как и поле под ней (п. 6.7.1). */}
               <Label htmlFor={nameId} font="normal" className="block text-sm text-text-dim">
-                Имя *
+                {m.addUser.nameLabel}
               </Label>
               <Input
                 id={nameId}
@@ -133,13 +132,13 @@ export function AddUserDialog({ open, onClose, users, onCreated }: AddUserDialog
                 </p>
               ) : (
                 <p id={hintId} className="text-xs text-text-dim">
-                  От 2 до 60 символов. Так вы будете видны в рейтинге.
+                  {m.addUser.nameHint}
                 </p>
               )}
             </div>
 
             <div className="space-y-2">
-              <p className="text-sm text-text-dim">Выбери персонажа</p>
+              <p className="text-sm text-text-dim">{m.addUser.pickCharacter}</p>
               <AvatarPicker value={avatarId} onChange={setAvatarId} taken={taken} />
             </div>
 
@@ -147,7 +146,7 @@ export function AddUserDialog({ open, onClose, users, onCreated }: AddUserDialog
           </DialogBody>
 
           <DialogActions
-            confirmLabel={saving ? 'Создаём…' : 'Создать'}
+            confirmLabel={saving ? m.common.creating : m.common.create}
             confirmType="submit"
             disabled={saving || name.trim().length === 0}
             saving={saving}
@@ -204,9 +203,9 @@ export function ChangeAvatarDialog({ open, onClose, user, users }: ChangeAvatarD
       <DialogShell>
         <DialogHeader>
           <DialogTitle className="retro text-sm leading-snug break-words sm:text-base">
-            Сменить персонажа
+            {m.changeAvatar.title}
           </DialogTitle>
-          <DialogDescription>Пресет видно в рейтинге, на пьедестале и в хинтах.</DialogDescription>
+          <DialogDescription>{m.changeAvatar.description}</DialogDescription>
         </DialogHeader>
 
         <DialogBody className="space-y-5">
@@ -216,7 +215,7 @@ export function ChangeAvatarDialog({ open, onClose, user, users }: ChangeAvatarD
         </DialogBody>
 
         <DialogActions
-          confirmLabel={saving ? 'Сохраняем…' : 'Сохранить'}
+          confirmLabel={saving ? m.common.saving : m.common.save}
           confirmType="button"
           disabled={saving}
           saving={saving}
@@ -272,7 +271,7 @@ function DialogActions({
         onClick={onCancel}
         disabled={saving}
       >
-        Отмена
+        {m.common.cancel}
       </Button>
       <Button
         type={confirmType}
@@ -286,8 +285,8 @@ function DialogActions({
   );
 }
 
-/** Человеческий текст ошибки: сообщение API либо нейтральный фолбэк. */
+/** Human error text: the API message or a neutral fallback. */
 function errorText(error: unknown): string {
   if (error instanceof ApiError) return error.message;
-  return 'Не удалось связаться с сервером. Проверьте сеть и повторите.';
+  return m.common.networkError;
 }

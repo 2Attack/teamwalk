@@ -5,6 +5,7 @@ import { apiError, handle } from '@/lib/api';
 import { getTelegramStatus, unlink } from '@/lib/telegram/links';
 import type { TelegramStatusDto } from '@/lib/types';
 import { uuidSchema } from '@/lib/validation';
+import { m } from '@/lib/i18n';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -16,7 +17,7 @@ export function GET(_request: Request, context: RouteContext) {
   return handle<TelegramStatusDto | ApiErrorBody>(async () => {
     const id = uuidSchema.parse((await context.params).id);
     const status = await getTelegramStatus(id);
-    if (!status) return apiError(404, 'NOT_FOUND', 'Участник не найден');
+    if (!status) return apiError(404, 'NOT_FOUND', m.apiMessages.userNotFound);
     return NextResponse.json(status);
   });
 }
@@ -30,7 +31,7 @@ export function DELETE(_request: Request, context: RouteContext) {
     await unlink(id);
 
     const status = await getTelegramStatus(id);
-    if (!status) return apiError(404, 'NOT_FOUND', 'Участник не найден');
+    if (!status) return apiError(404, 'NOT_FOUND', m.apiMessages.userNotFound);
     return NextResponse.json(status);
   });
 }

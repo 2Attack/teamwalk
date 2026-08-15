@@ -6,6 +6,7 @@ import { Progress } from '@/components/ui/8bit/progress';
 import { Icon } from '@/components/ui/icon';
 import { cn } from '@/lib/cn';
 import { calcSegmentedDistanceKm, formatDuration, formatKm } from '@/lib/format';
+import { fmt, m } from '@/lib/i18n';
 import type { WalkSpeedSegmentDto } from '@/lib/types';
 
 /**
@@ -84,7 +85,7 @@ export function WalkTimer({
       {/* Пиксельный шрифт только на числах и коротких метках (п. 6.7.1). */}
       <p
         className="font-pixel text-[32px] leading-none tabular-nums text-text-main sm:text-[48px]"
-        aria-label={`Прошло ${formatDuration(seconds)}`}
+        aria-label={fmt(m.walkTimer.elapsedAria, { duration: formatDuration(seconds) })}
         role="timer"
       >
         {formatDuration(seconds)}
@@ -93,7 +94,7 @@ export function WalkTimer({
       {/* Подписи про скорость нет сознательно: текущий темп показывает
           регулятор ниже, а дублирование только шумело. */}
       <p className="font-pixel text-[24px] leading-none tabular-nums text-citrus sm:text-[32px]">
-        {formatKm(distanceKm)} км
+        {formatKm(distanceKm)} {m.units.km}
       </p>
 
       {hasRecord ? (
@@ -101,7 +102,7 @@ export function WalkTimer({
           {beatsRecord ? (
             <p className="flex items-center justify-center gap-2 font-pixel text-[16px] leading-tight text-lime">
               <Icon name="trophy" size={16} />
-              НОВЫЙ РЕКОРД
+              {m.walkTimer.newRecord}
             </p>
           ) : (
             <>
@@ -111,10 +112,10 @@ export function WalkTimer({
                 font="normal"
                 progressBg="bg-lime"
                 className="h-4"
-                aria-label={`Прогресс к лучшему дню: ${formatKm(distanceKm)} из ${formatKm(bestDayKm)} км`}
+                aria-label={fmt(m.walkTimer.recordProgressAria, { current: formatKm(distanceKm), best: formatKm(bestDayKm) })}
               />
               <p className="mt-3 text-sm text-text-dim">
-                твой лучший день — {formatKm(bestDayKm)} км
+                {fmt(m.walkTimer.bestDay, { km: formatKm(bestDayKm) })}
               </p>
             </>
           )}

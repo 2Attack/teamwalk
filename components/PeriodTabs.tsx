@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { ru } from 'date-fns/locale';
+import { enUS, es, ru } from 'date-fns/locale';
 import type { DateRange } from 'react-day-picker';
 
 import { Button } from '@/components/ui/8bit/button';
@@ -10,6 +10,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/8bit/po
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/8bit/tabs';
 import { Icon } from '@/components/ui/icon';
 import { cn } from '@/lib/cn';
+import { INTL_LOCALE, LOCALE, m } from '@/lib/i18n';
 import { addOfficeDays, toOfficeDay } from '@/lib/time';
 import type { Period, PeriodSelection } from '@/lib/types';
 
@@ -25,12 +26,15 @@ interface DayRange {
 }
 
 const TABS: ReadonlyArray<{ value: Period | 'custom'; label: string; short: string }> = [
-  { value: 'week', label: 'Неделя', short: 'Нед.' },
-  { value: 'month', label: 'Месяц', short: 'Мес.' },
-  // На 360 px «Всё время» пиксельным шрифтом (16 px = 16 px на символ) не влезает.
-  { value: 'all', label: 'Всё время', short: 'Всё' },
-  { value: 'custom', label: 'Период', short: 'Даты' },
+  { value: 'week', label: m.periodTabs.week, short: m.periodTabs.weekShort },
+  { value: 'month', label: m.periodTabs.month, short: m.periodTabs.monthShort },
+  // On 360 px the full "all time" label does not fit in the pixel font.
+  { value: 'all', label: m.periodTabs.all, short: m.periodTabs.allShort },
+  { value: 'custom', label: m.periodTabs.custom, short: m.periodTabs.customShort },
 ];
+
+/** date-fns locale for the range calendar, matched to the app locale. */
+const DATE_FNS_LOCALE = { ru, en: enUS, es }[LOCALE];
 
 /** Стартовый произвольный период — последние 7 офисных дней включая сегодня. */
 function defaultRange(): DayRange {
@@ -56,8 +60,8 @@ function dateToDay(date: Date): string {
   return `${y}-${m}-${d}`;
 }
 
-const dayLabelFmt = new Intl.DateTimeFormat('ru-RU', { day: 'numeric', month: 'short' });
-const dayLabelWithYearFmt = new Intl.DateTimeFormat('ru-RU', {
+const dayLabelFmt = new Intl.DateTimeFormat(INTL_LOCALE, { day: 'numeric', month: 'short' });
+const dayLabelWithYearFmt = new Intl.DateTimeFormat(INTL_LOCALE, {
   day: 'numeric',
   month: 'short',
   year: 'numeric',
@@ -123,7 +127,7 @@ export function PeriodTabs({ value, onChange, className }: PeriodTabsProps) {
       className={cn('items-center p-1.5', className)}
     >
       <TabsList
-        aria-label="Период рейтинга"
+        aria-label={m.periodTabs.listAria}
         className={cn(
           'gap-1 p-0',
           // h-8 из базы приходит с вариантом (специфичность 0,2,0), поэтому
@@ -170,7 +174,7 @@ export function PeriodTabs({ value, onChange, className }: PeriodTabsProps) {
                 // Даты — цифры и сокращения месяцев: sans, иначе кириллица
                 // «авг.» пиксельным шрифтом без кириллицы рассыпается (п. 6.7.1).
                 font="normal"
-                aria-label="Изменить даты периода"
+                aria-label={m.periodTabs.changeDatesAria}
                 className="mt-3 min-h-11 gap-2 px-3 text-sm tabular-nums"
               />
             }
@@ -179,10 +183,10 @@ export function PeriodTabs({ value, onChange, className }: PeriodTabsProps) {
             {formatRangeLabel(value)}
           </PopoverTrigger>
 
-          <PopoverContent font="normal" className="w-auto p-0" aria-label="Выбор периода">
+          <PopoverContent font="normal" className="w-auto p-0" aria-label={m.periodTabs.popoverAria}>
             <Calendar
               mode="range"
-              locale={ru}
+              locale={DATE_FNS_LOCALE}
               font="normal"
               numberOfMonths={1}
               defaultMonth={dayToDate(value.to)}

@@ -14,6 +14,7 @@ import {
   DialogTitle,
 } from '@/components/ui/8bit/dialog';
 import { apiSend, useTelegramStatus } from '@/lib/client/api';
+import { m } from '@/lib/i18n';
 import type { TelegramLinkTokenDto } from '@/lib/types';
 
 interface TelegramLinkDialogProps {
@@ -59,7 +60,7 @@ export function TelegramLinkDialog({ open, userId, onClose }: TelegramLinkDialog
         setError(
           cause instanceof Error && cause.message
             ? cause.message
-            : 'Не вышло получить ссылку — проверьте связь и попробуйте ещё раз',
+            : m.telegram.linkFailed,
         );
       });
     return () => {
@@ -125,9 +126,9 @@ export function TelegramLinkDialog({ open, userId, onClose }: TelegramLinkDialog
     >
       <DialogShell>
         <DialogHeader>
-          <DialogTitle className="text-[16px] leading-relaxed">Привязать Telegram</DialogTitle>
+          <DialogTitle className="text-[16px] leading-relaxed">{m.telegram.dialogTitle}</DialogTitle>
           <DialogDescription className="font-sans">
-            Наведите камеру телефона на код — откроется чат с ботом, останется нажать «Start»
+            {m.telegram.dialogDescription}
           </DialogDescription>
         </DialogHeader>
 
@@ -143,7 +144,7 @@ export function TelegramLinkDialog({ open, userId, onClose }: TelegramLinkDialog
                 className="min-h-11"
                 onClick={() => setAttempt((n) => n + 1)}
               >
-                Попробовать ещё раз
+                {m.telegram.tryAgain}
               </Button>
             </>
           ) : (
@@ -154,12 +155,12 @@ export function TelegramLinkDialog({ open, userId, onClose }: TelegramLinkDialog
                   /* Дата-URL, сгенерированный на месте, — не кандидат в next/image. */
                   <img
                     src={qrDataUrl}
-                    alt="QR-код привязки Telegram"
+                    alt={m.telegram.qrAlt}
                     className="size-full [image-rendering:pixelated]"
                   />
                 ) : (
                   <p className="text-center font-sans text-sm text-neutral-500">
-                    {link === null ? 'Получаем ссылку…' : 'QR не нарисовался — ссылка ниже'}
+                    {link === null ? m.telegram.gettingLink : m.telegram.qrFailed}
                   </p>
                 )}
               </div>
@@ -171,7 +172,7 @@ export function TelegramLinkDialog({ open, userId, onClose }: TelegramLinkDialog
                   rel="noopener noreferrer"
                   className="min-h-11 text-center font-sans text-sm text-citrus underline underline-offset-4"
                 >
-                  Привязать по ссылке — если Telegram на этом устройстве
+                  {m.telegram.linkOnThisDevice}
                 </a>
               ) : null}
             </>
@@ -185,7 +186,7 @@ export function TelegramLinkDialog({ open, userId, onClose }: TelegramLinkDialog
             onClick={onClose}
             className="min-h-11 w-full sm:w-auto"
           >
-            Закрыть
+            {m.common.close}
           </Button>
         </DialogFooter>
       </DialogShell>

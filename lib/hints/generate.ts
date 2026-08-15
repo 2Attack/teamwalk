@@ -5,6 +5,7 @@ import {
 } from '@/lib/config';
 import { db } from '@/lib/db';
 import { hintsCache } from '@/lib/db/schema';
+import { LOCALE } from '@/lib/i18n';
 import { shuffle } from '@/lib/random';
 import type { LlmHint } from '@/lib/validation';
 
@@ -128,6 +129,7 @@ async function writePool(rows: readonly PoolRow[]): Promise<void> {
     tone: row.tone,
     subjectId: row.subjectId,
     source: row.source,
+    locale: LOCALE,
   }));
 
   // `db.batch` у neon-http выполняет запросы одной транзакцией: пул не может

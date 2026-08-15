@@ -8,6 +8,7 @@ import { Skeleton } from '@/components/ui/8bit/skeleton';
 import { useLeaderboard } from '@/lib/client/api';
 import { cn } from '@/lib/cn';
 import { formatKm } from '@/lib/format';
+import { m } from '@/lib/i18n';
 import type { LeaderboardRowDto, PeriodSelection } from '@/lib/types';
 
 interface PodiumProps {
@@ -91,7 +92,7 @@ function PodiumSlot({
             <span className={cn('font-pixel text-[16px]', config.accent)}>
               {formatKm(row.totalKm)}
             </span>
-            <span className="ml-1 text-[10px] text-text-dim">км</span>
+            <span className="ml-1 text-[10px] text-text-dim">{m.units.km}</span>
           </p>
         </>
       ) : (
@@ -103,7 +104,7 @@ function PodiumSlot({
             className="border-[3px] border-dashed border-border-dim opacity-70"
           />
           <p className="mt-2 w-full truncate px-1 text-center text-xs leading-tight text-text-dim sm:text-sm">
-            Место свободно
+            {m.podium.emptyPlace}
           </p>
           <p className="mt-1 text-[10px] leading-none text-text-dim">—</p>
         </>
@@ -168,7 +169,7 @@ export function Podium({ period, currentUserId }: PodiumProps) {
 
   return (
     <ul
-      aria-label="Пьедестал: топ-3 участников"
+      aria-label={m.podium.aria}
       className="flex list-none items-end justify-center gap-2 sm:gap-4"
     >
       {PLACES.map((config) => {

@@ -26,6 +26,7 @@ import {
 import { Icon } from '@/components/ui/icon';
 import { ApiError, apiSend, revalidateRoutes, useRoutesAdmin } from '@/lib/client/api';
 import { formatKm } from '@/lib/format';
+import { fmt, INTL_LOCALE, m } from '@/lib/i18n';
 import type { RouteAdminDto } from '@/lib/types';
 
 /**
@@ -47,17 +48,15 @@ export function RouteSettings() {
     <Card font="normal">
       <CardHeader>
         <CardTitle className="retro text-sm leading-snug break-words sm:text-base">
-          Маршрут команды
+          {m.routes.title}
         </CardTitle>
       </CardHeader>
       <CardContent font="normal" className="space-y-4">
         {error ? (
           <div className="space-y-4">
-            <p className="text-sm text-text-dim">
-              Не удалось загрузить маршруты. Проверьте подключение и повторите.
-            </p>
+            <p className="text-sm text-text-dim">{m.routes.loadFailed}</p>
             <Button type="button" className="min-h-11 text-xs" onClick={() => void reload()}>
-              Повторить
+              {m.common.retry}
             </Button>
           </div>
         ) : isLoading || !routes ? (
@@ -68,24 +67,21 @@ export function RouteSettings() {
         ) : (
           <>
             {routes.length === 0 ? (
-              <p className="text-sm text-text-dim">
-                Маршрутов пока нет — команда идёт по встроенному. Добавьте свой,
-                и он появится на главной.
-              </p>
+              <p className="text-sm text-text-dim">{m.routes.empty}</p>
             ) : (
               <div className="w-full [&>div]:w-full">
                 <Table font="normal" variant="borderless" className="w-full">
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="retro text-[10px] text-text-dim">Название</TableHead>
+                      <TableHead className="retro text-[10px] text-text-dim">{m.routes.colName}</TableHead>
                       <TableHead className="retro w-px text-right text-[10px] text-text-dim">
-                        Городов
+                        {m.routes.colCities}
                       </TableHead>
                       <TableHead className="retro w-px text-right text-[10px] text-text-dim">
-                        Длина
+                        {m.routes.colLength}
                       </TableHead>
-                      <TableHead className="retro text-[10px] text-text-dim">Статус</TableHead>
-                      <TableHead className="sr-only">Действия</TableHead>
+                      <TableHead className="retro text-[10px] text-text-dim">{m.routes.colStatus}</TableHead>
+                      <TableHead className="sr-only">{m.routes.colActions}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -110,7 +106,7 @@ export function RouteSettings() {
               onClick={() => setFormTarget(null)}
             >
               <Icon name="plus" size={16} />
-              Добавить маршрут
+              {m.routes.add}
             </Button>
           </>
         )}
@@ -144,19 +140,19 @@ function RouteRow({ route, onEdit, onActivate, onDelete }: RouteRowProps) {
       <TableCell className="text-sm text-text-main">{route.name}</TableCell>
       <TableCell className="text-right text-sm text-text-main">{route.points.length}</TableCell>
       <TableCell className="text-right text-sm whitespace-nowrap text-text-main">
-        {Math.round(lengthKm).toLocaleString('ru-RU')} км
+        {Math.round(lengthKm).toLocaleString(INTL_LOCALE)} {m.units.km}
       </TableCell>
       <TableCell>
         <span className="flex flex-col items-start gap-1">
           {route.isActive ? (
-            <Badge className="text-[10px]">активный</Badge>
+            <Badge className="text-[10px]">{m.routes.badgeActive}</Badge>
           ) : (
             <span className="text-sm text-text-dim">—</span>
           )}
           {route.progress && (
             <span className="text-xs whitespace-nowrap text-text-dim">
-              {formatKm(route.progress.walkedKm)} км
-              {route.progress.nextCity ? ` · → ${route.progress.nextCity}` : ' · пройден'}
+              {formatKm(route.progress.walkedKm)} {m.units.km}
+              {route.progress.nextCity ? ` · → ${route.progress.nextCity}` : m.routes.progressDone}
             </span>
           )}
         </span>
@@ -168,8 +164,8 @@ function RouteRow({ route, onEdit, onActivate, onDelete }: RouteRowProps) {
             variant="secondary"
             size="icon"
             className="size-11"
-            aria-label={`Изменить маршрут «${route.name}»`}
-            title="Изменить"
+            aria-label={fmt(m.routes.editAria, { name: route.name })}
+            title={m.routes.editTitle}
             onClick={onEdit}
           >
             <Icon name="edit" size={16} />
@@ -180,8 +176,8 @@ function RouteRow({ route, onEdit, onActivate, onDelete }: RouteRowProps) {
               variant="secondary"
               size="icon"
               className="size-11"
-              aria-label={`Выбрать маршрут «${route.name}»`}
-              title="Выбрать"
+              aria-label={fmt(m.routes.activateAria, { name: route.name })}
+              title={m.routes.activateTitle}
               onClick={onActivate}
             >
               <Icon name="play" size={16} />
@@ -194,8 +190,8 @@ function RouteRow({ route, onEdit, onActivate, onDelete }: RouteRowProps) {
             variant="destructive"
             size="icon"
             className="size-11"
-            aria-label={`Удалить маршрут «${route.name}»`}
-            title="Удалить"
+            aria-label={fmt(m.routes.deleteAria, { name: route.name })}
+            title={m.routes.deleteTitle}
             onClick={onDelete}
           >
             <Icon name="trash" size={16} />
@@ -242,10 +238,10 @@ function ActivateRouteDialog({ route, onClose }: ActivateRouteDialogProps) {
       <DialogShell>
         <DialogHeader>
           <DialogTitle className="retro text-sm leading-snug break-words sm:text-base">
-            Сменить маршрут?
+            {m.routes.activateConfirmTitle}
           </DialogTitle>
           <DialogDescription>
-            Команда переходит на «{route.name}». Полоса на главной покажет его.
+            {fmt(m.routes.activateConfirmBody, { name: route.name })}
           </DialogDescription>
         </DialogHeader>
 
@@ -253,15 +249,15 @@ function ActivateRouteDialog({ route, onClose }: ActivateRouteDialogProps) {
           <ResetChoice
             selected={resetProgress}
             value
-            title="Начать с нуля"
-            hint="Прогресс нового маршрута стартует с 0 км — история прогулок не меняется."
+            title={m.routes.resetTitle}
+            hint={m.routes.resetHint}
             onSelect={setResetProgress}
           />
           <ResetChoice
             selected={!resetProgress}
             value={false}
-            title="Продолжить с текущей отметки"
-            hint="Уже пройденные командой километры засчитываются и на этом маршруте."
+            title={m.routes.keepTitle}
+            hint={m.routes.keepHint}
             onSelect={setResetProgress}
           />
 
@@ -276,7 +272,7 @@ function ActivateRouteDialog({ route, onClose }: ActivateRouteDialogProps) {
             onClick={onClose}
             disabled={saving}
           >
-            Отмена
+            {m.common.cancel}
           </Button>
           <Button
             type="button"
@@ -284,7 +280,7 @@ function ActivateRouteDialog({ route, onClose }: ActivateRouteDialogProps) {
             onClick={() => void handleActivate()}
             disabled={saving}
           >
-            {saving ? 'Меняем…' : 'Выбрать'}
+            {saving ? m.routes.activating : m.routes.activate}
           </Button>
         </DialogFooter>
       </DialogShell>
@@ -351,19 +347,16 @@ function DeleteRouteDialog({ route, onClose }: DeleteRouteDialogProps) {
       <DialogShell>
         <DialogHeader>
           <DialogTitle className="retro text-sm leading-snug break-words sm:text-base">
-            Удалить маршрут?
+            {m.routes.deleteConfirmTitle}
           </DialogTitle>
           <DialogDescription>
-            «{route.name}» будет удалён насовсем. Отменить действие нельзя.
+            {fmt(m.routes.deleteConfirmBody, { name: route.name })}
           </DialogDescription>
         </DialogHeader>
 
         <DialogBody className="space-y-4">
           {route.isActive && (
-            <p className="text-sm text-text-dim">
-              Это активный маршрут: после удаления главная покажет «маршрут не выбран»,
-              пока вы не выберете другой.
-            </p>
+            <p className="text-sm text-text-dim">{m.routes.deleteActiveWarn}</p>
           )}
           {error && <ActionError text={error} />}
         </DialogBody>
@@ -376,7 +369,7 @@ function DeleteRouteDialog({ route, onClose }: DeleteRouteDialogProps) {
             onClick={onClose}
             disabled={deleting}
           >
-            Отмена
+            {m.common.cancel}
           </Button>
           <Button
             type="button"
@@ -385,7 +378,7 @@ function DeleteRouteDialog({ route, onClose }: DeleteRouteDialogProps) {
             onClick={() => void handleDelete()}
             disabled={deleting}
           >
-            {deleting ? 'Удаляем…' : 'Удалить'}
+            {deleting ? m.common.deleting : m.common.delete}
           </Button>
         </DialogFooter>
       </DialogShell>
@@ -408,5 +401,5 @@ function ActionError({ text }: { text: string }) {
 /** Human error text: the API message or a neutral fallback. */
 function errorText(error: unknown): string {
   if (error instanceof ApiError) return error.message;
-  return 'Не удалось связаться с сервером. Проверьте сеть и повторите.';
+  return m.common.networkError;
 }

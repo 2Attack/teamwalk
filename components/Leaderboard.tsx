@@ -18,6 +18,7 @@ import { Skeleton } from '@/components/ui/8bit/skeleton';
 import { useLeaderboard } from '@/lib/client/api';
 import { cn } from '@/lib/cn';
 import { formatKm } from '@/lib/format';
+import { fmt, m } from '@/lib/i18n';
 import type { LeaderboardRowDto, Period, PeriodSelection } from '@/lib/types';
 
 interface LeaderboardProps {
@@ -26,14 +27,16 @@ interface LeaderboardProps {
 }
 
 const PERIOD_LABEL: Record<Period, string> = {
-  week: 'неделю',
-  month: 'месяц',
-  all: 'всё время',
+  week: m.leaderboard.periodWeek,
+  month: m.leaderboard.periodMonth,
+  all: m.leaderboard.periodAll,
 };
 
-/** Подпись периода для скрытого заголовка таблицы. */
+/** Period caption for the visually hidden table title. */
 function periodLabel(selection: PeriodSelection): string {
-  if (selection.period === 'custom') return `период с ${selection.from} по ${selection.to}`;
+  if (selection.period === 'custom') {
+    return fmt(m.leaderboard.periodCustom, { from: selection.from, to: selection.to });
+  }
   return PERIOD_LABEL[selection.period];
 }
 
@@ -116,20 +119,20 @@ function LeaderboardRow({
       </TableCell>
 
       <TableCell role="cell" className={cn(STAT_CELL, !isIdle && 'text-lime')}>
-        <CellLabel>Дистанция, км</CellLabel>
+        <CellLabel>{m.leaderboard.colDistance}</CellLabel>
         {formatKm(row.totalKm)}
       </TableCell>
       <TableCell role="cell" className={STAT_CELL}>
-        <CellLabel>Прогулок</CellLabel>
+        <CellLabel>{m.leaderboard.colWalks}</CellLabel>
         {row.walksCount}
       </TableCell>
       <TableCell role="cell" className={STAT_CELL}>
-        <CellLabel>Серия</CellLabel>
+        <CellLabel>{m.leaderboard.colStreak}</CellLabel>
         <StreakBadge days={row.streakDays} />
       </TableCell>
       <TableCell role="cell" className={STAT_CELL}>
-        <CellLabel>Средняя скорость</CellLabel>
-        {row.avgSpeedKmh > 0 ? `${row.avgSpeedKmh.toFixed(1)} км/ч` : '—'}
+        <CellLabel>{m.leaderboard.colAvgSpeed}</CellLabel>
+        {row.avgSpeedKmh > 0 ? `${row.avgSpeedKmh.toFixed(1)} ${m.units.kmh}` : '—'}
       </TableCell>
     </TableRow>
   );
@@ -149,7 +152,7 @@ function EmptyState() {
   return (
     <Card font="normal">
       <CardContent font="normal">
-        <p className="text-center text-sm text-text-dim">Ещё никто не ходил — будьте первым</p>
+        <p className="text-center text-sm text-text-dim">{m.leaderboard.empty}</p>
       </CardContent>
     </Card>
   );
@@ -192,7 +195,7 @@ export function Leaderboard({ period, currentUserId }: LeaderboardProps) {
         )}
       >
         <TableCaption className="sr-only">
-          {`Таблица лидеров за ${periodLabel(period)}: место, участник, дистанция в километрах, число прогулок, серия и средняя скорость`}
+          {fmt(m.leaderboard.caption, { period: periodLabel(period) })}
         </TableCaption>
         <TableHeader className="max-sm:hidden">
           <TableRow role="row" className="transition-none">
@@ -200,19 +203,19 @@ export function Leaderboard({ period, currentUserId }: LeaderboardProps) {
               #
             </TableHead>
             <TableHead scope="col" role="columnheader" className={HEAD_CELL}>
-              Участник
+              {m.leaderboard.colParticipant}
             </TableHead>
             <TableHead scope="col" role="columnheader" className={cn(HEAD_CELL, 'w-24 text-right')}>
-              Дистанция, км
+              {m.leaderboard.colDistance}
             </TableHead>
             <TableHead scope="col" role="columnheader" className={cn(HEAD_CELL, 'w-20 text-right')}>
-              Прогулок
+              {m.leaderboard.colWalks}
             </TableHead>
             <TableHead scope="col" role="columnheader" className={cn(HEAD_CELL, 'w-24 text-right')}>
-              Серия
+              {m.leaderboard.colStreak}
             </TableHead>
             <TableHead scope="col" role="columnheader" className={cn(HEAD_CELL, 'w-24 text-right')}>
-              Ср. скорость
+              {m.leaderboard.colAvgSpeedShort}
             </TableHead>
           </TableRow>
         </TableHeader>

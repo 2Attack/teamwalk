@@ -9,6 +9,8 @@ import type * as React from 'react';
 
 import { cn } from '@/lib/cn';
 
+import { m } from '@/lib/i18n';
+
 /** 20 делений: читается как шкала, но не рассыпается в кашу на 360px. */
 const SEGMENTS = 20;
 
@@ -24,7 +26,7 @@ export function Progress({
   value,
   max = 100,
   className,
-  label = 'Прогресс',
+  label = m.common.progress,
 }: ProgressProps): React.JSX.Element {
   // Данные приходят из API и с сервера: NaN и max ≤ 0 надёжнее погасить здесь.
   const safeMax = Number.isFinite(max) && max > 0 ? max : 100;

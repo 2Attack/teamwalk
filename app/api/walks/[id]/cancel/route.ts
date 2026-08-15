@@ -8,6 +8,7 @@ import { getWalkById } from '@/lib/db/queries/walks';
 import { walks } from '@/lib/db/schema';
 import { notifyTreadmillFreed, wereAllTreadmillsBusy } from '@/lib/telegram/notify';
 import { uuidSchema } from '@/lib/validation';
+import { m } from '@/lib/i18n';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -40,10 +41,10 @@ export async function POST(_request: Request, { params }: { params: Promise<{ id
 
     if (cancelled.length === 0) {
       const current = await getWalkById(walkId);
-      if (!current) return apiError(404, 'NOT_FOUND', 'Прогулка не найдена');
+      if (!current) return apiError(404, 'NOT_FOUND', m.apiMessages.walkNotFound);
       // Идемпотентность: повторная отмена — это успех, а не конфликт.
       if (current.status === 'cancelled') return NextResponse.json({ ok: true });
-      return apiError(409, 'WALK_NOT_ACTIVE', 'Прогулка уже завершена — отменить её нельзя');
+      return apiError(409, 'WALK_NOT_ACTIVE', m.apiMessages.walkAlreadyFinished);
     }
 
     // Свежая отмена освободила дорожку при аншлаге — событие для ждавших

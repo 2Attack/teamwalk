@@ -3,7 +3,7 @@
 import { Badge } from '@/components/ui/8bit/badge';
 import { Icon } from '@/components/ui/icon';
 import { cn } from '@/lib/cn';
-import { plural } from '@/lib/format';
+import { m, plural } from '@/lib/i18n';
 
 interface StreakBadgeProps {
   days: number;
@@ -28,10 +28,7 @@ export function StreakBadge({ days, className }: StreakBadgeProps) {
   const safeDays = Number.isFinite(days) ? Math.max(0, Math.floor(days)) : 0;
   const isHot = safeDays >= HOT_STREAK_DAYS;
 
-  const label =
-    safeDays === 0
-      ? 'Серии пока нет'
-      : `Серия: ${safeDays} ${plural(safeDays, 'день', 'дня', 'дней')} подряд`;
+  const label = safeDays === 0 ? m.streak.none : plural(m.streak.label, safeDays);
 
   return (
     <Badge

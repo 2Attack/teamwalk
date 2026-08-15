@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { ZodError } from 'zod';
 
+import { m } from './i18n';
+
 /** Unified API error format (spec § 5). */
 export type ApiErrorCode =
   | 'VALIDATION_ERROR'
@@ -41,7 +43,7 @@ export function apiError(
 
 export function validationError(error: ZodError): NextResponse<ApiErrorBody> {
   const first = error.issues[0];
-  return apiError(400, 'VALIDATION_ERROR', first?.message ?? 'Некорректные данные', {
+  return apiError(400, 'VALIDATION_ERROR', first?.message ?? m.api.invalidData, {
     field: first?.path.join('.') || undefined,
     details: error.issues,
   });
@@ -54,7 +56,7 @@ export async function handle<T>(fn: () => Promise<NextResponse<T>>) {
   } catch (error) {
     if (error instanceof ZodError) return validationError(error);
     console.error('[api] unhandled error', error);
-    return apiError(500, 'INTERNAL_ERROR', 'Что-то пошло не так. Попробуйте ещё раз');
+    return apiError(500, 'INTERNAL_ERROR', m.api.internalError);
   }
 }
 

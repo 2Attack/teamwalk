@@ -5,6 +5,7 @@ import { apiError, handle, isUniqueViolation, readJson } from '@/lib/api';
 import { createUser, listUsers } from '@/lib/db/queries/users';
 import type { UserDto } from '@/lib/types';
 import { createUserSchema } from '@/lib/validation';
+import { m } from '@/lib/i18n';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -31,7 +32,7 @@ export function POST(request: Request) {
       // Уникальность имени регистронезависима и нечувствительна к пробелам —
       // это обеспечивает индекс users_name_uniq, а не предварительный SELECT (гонка).
       if (isUniqueViolation(error, 'users_name_uniq')) {
-        return apiError(409, 'NAME_TAKEN', 'Участник с таким именем уже есть в списке', {
+        return apiError(409, 'NAME_TAKEN', m.apiMessages.userNameTaken, {
           field: 'name',
         });
       }

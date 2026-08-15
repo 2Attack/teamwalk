@@ -5,6 +5,7 @@ import { apiError, handle } from '@/lib/api';
 import { dismissNudge, getTelegramStatus } from '@/lib/telegram/links';
 import type { TelegramStatusDto } from '@/lib/types';
 import { uuidSchema } from '@/lib/validation';
+import { m } from '@/lib/i18n';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -22,7 +23,7 @@ export function POST(_request: Request, context: RouteContext) {
 
     // Свежий статус до записи — заодно проверка, что участник существует.
     const status = await getTelegramStatus(id);
-    if (!status) return apiError(404, 'NOT_FOUND', 'Участник не найден');
+    if (!status) return apiError(404, 'NOT_FOUND', m.apiMessages.userNotFound);
 
     await dismissNudge(id);
     return NextResponse.json({ ...status, dismissed: true });

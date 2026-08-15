@@ -6,6 +6,7 @@ import { getActiveWalkById, getWalkById } from '@/lib/db/queries/walks';
 import { walkSpeedSegments } from '@/lib/db/schema';
 import type { ActiveWalkDto } from '@/lib/types';
 import { changeSpeedSchema, uuidSchema } from '@/lib/validation';
+import { fmt, m } from '@/lib/i18n';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -37,8 +38,8 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     if (!walk) {
       // Разделяем «нет такой» и «уже не идёт»: экран прогулки ведёт себя по-разному.
       const known = await getWalkById(walkId);
-      if (!known) return apiError(404, 'NOT_FOUND', 'Прогулка не найдена');
-      return apiError(409, 'WALK_NOT_ACTIVE', 'Прогулка уже не идёт — скорость не изменить');
+      if (!known) return apiError(404, 'NOT_FOUND', m.apiMessages.walkNotFound);
+      return apiError(409, 'WALK_NOT_ACTIVE', m.apiMessages.walkNotActiveSpeed);
     }
 
     // Потолок — свойство конкретной дорожки, CHECK его не проверяет (как и на старте).
@@ -46,7 +47,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       return apiError(
         400,
         'SPEED_OUT_OF_RANGE',
-        `Для дорожки «${walk.treadmillName}» максимум ${walk.treadmillMaxSpeedKmh} км/ч`,
+        fmt(m.apiMessages.speedAboveCeiling, { name: walk.treadmillName, max: walk.treadmillMaxSpeedKmh }),
         { field: 'speedKmh' },
       );
     }
@@ -60,7 +61,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     const updated = await getActiveWalkById(walkId);
     if (!updated) {
       // Прогулку успели закрыть параллельно: скорость записана, но отдать нечего.
-      return apiError(409, 'WALK_NOT_ACTIVE', 'Прогулка только что завершилась');
+      return apiError(409, 'WALK_NOT_ACTIVE', m.apiMessages.walkJustFinished);
     }
 
     return NextResponse.json(updated);

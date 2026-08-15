@@ -7,6 +7,7 @@ import { db } from '@/lib/db';
 import { getWalkById } from '@/lib/db/queries/walks';
 import { walks } from '@/lib/db/schema';
 import { uuidSchema } from '@/lib/validation';
+import { fmt, m } from '@/lib/i18n';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -33,18 +34,18 @@ export async function DELETE(_request: Request, { params }: { params: Promise<{ 
 
     if (deleted.length === 0) {
       const current = await getWalkById(walkId);
-      if (!current) return apiError(404, 'NOT_FOUND', 'Запись не найдена');
+      if (!current) return apiError(404, 'NOT_FOUND', m.apiMessages.entryNotFound);
       if (current.status === 'active') {
         return apiError(
           403,
           'DELETE_WINDOW_EXPIRED',
-          'Прогулка ещё идёт — сначала завершите или отмените её',
+          m.apiMessages.walkStillActive,
         );
       }
       return apiError(
         403,
         'DELETE_WINDOW_EXPIRED',
-        `Удалить запись можно только в течение ${DELETE_WINDOW_MINUTES} минут после завершения`,
+        fmt(m.apiMessages.deleteWindowExpired, { minutes: DELETE_WINDOW_MINUTES }),
       );
     }
 

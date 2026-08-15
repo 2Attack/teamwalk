@@ -9,6 +9,7 @@ import {
   notifyTreadmillFreed,
   wereAllTreadmillsBusy,
 } from '@/lib/telegram/notify';
+import { uiText } from '@/lib/telegram/texts';
 
 /**
  * Автозакрытие зависших прогулок (п. 7.6): человек забыл нажать «End walk».
@@ -66,7 +67,7 @@ export async function closeStaleWalks(): Promise<number> {
             .limit(1);
           await notifyTreadmillFreed({
             walkId: first.id,
-            treadmillName: rows[0]?.name ?? 'Дорожка',
+            treadmillName: rows[0]?.name ?? uiText.fallbackTreadmillName,
             freedByUserId: first.userId,
             busySec: first.durationSec ?? 0,
           });

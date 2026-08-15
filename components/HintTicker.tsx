@@ -6,6 +6,7 @@ import { Alert, AlertDescription } from '@/components/ui/8bit/alert';
 import { Icon } from '@/components/ui/icon';
 import { useHints } from '@/lib/client/api';
 import { cn } from '@/lib/cn';
+import { m } from '@/lib/i18n';
 import type { HintDto } from '@/lib/types';
 
 interface HintTickerProps {
@@ -24,7 +25,7 @@ const TYPE_TOTAL_MAX_MS = 2_400;
 const FALLBACK: HintDto = {
   id: 'fallback',
   tone: 'neutral',
-  text: 'Дорожка свободна. Хорошего шага!',
+  text: m.hintsUi.fallback,
   source: 'static',
 };
 
@@ -167,7 +168,7 @@ export function HintTicker({ userId = null, variant = 'home', className }: HintT
 
   return (
     <section
-      aria-label="Лента подсказок"
+      aria-label={m.hintsUi.tickerAria}
       className={cn('w-full', className)}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}

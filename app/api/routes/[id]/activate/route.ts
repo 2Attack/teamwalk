@@ -4,6 +4,7 @@ import { apiError, handle, readJson, type ApiErrorBody } from '@/lib/api';
 import { activateRoute } from '@/lib/db/queries/routes';
 import type { RouteAdminDto } from '@/lib/types';
 import { activateRouteSchema, uuidSchema } from '@/lib/validation';
+import { m } from '@/lib/i18n';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -22,7 +23,7 @@ export function POST(request: Request, context: RouteContext) {
     const { resetProgress } = activateRouteSchema.parse(await readJson(request));
 
     const activated = await activateRoute(id, resetProgress);
-    if (!activated) return apiError(404, 'NOT_FOUND', 'Маршрут не найден');
+    if (!activated) return apiError(404, 'NOT_FOUND', m.apiMessages.routeNotFound);
     return NextResponse.json(activated);
   });
 }

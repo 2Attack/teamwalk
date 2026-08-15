@@ -18,6 +18,7 @@ import { ensureNotifySweep } from '@/lib/telegram/sweep';
 import type { ActiveWalkDto, TreadmillDto } from '@/lib/types';
 import { startWalkSchema } from '@/lib/validation';
 import { closeStaleWalks } from '@/lib/walks/autoclose';
+import { fmt, m } from '@/lib/i18n';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -35,14 +36,14 @@ async function resolveExplicit(id: string, active: TreadmillDto[]): Promise<Chos
   if (found) return { ok: true, treadmill: found };
 
   const known = await getTreadmillById(id);
-  if (!known) return { ok: false, response: apiError(404, 'NOT_FOUND', 'Дорожка не найдена') };
+  if (!known) return { ok: false, response: apiError(404, 'NOT_FOUND', m.apiMessages.treadmillNotFound) };
 
   return {
     ok: false,
     response: apiError(
       409,
       'TREADMILL_INACTIVE',
-      `Дорожка «${known.name}» сейчас недоступна`,
+      fmt(m.apiMessages.treadmillUnavailable, { name: known.name }),
       { field: 'treadmillId' },
     ),
   };
@@ -53,7 +54,7 @@ function resolveAuto(active: TreadmillDto[], skip: ReadonlySet<string> = new Set
   if (active.length === 0) {
     return {
       ok: false,
-      response: apiError(409, 'NO_TREADMILLS', 'Сейчас нет доступных дорожек'),
+      response: apiError(409, 'NO_TREADMILLS', m.apiMessages.noTreadmills),
     };
   }
 
@@ -63,7 +64,7 @@ function resolveAuto(active: TreadmillDto[], skip: ReadonlySet<string> = new Set
 
   return {
     ok: false,
-    response: apiError(409, 'TREADMILL_BUSY', 'Все дорожки заняты, подождите освобождения', {
+    response: apiError(409, 'TREADMILL_BUSY', m.apiMessages.allTreadmillsBusy, {
       details: active.map((t) => ({ treadmillId: t.id, name: t.name, busy: t.busy })),
     }),
   };
@@ -86,7 +87,7 @@ function violates(error: unknown, index?: string): boolean {
 
 /** 409 по п. 7.1: у участника уже есть активная прогулка — отдаём её в `details`. */
 async function alreadyActive(userId: string) {
-  return apiError(409, 'WALK_ALREADY_ACTIVE', 'У вас уже идёт прогулка', {
+  return apiError(409, 'WALK_ALREADY_ACTIVE', m.apiMessages.walkAlreadyActive, {
     details: await getActiveWalk(userId),
   });
 }
@@ -95,8 +96,8 @@ async function alreadyActive(userId: string) {
 async function treadmillBusy(treadmill: TreadmillDto) {
   const busy = (await listActiveTreadmills()).find((t) => t.id === treadmill.id)?.busy ?? null;
   const message = busy
-    ? `На дорожке «${treadmill.name}» сейчас ${busy.user.name}, с ${formatTimeOfDay(busy.startedAt)}`
-    : `Дорожка «${treadmill.name}» только что занята`;
+    ? fmt(m.apiMessages.treadmillBusyBy, { name: treadmill.name, user: busy.user.name, time: formatTimeOfDay(busy.startedAt) })
+    : fmt(m.apiMessages.treadmillJustTaken, { name: treadmill.name });
 
   return apiError(409, 'TREADMILL_BUSY', message, { field: 'treadmillId', details: busy });
 }
@@ -125,7 +126,7 @@ export async function POST(request: Request) {
     // От гонки по-прежнему защищает partial unique index, а не этот SELECT.
     const own = await getActiveWalk(userId);
     if (own) {
-      return apiError(409, 'WALK_ALREADY_ACTIVE', 'У вас уже идёт прогулка', { details: own });
+      return apiError(409, 'WALK_ALREADY_ACTIVE', m.apiMessages.walkAlreadyActive, { details: own });
     }
 
     /*
@@ -152,7 +153,7 @@ export async function POST(request: Request) {
         return apiError(
           400,
           'SPEED_OUT_OF_RANGE',
-          `Для дорожки «${treadmill.name}» максимум ${treadmill.maxSpeedKmh} км/ч`,
+          fmt(m.apiMessages.speedAboveCeiling, { name: treadmill.name, max: treadmill.maxSpeedKmh }),
           { field: 'speedKmh' },
         );
       }
@@ -180,7 +181,7 @@ export async function POST(request: Request) {
 
     const walk = await getActiveWalk(userId);
     if (!walk) {
-      return apiError(500, 'INTERNAL_ERROR', 'Прогулка создана, но её не удалось прочитать');
+      return apiError(500, 'INTERNAL_ERROR', m.apiMessages.walkCreatedUnreadable);
     }
 
     // Telegram никогда не в горячем пути (п. 6.10.1): уведомление о старте —

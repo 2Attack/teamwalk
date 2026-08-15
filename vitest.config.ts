@@ -14,5 +14,12 @@ export default defineConfig({
   test: {
     environment: 'node',
     include: ['tests/**/*.test.ts'],
+    /*
+     * The suites assert Russian content (validation messages, telegram texts,
+     * the ru hint filter), so the locale is pinned explicitly instead of
+     * relying on the app default (en). Locale-specific tests override it via
+     * `vi.stubEnv` + `vi.resetModules`.
+     */
+    env: { NEXT_PUBLIC_LOCALE: 'ru' },
   },
 });

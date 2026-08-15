@@ -2,6 +2,7 @@ import { and, eq, isNull, sql } from 'drizzle-orm';
 
 import { TZ } from '../config';
 import { db } from '../db';
+import { m } from '../i18n';
 import { achievements, treadmills, walkSpeedSegments, walks } from '../db/schema';
 import { addOfficeDays, officeDayStart, officeWeekday, toOfficeDay } from '../time';
 import type { AchievementDto } from '../types';
@@ -16,28 +17,32 @@ import { getStreak } from './streak';
  * удалении прогулки — худший из вариантов поведения.
  */
 
-export const ACHIEVEMENTS: ReadonlyArray<{ code: string; title: string; description: string }> = [
-  { code: 'first_walk', title: 'Первый шаг', description: 'Первая завершённая прогулка' },
-  { code: 'early_bird', title: 'Ранняя пташка', description: 'Прогулка начата до 9:00' },
-  { code: 'night_owl', title: 'Сова', description: 'Прогулка начата после 18:00' },
-  { code: 'lunch_walker', title: 'Обеденный странник', description: 'Прогулка начата между 12:00 и 14:00' },
-  { code: 'friday_closer', title: 'Пятничный', description: 'Финиш в пятницу после 17:00' },
-  { code: 'marathon', title: 'Марафон', description: 'Одна прогулка дольше часа' },
-  { code: 'zen', title: 'Дзен', description: '30 минут на скорости не выше 2 км/ч' },
-  { code: 'long_haul', title: 'Дальний рейс', description: '5 км за одну прогулку' },
-  { code: 'gearbox', title: 'Коробка передач', description: 'Три смены скорости за одну прогулку' },
-  { code: 'cruise', title: 'Круиз-контроль', description: '10 прогулок без единой смены скорости' },
-  { code: 'five_days', title: 'Пятидневка', description: '5 рабочих дней подряд' },
-  { code: 'ten_day_streak', title: 'Двухнедельник', description: 'Серия 10 рабочих дней' },
-  { code: 'ten_walks', title: 'Десятка', description: '10 завершённых прогулок' },
-  { code: 'fifty_walks', title: 'Полсотни ходок', description: '50 завершённых прогулок' },
-  { code: 'stayer', title: 'Стайер', description: '10 прогулок на скорости 7+ км/ч' },
-  { code: 'full_throttle', title: 'Полный газ', description: '10 минут на потолке дорожки' },
-  { code: 'fifty_km', title: 'Полтинник', description: '50 км суммарно' },
-  { code: 'first_hundred', title: 'Первая сотня', description: '100 км суммарно' },
-  { code: 'warm_treadmill', title: 'Дорожка не остыла', description: 'Две прогулки в один день' },
-  { code: 'connected', title: 'На связи', description: 'Привязан Telegram-бот' },
-];
+/** Award order is the display order; titles come from the i18n dictionary. */
+const ACHIEVEMENT_CODES = [
+  'first_walk',
+  'early_bird',
+  'night_owl',
+  'lunch_walker',
+  'friday_closer',
+  'marathon',
+  'zen',
+  'long_haul',
+  'gearbox',
+  'cruise',
+  'five_days',
+  'ten_day_streak',
+  'ten_walks',
+  'fifty_walks',
+  'stayer',
+  'full_throttle',
+  'fifty_km',
+  'first_hundred',
+  'warm_treadmill',
+  'connected',
+] as const;
+
+export const ACHIEVEMENTS: ReadonlyArray<{ code: string; title: string; description: string }> =
+  ACHIEVEMENT_CODES.map((code) => ({ code, ...m.achievements[code] }));
 
 /** Пороги условий. Значения смысловые, а не настроечные, поэтому живут рядом с каталогом. */
 const EARLY_BIRD_BEFORE_HOUR = 9;

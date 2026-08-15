@@ -4,6 +4,7 @@ import { useId } from 'react';
 
 import { Button } from '@/components/ui/8bit/button';
 import { MIN_SPEED_KMH } from '@/lib/config';
+import { fmt, m } from '@/lib/i18n';
 
 interface SpeedPickerProps {
   /** Выбранная скорость; `null` — ещё не выбрана. */
@@ -44,7 +45,7 @@ export function SpeedPicker({ value, max, onChange, disabled = false }: SpeedPic
   return (
     <div className="space-y-2">
       <p id={labelId} className="text-sm text-text-dim">
-        Скорость дорожки, км/ч
+        {m.speedPicker.label}
       </p>
       {/* gap-3: пиксельная рамка 8bitcn выступает на 6 px за габарит кнопки,
           при меньшем зазоре соседние рамки наезжали бы друг на друга. */}
@@ -62,7 +63,7 @@ export function SpeedPicker({ value, max, onChange, disabled = false }: SpeedPic
               type="button"
               role="radio"
               aria-checked={selected}
-              aria-label={`${speed} км/ч`}
+              aria-label={fmt(m.speedPicker.speedAria, { speed })}
               // Roving tabindex: в группу заходим по Tab один раз, дальше — стрелками.
               tabIndex={selected || (value === null && speed === speeds[0]) ? 0 : -1}
               disabled={disabled}
