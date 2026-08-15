@@ -36,23 +36,23 @@ const TABS: ReadonlyArray<{ value: Period | 'custom'; label: string; short: stri
 /** date-fns locale for the range calendar, matched to the app locale. */
 const DATE_FNS_LOCALE = { ru, en: enUS, es }[LOCALE];
 
-/** Стартовый произвольный период — последние 7 офисных дней включая сегодня. */
+/** Initial custom range: the last 7 office days including today. */
 function defaultRange(): DayRange {
   const today = toOfficeDay();
   return { from: addOfficeDays(today, -6), to: today };
 }
 
 /**
- * Офисная дата → `Date` для календаря: локальная полночь того же календарного
- * дня. Через `officeDayStart` нельзя — календарь живёт в зоне устройства, и
- * московская полночь западнее Москвы отобразилась бы предыдущим днём.
+ * Office day → `Date` for the calendar: local midnight of the same calendar
+ * day. `officeDayStart` won't do — the calendar lives in the device timezone,
+ * and Moscow midnight west of Moscow would render as the previous day.
  */
 function dayToDate(day: string): Date {
   const [y, m, d] = day.split('-').map(Number);
   return new Date(y, m - 1, d);
 }
 
-/** Выбранный в календаре день → `YYYY-MM-DD` из локальных полей, без сдвига зоны. */
+/** Calendar-selected day → `YYYY-MM-DD` from local fields, no timezone shift. */
 function dateToDay(date: Date): string {
   const y = date.getFullYear();
   const m = String(date.getMonth() + 1).padStart(2, '0');
@@ -67,7 +67,7 @@ const dayLabelWithYearFmt = new Intl.DateTimeFormat(INTL_LOCALE, {
   year: 'numeric',
 });
 
-/** Метка кнопки: «5 авг. — 13 авг.»; год дописывается, только если он не текущий. */
+/** Button label like «5 авг. — 13 авг.»; the year is appended only when not current. */
 function formatRangeLabel(range: DayRange): string {
   const currentYear = String(new Date().getFullYear());
   const fmt = (day: string) =>
@@ -76,23 +76,23 @@ function formatRangeLabel(range: DayRange): string {
 }
 
 /**
- * Переключатель периода рейтинга (п. 6.2, 6.8.2) на `Tabs` из 8bitcn.
- * Паттерн tablist целиком отдан библиотеке: `role="tablist"`, roving tabindex и
- * ходьба стрелками/Home/End приходят из Base UI, поэтому своих обработчиков нет.
+ * Leaderboard period switcher (spec § 6.2, 6.8.2) on 8bitcn `Tabs`.
+ * The tablist pattern is fully delegated to Base UI (`role="tablist"`, roving
+ * tabindex, arrow/Home/End navigation) — no custom handlers.
  *
- * Четвёртая вкладка «Период» — произвольный диапазон дат: под вкладками
- * появляется кнопка с текущими границами, по ней — range-календарь в поповере.
- * Каждый клик по календарю сразу уходит в `onChange`: рейтинг за спиной
- * поповера обновляется живьём, отдельной кнопки «Применить» нет.
+ * The fourth tab is a custom date range: a button with the current bounds
+ * appears below the tabs and opens a range calendar in a popover. Every
+ * calendar click goes straight to `onChange` — the leaderboard behind the
+ * popover updates live, there is no "Apply" button.
  *
- * Панелей (`TabsContent`) нет намеренно: содержимое вкладки — пьедестал и таблица,
- * которые лежат в разметке страницы рядом и следуют одному периоду. Состояние
- * держит родитель — иначе на экране висели бы два противоречащих топ-3.
- * «Неделя» — вкладка по умолчанию, но дефолт задаёт родитель, а не этот компонент.
+ * No `TabsContent` panels on purpose: tab content is the podium and table that
+ * sit next to each other in the page and follow one period. The parent owns
+ * the state — otherwise two contradicting top-3s could be on screen. The
+ * parent also sets the default tab.
  */
 export function PeriodTabs({ value, onChange, className }: PeriodTabsProps) {
-  // Последний выбранный диапазон переживает уход на другие вкладки:
-  // вернувшись на «Период», участник видит свои даты, а не сброс к дефолту.
+  // The last chosen range survives switching to other tabs: returning to
+  // "custom" shows the user's dates, not a reset to the default.
   const [lastRange, setLastRange] = useState<DayRange>(defaultRange);
 
   const applyRange = (range: DayRange) => {
@@ -106,11 +106,11 @@ export function PeriodTabs({ value, onChange, className }: PeriodTabsProps) {
   };
 
   const handleSelect = (selected: DateRange | undefined) => {
-    // Клик, снявший выделение, диапазон не меняет: пустого периода не бывает.
+    // A click that clears the selection doesn't change the range: no empty periods.
     if (!selected?.from) return;
     const from = dateToDay(selected.from);
     const to = dateToDay(selected.to ?? selected.from);
-    // Библиотека упорядочивает границы сама, но контракт API — `from <= to`.
+    // The library orders bounds itself, but the API contract is `from <= to`.
     applyRange(from <= to ? { from, to } : { from: to, to: from });
   };
 
@@ -119,19 +119,19 @@ export function PeriodTabs({ value, onChange, className }: PeriodTabsProps) {
       value={value.period}
       onValueChange={handleTabChange}
       /*
-        Пиксельные «уши» рамки 8bitcn вылезают на 6 px за габарит списка со всех
-        сторон (inset-0 с -m-1.5), поэтому вокруг оставлен ровно такой отступ.
+        The 8bitcn pixel frame "ears" overflow the list by 6 px on all sides
+        (inset-0 with -m-1.5), hence exactly that much padding around.
       */
-      // `items-center` — вкладки по центру под пьедесталом; корень Tabs в
-      // горизонтальной ориентации это flex-колонка, поэтому центрирует список.
+      // `items-center` centers the tabs under the podium; the Tabs root in
+      // horizontal orientation is a flex column, so it centers the list.
       className={cn('items-center p-1.5', className)}
     >
       <TabsList
         aria-label={m.periodTabs.listAria}
         className={cn(
           'gap-1 p-0',
-          // h-8 из базы приходит с вариантом (специфичность 0,2,0), поэтому
-          // перебить её можно только тем же вариантом — иначе тач-таргет 32 px.
+          // Base h-8 comes with a variant (specificity 0,2,0), so it can only
+          // be overridden with the same variant — otherwise a 32 px touch target.
           'group-data-horizontal/tabs:h-auto',
         )}
       >
@@ -141,16 +141,16 @@ export function PeriodTabs({ value, onChange, className }: PeriodTabsProps) {
             value={tab.value}
             aria-label={tab.label}
             className={cn(
-              // min-h-11: тач-таргет не меньше 44 px (п. 6.7.7).
+              // min-h-11: touch target at least 44 px (spec § 6.7.7).
               'min-h-11 px-3 text-[16px] leading-none',
-              // Активная вкладка — цитрусовая заливка, как раньше у кнопки `default`.
-              // Селектор именно data-active: базовый Tabs собран на Base UI,
-              // где нет radix-овского data-[state=active] из класса библиотеки.
-              // Пара с `dark:` обязательна: в базе активное состояние задано и в
-              // `dark:`-варианте, а он в нашей всегда тёмной теме перебил бы одиночный.
+              // Active tab: citrus fill. Selector must be data-active — base
+              // Tabs is built on Base UI, not Radix's data-[state=active].
+              // The `dark:` pair is mandatory: the base defines the active
+              // state in a `dark:` variant too, which in our always-dark theme
+              // would override a lone selector.
               'data-active:bg-primary data-active:text-primary-foreground',
               'dark:data-active:bg-primary dark:data-active:text-primary-foreground',
-              // Мгновенная смена состояния вместо цветового перехода (п. 6.7.6).
+              // Instant state change instead of a color transition (spec § 6.7.6).
               'transition-none',
             )}
           >
@@ -163,16 +163,17 @@ export function PeriodTabs({ value, onChange, className }: PeriodTabsProps) {
       {value.period === 'custom' && (
         <Popover>
           {/*
-            Base UI (стиль `base-nova` в components.json) подставляет свой
-            элемент через `render`, а не через `asChild` как Radix.
+            Base UI (`base-nova` style in components.json) injects its element
+            via `render`, not Radix's `asChild`.
           */}
           <PopoverTrigger
             render={
               <Button
                 type="button"
                 variant="outline"
-                // Даты — цифры и сокращения месяцев: sans, иначе кириллица
-                // «авг.» пиксельным шрифтом без кириллицы рассыпается (п. 6.7.1).
+                // Dates are digits and month abbreviations: sans, because
+                // Cyrillic like «авг.» falls apart in the pixel font, which
+                // has no Cyrillic glyphs (spec § 6.7.1).
                 font="normal"
                 aria-label={m.periodTabs.changeDatesAria}
                 className="mt-3 min-h-11 gap-2 px-3 text-sm tabular-nums"
@@ -192,10 +193,10 @@ export function PeriodTabs({ value, onChange, className }: PeriodTabsProps) {
               defaultMonth={dayToDate(value.to)}
               selected={{ from: dayToDate(value.from), to: dayToDate(value.to) }}
               onSelect={handleSelect}
-              // Будущих прогулок не бывает — дни после сегодняшнего закрыты.
+              // No future walks — days after today are disabled.
               disabled={{ after: new Date() }}
-              // Рамку рисует поповер: собственные «уши» календаря внутри панели
-              // дали бы вторую рамку в рамке (тот же приём, что у Command).
+              // The popover draws the frame: the calendar's own "ears" inside
+              // the panel would double the frame (same trick as Command).
               className="border-y-0 [&>div.absolute]:hidden"
             />
           </PopoverContent>

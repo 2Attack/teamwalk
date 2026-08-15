@@ -21,7 +21,7 @@ function routeKm(km: number): string {
   return Math.round(Math.max(0, km)).toLocaleString(INTL_LOCALE);
 }
 
-/** Жёсткий контур в четыре стороны — пиксельная обводка без blur (п. 6.7.6). */
+/** Hard four-way outline — pixel stroke without blur (spec § 6.7.6). */
 const PERCENT_OUTLINE = {
   textShadow:
     '1px 1px 0 var(--background), -1px -1px 0 var(--background), ' +
@@ -33,13 +33,10 @@ function ProgressBar({ ratio, label }: { ratio: number; label: string }) {
   const percent = Math.round(safeRatio * 100);
   return (
     /*
-      `variant="retro"` из 8bitcn: полоса набирается двадцатью квадратами, свой
-      слой насечек поверх заливки больше не нужен. Шаг маршрута — 1/20, то есть
-      квадрат зажигается примерно каждые 5 % пути; полоса и раньше двигалась
-      редко (только на финише прогулки), так что ступенька заметнее плавности.
-      Анимации нет вовсе — п. 6.7.6 требует именно мгновенной смены состояния.
-      Пиксельная рамка полосы — из самой библиотеки. Проценты — поверх полосы:
-      цифра со «своим» контуром читается и на лаймовых, и на пустых сегментах.
+      8bitcn `variant="retro"`: the bar is built from twenty squares, one
+      lighting up per ~5% of the route. No animation at all — spec § 6.7.6
+      requires an instant state change. The percentage sits on top of the bar:
+      the outlined digit reads on both lime and empty segments.
     */
     <div className="relative">
       <Progress
@@ -64,8 +61,8 @@ function ProgressBar({ ratio, label }: { ratio: number; label: string }) {
 function ProgressBody({ data }: { data: TeamProgressDto }) {
   const { totalKm, passed, next, kmLeft, progressRatio, route } = data;
 
-  // «Маршрут не выбран» — штатное состояние пустой таблицы (п. 6.12.6):
-  // километры команды всё равно показываем, вместо полосы — приглашение.
+  // "No route selected" is a normal state of an empty table (spec § 6.12.6):
+  // team kilometers are still shown; the bar is replaced by an invitation.
   if (!passed || route.length < 2) {
     return (
       <p className="text-sm text-text-dim">
@@ -78,7 +75,7 @@ function ProgressBody({ data }: { data: TeamProgressDto }) {
     );
   }
 
-  // Пройденное — без округления: команда честно заработала каждую сотку.
+  // Distance covered is not rounded: the team honestly earned every 100 m.
   const caption = next
     ? fmt(m.teamProgress.captionNext, {
         km: formatKm(totalKm),
@@ -89,7 +86,7 @@ function ProgressBody({ data }: { data: TeamProgressDto }) {
 
   return (
     <>
-      {/* Названия городов — данные, значит обычный sans (п. 6.7.1). */}
+      {/* City names are data — regular sans (spec § 6.7.1). */}
       <div className="flex items-baseline justify-between gap-3 text-sm">
         <span className="min-w-0 truncate font-medium text-citrus" title={passed.city}>
           {passed.city}
@@ -105,9 +102,9 @@ function ProgressBody({ data }: { data: TeamProgressDto }) {
 
       <p className="mt-3 text-sm text-text-dim">{caption}</p>
 
-      {/* Полная цепочка маршрута (п. 6.12): шапка показывает края текущего
-          отрезка, а эта строка отвечает на «а что дальше?» — пройденные города
-          приглушены, следующий подсвечен. Названия — данные, sans (п. 6.7.1). */}
+      {/* Full route chain (spec § 6.12): the header shows the current segment's
+          ends, this line answers "what's next" — passed cities dimmed, the
+          next one highlighted. Names are data, sans (spec § 6.7.1). */}
       {route.length >= 2 && (
         <p className="mt-2 flex flex-wrap items-center gap-x-1.5 gap-y-1 text-xs text-text-dim">
           {route.map((point, index) => (
@@ -131,27 +128,27 @@ function ProgressBody({ data }: { data: TeamProgressDto }) {
 }
 
 /**
- * Командная цель на маршруте (п. 6.6.8, 6.8.2): единственная механика, где сильный
- * ходок складывается со слабым, а не отнимает у него.
+ * Team route goal (spec § 6.6.8, 6.8.2): the one mechanic where a strong walker
+ * adds to a weak one instead of taking from them.
  *
- * Панель — `Card` из 8bitcn: та же двойная пиксельная рамка, что и у ленты хинтов,
- * поэтому блоки главной держат общий ритм. `font="normal"` — внутри только
- * названия городов и подпись, то есть слой данных (п. 6.7.1); заголовок из этого
- * правила выведен и набран пиксельным, как у блока старта.
+ * Panel is an 8bitcn `Card` — same double pixel frame as the hint feed, keeping
+ * the home blocks in one rhythm. `font="normal"`: only city names and a caption
+ * inside, i.e. the data layer (spec § 6.7.1); the title is exempt and set in
+ * pixel font, like the start block's.
  */
 export function TeamProgress({ className }: TeamProgressProps) {
   const { data, error, isLoading } = useTeamProgress();
   const titleId = useId();
 
   return (
-    // Заголовок виден на экране, поэтому имя секции берётся из него, а не из
-    // отдельного aria-label: два разных названия одного блока сбивают навигацию.
+    // The title is visible, so the section is named by it rather than a
+    // separate aria-label: two different names for one block confuse navigation.
     <section aria-labelledby={titleId} className={cn('w-full', className)}>
       <Card font="normal">
         <CardHeader>
-          {/* text-sm на мобильном: пиксельный шрифт широкий и 16-м кеглем
-              упирается в край экрана 360 px (п. 6.7.2).
-              `retro` в классе обязателен — className в 8bitcn перекрывает его. */}
+          {/* text-sm on mobile: the pixel font is wide and hits the edge of a
+              360 px screen at 16px (spec § 6.7.2).
+              `retro` in the class is mandatory — className in 8bitcn overrides it. */}
           <CardTitle
             id={titleId}
             className="retro text-sm leading-snug break-words sm:text-base"

@@ -5,7 +5,7 @@ import type { UserDto } from '@/lib/types';
 import { db } from '../index';
 import { users } from '../schema';
 
-/** Запросы по участникам (п. 5.1 ТЗ). */
+/** Participant queries (spec § 5.1). */
 
 type UserRow = typeof users.$inferSelect;
 
@@ -17,9 +17,9 @@ const toDto = (row: UserRow): UserDto => ({
 });
 
 /**
- * Сортировка русских имён делается в JS через `Intl.Collator`, а не `ORDER BY ... COLLATE`:
- * набор коллаций в конкретном инстансе Postgres не гарантирован, а участников десятки —
- * сортировка в памяти дешевле, чем риск 500-й на отсутствующей коллации.
+ * Russian names are sorted in JS via `Intl.Collator`, not `ORDER BY ... COLLATE`:
+ * the collation set of a given Postgres instance is not guaranteed, and with tens
+ * of participants an in-memory sort is cheaper than risking a 500 on a missing collation.
  */
 const byName = new Intl.Collator('ru', { sensitivity: 'base', numeric: true });
 
@@ -38,8 +38,8 @@ export async function createUser(input: {
   name: string;
   avatarId: string;
 }): Promise<UserDto> {
-  // Конфликт имени не проверяем заранее: между SELECT и INSERT возможна гонка,
-  // источник истины — уникальный индекс users_name_uniq, его нарушение ловит вызывающий код.
+  // No upfront name-conflict check: a SELECT-then-INSERT race is possible; the
+  // source of truth is the users_name_uniq index, whose violation the caller handles.
   const rows = await db
     .insert(users)
     .values({ name: input.name, avatarId: input.avatarId })
@@ -56,7 +56,7 @@ export async function updateUser(
   if (patch.avatarId !== undefined) values.avatarId = patch.avatarId;
   if (patch.hintsOptOut !== undefined) values.hintsOptOut = patch.hintsOptOut;
 
-  // Пустой SET — синтаксическая ошибка в SQL; такой patch отсекает Zod, но подстрахуемся.
+  // An empty SET is a SQL syntax error; Zod rejects such a patch, but be safe.
   if (Object.keys(values).length === 0) return getUser(id);
 
   const rows = await db.update(users).set(values).where(eq(users.id, id)).returning();
@@ -64,7 +64,7 @@ export async function updateUser(
   return row ? toDto(row) : null;
 }
 
-/** Аватары, уже выбранные кем-то: в UI помечаются как «занят» (п. 6.5). */
+/** Avatars already picked by someone: marked as taken in the UI (spec § 6.5). */
 export async function takenAvatarIds(): Promise<string[]> {
   const rows = await db.selectDistinct({ avatarId: users.avatarId }).from(users);
   return rows.map((r) => r.avatarId);

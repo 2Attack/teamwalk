@@ -1,12 +1,12 @@
 'use client';
 
 /**
- * Экран выбора персонажа (п. 6.5): сетка 6×4 из 24 пресетов.
+ * Character picker (spec § 6.5): 6×4 grid of 24 presets.
  *
- * Занятые пресеты приглушены и подписаны, но остаются выбираемыми — жёсткий запрет
- * создал бы тупик, как только участников станет больше 24.
- * Клавиатура работает по паттерну radiogroup: Tab входит в сетку один раз,
- * стрелки двигают выбор, Home/End — к краям.
+ * Taken presets are dimmed and labeled but still selectable — a hard block
+ * would dead-end once there are more than 24 members.
+ * Keyboard follows the radiogroup pattern: Tab enters the grid once, arrows
+ * move the selection, Home/End jump to the edges.
  */
 import * as React from 'react';
 
@@ -16,7 +16,7 @@ import { fmt, m } from '@/lib/i18n';
 
 import { Avatar } from './Avatar';
 
-/** Сетка 6×4 по ТЗ; на 360px ячейка ужимается примерно до 48px и остаётся тач-таргетом. */
+/** 6×4 grid per spec; at 360px a cell shrinks to ~48px and stays a valid touch target. */
 const COLUMNS = 6;
 
 const STEP: Record<string, number> = {
@@ -29,7 +29,7 @@ const STEP: Record<string, number> = {
 export interface AvatarPickerProps {
   value: string;
   onChange: (id: string) => void;
-  /** Пресеты, занятые другими участниками. */
+  /** Presets taken by other members. */
   taken?: string[];
 }
 
@@ -42,11 +42,9 @@ export function AvatarPicker({
   const takenSet = React.useMemo(() => new Set(taken), [taken]);
 
   /**
-   * Фокус едет за выбором: иначе стрелки после первого шага перестают работать,
-   * а Safari вдобавок не отдаёт кнопке фокус по клику. Подскроливания это больше
-   * не вызывает — фокус всегда уходит на ячейку, по которой только что кликнули
-   * или до которой дошли стрелками, то есть заведомо видимую. Рывок был у кнопки
-   * «Случайный», которая кидала выбор в произвольную ячейку сетки; кнопки нет.
+   * Focus follows selection: otherwise arrow keys stop working after the first
+   * step, and Safari doesn't focus buttons on click. No scroll jump — focus
+   * always lands on the cell just clicked or arrowed to, which is visible.
    */
   const select = React.useCallback(
     (id: string) => {
@@ -68,7 +66,7 @@ export function AvatarPicker({
     select(AVATARS[clamped].id);
   };
 
-  // Активная точка входа с Tab: выбранный элемент, а при неизвестном value — первый.
+  // Tab entry point: the selected item, or the first one if value is unknown.
   const focusIndex = Math.max(
     AVATARS.findIndex((a) => a.id === value),
     0,
@@ -108,7 +106,7 @@ export function AvatarPicker({
                 isTaken && !selected && 'opacity-50',
               )}
             >
-              {/* `!` обязателен: Avatar задаёт размер инлайн-стилем, а ячейка тянется по сетке. */}
+              {/* `!` is required: Avatar sets its size via inline style, but the cell tracks the grid. */}
               <Avatar
                 avatarId={preset.id}
                 size={40}
@@ -125,7 +123,7 @@ export function AvatarPicker({
               )}
 
               {isTaken && (
-                // Подпись — слой «данные», поэтому обычный sans (п. 6.7.1).
+                // Caption is the data layer — regular sans (spec § 6.7.1).
                 <span className="absolute inset-x-0 bottom-0 bg-bg-deep/85 text-center text-[10px] leading-tight text-text-dim">
                   {m.avatarPicker.takenBadge}
                 </span>
@@ -135,10 +133,8 @@ export function AvatarPicker({
         })}
       </div>
 
-      {/* Подпись выбранного пресета. Кнопки «Случайный» здесь больше нет:
-          случайный свободный аватар и так подставляется при открытии
-          «Нового участника» (см. AddUserDialog), а выбрать другой можно прямо
-          в сетке. */}
+      {/* Selected preset caption. No "random" button: a random free avatar is
+          already pre-filled when the add-user dialog opens (see AddUserDialog). */}
       <p className="truncate text-sm text-text-dim">{avatarLabel(value)}</p>
     </div>
   );

@@ -1,15 +1,14 @@
--- Смена скорости в процессе прогулки (п. 6.3).
--- Скрипт идемпотентен: повторный запуск ничего не ломает.
+-- Mid-walk speed changes (spec § 6.3).
+-- The script is idempotent: rerunning breaks nothing.
 
--- Скорость перестала быть одним числом на всю прогулку: человек может прибавить
--- или сбросить темп прямо на дорожке. Прошлое при этом не переписывается —
--- пройденное до смены считается по прежней скорости, поэтому каждый отрезок
--- постоянной скорости хранится отдельной строкой.
+-- Speed is no longer a single number for the whole walk: pace can change right
+-- on the treadmill. History is never rewritten — distance before a change is
+-- computed at the old speed, so each constant-speed segment is its own row.
 --
--- Первый отрезок в таблице НЕ хранится: он равен `walks.speed_kmh`, действующей
--- с `walks.started_at`. Значит, прогулки без единой смены скорости (в том числе
--- все существующие) не требуют ни одной строки здесь и не нуждаются в бэкфилле,
--- а `walks.speed_kmh` навсегда остаётся скоростью старта.
+-- The first segment is NOT stored: it equals `walks.speed_kmh`, effective from
+-- `walks.started_at`. Walks with no speed change (including all existing ones)
+-- need no rows here and no backfill, and `walks.speed_kmh` remains the start
+-- speed forever.
 create table if not exists walk_speed_segments (
   id         uuid primary key default gen_random_uuid(),
   walk_id    uuid not null references walks(id) on delete cascade,
@@ -19,6 +18,6 @@ create table if not exists walk_speed_segments (
   constraint walk_segment_speed_range check (speed_kmh between 1 and 25)
 );
 
--- Читаем всегда одинаково: все отрезки одной прогулки по возрастанию времени.
+-- The one read pattern: all segments of a walk in ascending time order.
 create index if not exists walk_speed_segments_walk_idx
   on walk_speed_segments (walk_id, started_at);

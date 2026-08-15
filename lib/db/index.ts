@@ -13,28 +13,26 @@ function connect(): { sql: NeonQueryFunction<false, false>; db: Db } {
 
   const url = process.env.DATABASE_URL;
   if (!url) {
-    // Fail fast, но в момент запроса, а не импорта модуля: иначе `next build`
-    // падал бы при сборе метаданных роутов на машине без строки подключения.
+    // Fail fast at query time, not module import: otherwise `next build`
+    // would crash collecting route metadata on a machine without the URL.
     throw new Error('DATABASE_URL is not set. See .env.example');
   }
 
-  // Локальная разработка без облачной БД: Postgres в docker + HTTP-прокси Neon
-  // на `db.localtest.me:4444`. В проде хост другой и ветка не срабатывает.
+  // Local dev without a cloud DB: dockerized Postgres + Neon HTTP proxy at
+  // `db.localtest.me:4444`. Prod uses a different host, so this branch is inert.
   if (url.includes('localtest.me')) {
     neonConfig.fetchEndpoint = (host) =>
       host.endsWith('localtest.me') ? `http://${host}:4444/sql` : `https://${host}/sql`;
   }
 
-  /**
-   * HTTP-драйвер Neon: в serverless нет долгоживущих соединений (п. 3.1 ТЗ),
-   * поэтому пул `pg` здесь противопоказан.
-   */
+  // Neon HTTP driver: serverless has no long-lived connections (spec § 3.1),
+  // so a `pg` pool is off the table here.
   cachedSql = neon(url);
   cachedDb = drizzle(cachedSql, { schema });
   return { sql: cachedSql, db: cachedDb };
 }
 
-/** Ленивый прокси: соединение поднимается на первом обращении. */
+/** Lazy proxy: the connection is established on first access. */
 export const db: Db = new Proxy({} as Db, {
   get(_target, prop, receiver) {
     const value = Reflect.get(connect().db as object, prop, receiver);

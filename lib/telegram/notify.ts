@@ -13,22 +13,23 @@ import { getLink } from './links';
 import { autocloseText, finishText, freeText, startText, uiText } from './texts';
 
 /**
- * Событийные уведомления: старт, финиш, автозакрытие (п. 6.10.4, 6.10.5 ТЗ).
+ * Event notifications: start, finish, autoclose (spec § 6.10.4, 6.10.5).
  *
- * Самодостаточные фоновые задачи: вызываются из хендлеров через `waitUntil()`
- * после ответа клиенту, сами читают привязку и настройки. Никогда не бросают —
- * недоступность Telegram не влияет ни на одну функцию приложения (п. 6.10.1).
+ * Self-contained background tasks: called from handlers via `waitUntil()`
+ * after the client response; they read the link and preferences themselves.
+ * Never throw — Telegram being down must not affect any app function
+ * (spec § 6.10.1).
  *
- * Идемпотентность — журналом `notification_log`: вставка ключа дедупликации
- * с unique-индексом; пустой `returning` означает «другой инстанс уже отправил».
+ * Idempotency via `notification_log`: dedup-key insert against a unique
+ * index; an empty `returning` means another instance already sent.
  */
 
-/** Заглушено командой `/mute`: дата в будущем — молчим (п. 6.10.3). */
+/** Muted via `/mute`: a future date — stay silent (spec § 6.10.3). */
 function isMuted(link: TelegramLink): boolean {
   return link.mutedUntil !== null && link.mutedUntil.getTime() > Date.now();
 }
 
-/** true — ключ вставлен нами, можно отправлять; false — уже отправлено. */
+/** true — we inserted the key, safe to send; false — already sent. */
 async function tryDedup(userId: string, kind: string, dedupKey: string): Promise<boolean> {
   const rows = await db
     .insert(notificationLog)
@@ -39,10 +40,10 @@ async function tryDedup(userId: string, kind: string, dedupKey: string): Promise
 }
 
 /**
- * Постскриптум-хинт к финишу (п. 6.10.4): строка из готового `hints_cache`
- * с двумя дополнительными ситами — `tone ∈ {praise, neutral, tip}` и субъект
- * сам получатель либо никто. `tease` в личку не попадает вовсе: на общем
- * экране это игра, один на один — укол. Любая ошибка — просто без хинта.
+ * Postscript hint for the finish message (spec § 6.10.4): a line from the
+ * ready `hints_cache` with two extra sieves — `tone ∈ {praise, neutral, tip}`
+ * and the subject is the recipient or nobody. `tease` never goes to DMs: on
+ * the shared screen it is a game, one-on-one it is a jab. On any error — no hint.
  */
 async function pickHint(userId: string): Promise<string | null> {
   try {
@@ -65,7 +66,7 @@ async function pickHint(userId: string): Promise<string | null> {
   }
 }
 
-/** Старт прогулки: тихое, с кнопкой «Это не я» — защита от розыгрышей (п. 6.10). */
+/** Walk start: silent, with an "It's not me" button — prank protection (spec § 6.10). */
 export async function notifyWalkStarted(walk: ActiveWalkDto): Promise<void> {
   try {
     if (!telegramEnabled()) return;
@@ -85,7 +86,7 @@ export async function notifyWalkStarted(walk: ActiveWalkDto): Promise<void> {
   }
 }
 
-/** Финиш: главное сообщение продукта, обычное (не тихое). */
+/** Finish: the product's main message, regular (not silent). */
 export async function notifyWalkFinished(result: FinishWalkResultDto): Promise<void> {
   try {
     if (!telegramEnabled()) return;
@@ -120,16 +121,16 @@ export async function notifyWalkFinished(result: FinishWalkResultDto): Promise<v
 }
 
 /**
- * «Все ли дорожки заняты?» — вызывается **до** освобождения (финиш/отмена/
- * автозакрытие): после апдейта переход «всё занято → свободно» уже не увидеть.
- * Ошибка или выключенный Telegram — false: уведомление-подсказка не стоит
- * лишнего запроса в горячем пути (п. 6.10.4).
+ * "Are all treadmills busy?" — call **before** freeing one (finish/cancel/
+ * autoclose): after the update the "all busy → free" transition is gone.
+ * Error or Telegram off — false: the nudge is not worth an extra hot-path
+ * query (spec § 6.10.4).
  */
 export async function wereAllTreadmillsBusy(): Promise<boolean> {
   if (!telegramEnabled()) return false;
   try {
-    // Два простых запроса вместо коррелированного exists в filter: дорожек
-    // единицы, а прозрачность здесь дороже одного round-trip'а.
+    // Two simple queries instead of a correlated exists in the filter: there
+    // are only a few treadmills, and clarity beats one saved round-trip.
     const totals = await db
       .select({ total: sql<number>`count(*)::int` })
       .from(treadmills)
@@ -151,13 +152,13 @@ export async function wereAllTreadmillsBusy(): Promise<boolean> {
 }
 
 /**
- * «Дорожка освободилась» (п. 6.10.4) — единственная широковещательная категория.
- * Вызывающий код обязан проверить `wereAllTreadmillsBusy()` до освобождения:
- * событие — переход «всё занято → появилась свободная», а не каждый финиш.
+ * "Treadmill freed up" (spec § 6.10.4) — the only broadcast category. The
+ * caller must check `wereAllTreadmillsBusy()` before freeing: the event is
+ * the "all busy → one free" transition, not every finish.
  *
- * Не шлётся освободившему и тем, кто идёт прямо сейчас. Вне рабочего окна —
- * просто молчим, без переносов: событие протухает мгновенно. Дедупликация —
- * `free:<walkId>`, один ключ на событие, а не на получателя.
+ * Not sent to the one who freed it or to anyone currently walking. Outside
+ * the work window — silence, no rescheduling: the event expires instantly.
+ * Dedup key `free:<walkId>` — one per event, not per recipient.
  */
 export async function notifyTreadmillFreed(input: {
   walkId: string;
@@ -168,7 +169,7 @@ export async function notifyTreadmillFreed(input: {
   try {
     if (!telegramEnabled()) return;
 
-    // Окно шире, чем у напоминаний (п. 6.10.4): пока люди в офисе — шлём.
+    // Wider window than reminders (spec § 6.10.4): send while people are in the office.
     const now = new Date();
     if (isWeekend(toOfficeDay(now))) return;
     const hour = officeHour(now);
@@ -184,7 +185,7 @@ export async function notifyTreadmillFreed(input: {
           eq(telegramLinks.notifyFree, true),
           or(isNull(telegramLinks.mutedUntil), lt(telegramLinks.mutedUntil, sql`now()`)),
           ne(telegramLinks.userId, input.freedByUserId),
-          // Идущим прямо сейчас дорожка не нужна.
+          // Whoever is walking right now does not need a treadmill.
           notExists(
             db
               .select({ one: sql`1` })
@@ -195,8 +196,8 @@ export async function notifyTreadmillFreed(input: {
       );
     if (recipients.length === 0) return;
 
-    // Один текст на событие: получатели видят одну и ту же фразу — это
-    // объявление по громкой связи, а не персональное сообщение.
+    // One text per event: every recipient sees the same phrase — a PA
+    // announcement, not a personal message.
     const text = freeText({ treadmillName: input.treadmillName, busySec: input.busySec });
     for (const { chatId } of recipients) {
       await sendMessage(chatId, text);
@@ -207,9 +208,9 @@ export async function notifyTreadmillFreed(input: {
 }
 
 /**
- * Автозакрытие (п. 7.6): тихое, под тумблером финиша — иначе человек узнаёт
- * о потерянной дистанции через неделю из рейтинга. Ошибка по одному участнику
- * не мешает уведомить остальных.
+ * Autoclose (spec § 7.6): silent, behind the finish toggle — otherwise the
+ * user learns about the lost distance a week later from the leaderboard.
+ * A failure for one user does not block notifying the rest.
  */
 export async function notifyAutoClosed(
   closed: Array<{ walkId: string; userId: string }>,

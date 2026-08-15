@@ -4,20 +4,20 @@ import { reminderDecision, type ReminderFacts } from '../lib/telegram/remind-rul
 import { workdaysSince } from '../lib/time';
 
 /**
- * Правила напоминаний «пора размяться» (п. 6.10.4 ТЗ). Здесь проверяется только
- * решение «слать / не слать» по фактам; окно отправки (день недели, час) —
- * зона планировщика и в `reminderDecision` намеренно не входит.
+ * "Time to stretch" reminder rules (spec § 6.10.4). Only the send / don't-send
+ * decision by facts is tested here; the delivery window (weekday, hour) is the
+ * scheduler's job and deliberately outside `reminderDecision`.
  *
- * Календарь августа 2026 (тот же, что в streak.test.ts):
- * пн 03, вт 04, ср 05, чт 06, пт 07 | сб 08, вс 09 |
- * пн 10, вт 11, ср 12, чт 13, пт 14 | сб 15, вс 16 | пн 17, вт 18 …
+ * August 2026 calendar (same as in streak.test.ts):
+ * Mon 03, Tue 04, Wed 05, Thu 06, Fri 07 | Sat 08, Sun 09 |
+ * Mon 10, Tue 11, Wed 12, Thu 13, Fri 14 | Sat 15, Sun 16 | Mon 17, Tue 18 …
  */
 
-/** База: давний участник, последняя прогулка в пятницу, напоминаний ещё не было. */
+/** Baseline: a long-time member, last walk on Friday, no reminders yet. */
 const BASE: ReminderFacts = {
-  today: '2026-08-13', // четверг
+  today: '2026-08-13', // Thursday
   userCreatedDay: '2026-07-01',
-  lastWalkDay: '2026-08-07', // пятница — простой к четвергу: пн+вт+ср = 3 полных дня
+  lastWalkDay: '2026-08-07', // Friday — idle by Thursday: Mon+Tue+Wed = 3 full days
   linkedDay: '2026-07-01',
   lastRemindDay: null,
   remindsSinceWalk: 0,
@@ -27,18 +27,18 @@ function facts(overrides: Partial<ReminderFacts>): ReminderFacts {
   return { ...BASE, ...overrides };
 }
 
-describe('reminderDecision: новички', () => {
-  it('участник моложе 3 дней не напоминается даже при большом простое', () => {
-    // Создан во вторник 11-го, сегодня четверг 13-е: diffOfficeDays = 2 < 3.
-    // Прогулка была давно — простой огромный, но новичок ещё ничего не «забросил».
+describe('reminderDecision: newcomers', () => {
+  it('a member younger than 3 days gets no reminder even after a long idle', () => {
+    // Created on Tuesday the 11th, today is Thursday the 13th: diffOfficeDays = 2 < 3.
+    // The last walk was long ago — a huge idle, but a newcomer has not "quit" anything yet.
     const result = reminderDecision(
       facts({ userCreatedDay: '2026-08-11', lastWalkDay: '2026-08-03' }),
     );
     expect(result).toBe(false);
   });
 
-  it('ровно 3 календарных дня с создания — уже не новичок', () => {
-    // Создан в понедельник 10-го: diffOfficeDays('2026-08-13', '2026-08-10') = 3.
+  it('exactly 3 calendar days since creation — no longer a newcomer', () => {
+    // Created on Monday the 10th: diffOfficeDays('2026-08-13', '2026-08-10') = 3.
     const result = reminderDecision(
       facts({ userCreatedDay: '2026-08-10', lastWalkDay: '2026-08-03' }),
     );
@@ -46,86 +46,86 @@ describe('reminderDecision: новички', () => {
   });
 });
 
-describe('reminderDecision: простой в рабочих днях', () => {
-  it('ходил вчера (рабочий день) — 0 полных дней простоя, не напоминаем', () => {
+describe('reminderDecision: idle time in workdays', () => {
+  it('walked yesterday (a workday) — 0 full idle days, no reminder', () => {
     expect(reminderDecision(facts({ lastWalkDay: '2026-08-12' }))).toBe(false);
   });
 
-  it('ходил сегодня — тем более не напоминаем', () => {
+  it('walked today — all the more no reminder', () => {
     expect(reminderDecision(facts({ lastWalkDay: '2026-08-13' }))).toBe(false);
   });
 
-  it('пятница → вторник: пропущен только понедельник, 1 < 2 — рано', () => {
+  it('Friday → Tuesday: only Monday missed, 1 < 2 — too early', () => {
     expect(
       reminderDecision(facts({ lastWalkDay: '2026-08-07', today: '2026-08-11' })),
     ).toBe(false);
   });
 
-  it('пятница → среда: пропущены пн и вт, 2 полных дня — пора', () => {
+  it('Friday → Wednesday: Mon and Tue missed, 2 full days — time', () => {
     expect(
       reminderDecision(facts({ lastWalkDay: '2026-08-07', today: '2026-08-12' })),
     ).toBe(true);
   });
 
-  it('выходные не считаются: четверг → понедельник — пропущена одна пятница', () => {
+  it('weekends do not count: Thursday → Monday — only Friday missed', () => {
     expect(
       reminderDecision(facts({ lastWalkDay: '2026-08-06', today: '2026-08-10' })),
     ).toBe(false);
   });
 
-  it('четверг → вторник: пропущены пт и пн — пора', () => {
+  it('Thursday → Tuesday: Fri and Mon missed — time', () => {
     expect(
       reminderDecision(facts({ lastWalkDay: '2026-08-06', today: '2026-08-11' })),
     ).toBe(true);
   });
 
-  it('сегодня суббота — «сегодня» из простоя не вычитается', () => {
-    // Прогулка в среду 12-го, сегодня суббота 15-е: полных пропущено чт+пт = 2.
-    // Окно (не слать в выходной) проверяется не здесь — решение по фактам «пора».
+  it('today is Saturday — "today" is not subtracted from the idle time', () => {
+    // Walked Wednesday the 12th, today is Saturday the 15th: Thu+Fri = 2 full days missed.
+    // The window (no sends on weekends) is checked elsewhere — this is the facts-based "time" decision.
     expect(
       reminderDecision(facts({ lastWalkDay: '2026-08-12', today: '2026-08-15' })),
     ).toBe(true);
   });
 });
 
-describe('reminderDecision: никогда не ходил — база linkedDay', () => {
-  it('привязался в пятницу, сегодня четверг: простой 3 дня — пора', () => {
+describe('reminderDecision: never walked — linkedDay as the baseline', () => {
+  it('linked on Friday, today is Thursday: 3 idle days — time', () => {
     expect(
       reminderDecision(facts({ lastWalkDay: null, linkedDay: '2026-08-07' })),
     ).toBe(true);
   });
 
-  it('привязался во вторник, сегодня четверг: пропущена одна среда — рано', () => {
+  it('linked on Tuesday, today is Thursday: only Wednesday missed — too early', () => {
     expect(
       reminderDecision(facts({ lastWalkDay: null, linkedDay: '2026-08-11' })),
     ).toBe(false);
   });
 });
 
-describe('reminderDecision: кулдаун между напоминаниями', () => {
-  it('напоминание было вчера (1 рабочий день назад) — молчим', () => {
+describe('reminderDecision: cooldown between reminders', () => {
+  it('a reminder went out yesterday (1 workday ago) — stay silent', () => {
     const result = reminderDecision(
       facts({ lastWalkDay: '2026-08-05', lastRemindDay: '2026-08-12', remindsSinceWalk: 1 }),
     );
     expect(result).toBe(false);
   });
 
-  it('напоминание было 2 рабочих дня назад — ещё молчим', () => {
+  it('a reminder went out 2 workdays ago — still silent', () => {
     const result = reminderDecision(
       facts({ lastWalkDay: '2026-08-05', lastRemindDay: '2026-08-11', remindsSinceWalk: 1 }),
     );
     expect(result).toBe(false);
   });
 
-  it('ровно 3 рабочих дня назад — кулдаун истёк, можно', () => {
+  it('exactly 3 workdays ago — cooldown expired, allowed', () => {
     const result = reminderDecision(
       facts({ lastWalkDay: '2026-08-05', lastRemindDay: '2026-08-10', remindsSinceWalk: 1 }),
     );
     expect(result).toBe(true);
   });
 
-  it('кулдаун считается рабочими днями: пятница → среда это ровно 3', () => {
-    // Пятница 07 → среда 12: пн+вт+ср = 3 рабочих дня, суббота и воскресенье не в счёт.
+  it('the cooldown counts workdays: Friday → Wednesday is exactly 3', () => {
+    // Friday 07 → Wednesday 12: Mon+Tue+Wed = 3 workdays; Saturday and Sunday do not count.
     const result = reminderDecision(
       facts({
         lastWalkDay: '2026-08-03',
@@ -138,44 +138,44 @@ describe('reminderDecision: кулдаун между напоминаниями
   });
 });
 
-describe('reminderDecision: затухание и тишина', () => {
-  it('после 3 напоминаний кулдаун растёт до 5: 3 рабочих дня — мало', () => {
+describe('reminderDecision: backoff and silence', () => {
+  it('after 3 reminders the cooldown grows to 5: 3 workdays is not enough', () => {
     const result = reminderDecision(
       facts({ lastWalkDay: '2026-07-27', lastRemindDay: '2026-08-10', remindsSinceWalk: 3 }),
     );
     expect(result).toBe(false);
   });
 
-  it('после 3 напоминаний: 5 рабочих дней с последнего — можно', () => {
-    // Четверг 06 → четверг 13: пт 07, пн 10, вт 11, ср 12, чт 13 = 5.
+  it('after 3 reminders: 5 workdays since the last one — allowed', () => {
+    // Thursday 06 → Thursday 13: Fri 07, Mon 10, Tue 11, Wed 12, Thu 13 = 5.
     const result = reminderDecision(
       facts({ lastWalkDay: '2026-07-27', lastRemindDay: '2026-08-06', remindsSinceWalk: 3 }),
     );
     expect(result).toBe(true);
   });
 
-  it('2 напоминания — бэкофф ещё не включён, хватает обычных 3 дней', () => {
+  it('2 reminders — backoff not yet active, the usual 3 days suffice', () => {
     const result = reminderDecision(
       facts({ lastWalkDay: '2026-07-27', lastRemindDay: '2026-08-10', remindsSinceWalk: 2 }),
     );
     expect(result).toBe(true);
   });
 
-  it('5 напоминаний — всё ещё бэкофф, 5 рабочих дней достаточно', () => {
+  it('5 reminders — still backoff, 5 workdays suffice', () => {
     const result = reminderDecision(
       facts({ lastWalkDay: '2026-07-27', lastRemindDay: '2026-08-06', remindsSinceWalk: 5 }),
     );
     expect(result).toBe(true);
   });
 
-  it('после 6 напоминаний — тишина, каким бы давним ни было последнее', () => {
+  it('after 6 reminders — silence, no matter how old the last one is', () => {
     const result = reminderDecision(
       facts({ lastWalkDay: '2026-07-01', lastRemindDay: '2026-07-15', remindsSinceWalk: 6 }),
     );
     expect(result).toBe(false);
   });
 
-  it('7 напоминаний — тоже тишина (порог «не меньше 6»)', () => {
+  it('7 reminders — silence too (the "at least 6" threshold)', () => {
     const result = reminderDecision(
       facts({ lastWalkDay: '2026-07-01', lastRemindDay: null, remindsSinceWalk: 7 }),
     );
@@ -183,28 +183,28 @@ describe('reminderDecision: затухание и тишина', () => {
   });
 });
 
-describe('reminderDecision: чистый случай', () => {
-  it('простой достаточный, напоминаний не было — шлём', () => {
+describe('reminderDecision: the clean case', () => {
+  it('idle long enough, no reminders yet — send', () => {
     expect(
       reminderDecision(facts({ lastRemindDay: null, remindsSinceWalk: 0 })),
     ).toBe(true);
   });
 });
 
-describe('workdaysSince: контракт полуинтервала (from; to]', () => {
-  it('from === to → 0: день события в интервал не входит', () => {
+describe('workdaysSince: half-open interval contract (from; to]', () => {
+  it('from === to → 0: the event day is outside the interval', () => {
     expect(workdaysSince('2026-08-13', '2026-08-13')).toBe(0);
   });
 
-  it('соседние рабочие дни → 1: правая граница включается, левая нет', () => {
+  it('adjacent workdays → 1: the right bound is included, the left is not', () => {
     expect(workdaysSince('2026-08-12', '2026-08-13')).toBe(1);
   });
 
-  it('выходные пропускаются: пятница → понедельник = 1', () => {
+  it('weekends are skipped: Friday → Monday = 1', () => {
     expect(workdaysSince('2026-08-07', '2026-08-10')).toBe(1);
   });
 
-  it('интервал через выходные: четверг 06 → вторник 11 = 3 (пт, пн, вт)', () => {
+  it('an interval across a weekend: Thursday 06 → Tuesday 11 = 3 (Fri, Mon, Tue)', () => {
     expect(workdaysSince('2026-08-06', '2026-08-11')).toBe(3);
   });
 });

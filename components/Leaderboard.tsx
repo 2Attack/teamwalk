@@ -41,31 +41,31 @@ function periodLabel(selection: PeriodSelection): string {
 }
 
 /**
- * Мобильная раскладка: `tr` становится flex-карточкой, а не страницей с горизонтальным
- * скроллом (п. 6.2 — «схлопывается в карточки»). Роли проставлены явно: смена `display`
- * у таблицы иначе ломает её семантику для скринридеров.
+ * Mobile layout: `tr` becomes a flex card instead of a horizontally scrolling
+ * page (spec § 6.2, "collapses into cards"). Roles are explicit: changing a
+ * table's `display` otherwise breaks its semantics for screen readers.
  *
- * Все мобильные классы идут с модификатором `max-sm:` — 8bitcn дописывает свои
- * рамки после нашего className, и без модификатора tailwind-merge выбросил бы наши.
+ * All mobile classes use the `max-sm:` modifier — 8bitcn appends its borders
+ * after our className, and without the modifier tailwind-merge would drop ours.
  */
 const CARD_ROW =
   'max-sm:mb-2 max-sm:flex max-sm:flex-wrap max-sm:items-center max-sm:gap-x-3 max-sm:gap-y-2 ' +
   'max-sm:border-3 max-sm:border-solid max-sm:bg-bg-panel max-sm:p-3';
 
-/** `tabular-nums` — чтобы колонка чисел не «плясала» при смене разрядов (п. 6.7.2). */
+/** `tabular-nums` keeps the number column from shifting as digits change (spec § 6.7.2). */
 const STAT_CELL =
   'px-2 py-2 text-right align-middle tabular-nums ' +
   'max-sm:basis-[calc(50%-0.375rem)] max-sm:px-0 max-sm:py-0 max-sm:text-left';
 
 /**
- * Заголовки короткие, но обычным sans: пиксельный шрифт на «ПРОГУЛОК» — это 128 px
- * при колонке в 80 px, а уменьшать его до 8 px нельзя по читаемости (п. 6.7.1).
+ * Headers are short but regular sans: pixel font on «ПРОГУЛОК» is 128 px in an
+ * 80 px column, and shrinking it to 8 px kills readability (spec § 6.7.1).
  */
 const HEAD_CELL =
   'h-auto px-2 py-2 text-left text-[10px] leading-tight tracking-wide whitespace-normal ' +
   'uppercase text-text-dim';
 
-/** Подпись колонки внутри мобильной карточки: на планшете и шире её заменяет `thead`. */
+/** Column label inside the mobile card; replaced by `thead` on tablet and wider. */
 function CellLabel({ children }: { children: string }) {
   return (
     <span aria-hidden="true" className="block text-[10px] leading-tight text-text-dim sm:hidden">
@@ -88,13 +88,13 @@ function LeaderboardRow({
       role="row"
       aria-current={isCurrent ? 'true' : undefined}
       className={cn(
-        // Мгновенная смена состояний вместо цветового перехода (п. 6.7.6).
+        // Instant state change instead of a color transition (spec § 6.7.6).
         'transition-none',
         CARD_ROW,
         isIdle && 'text-text-dim',
-        // Подсветка своей строки: на широком экране цитрусовая заливка, в мобильной
-        // карточке — цитрусовая обводка внутрь. Рамку строки трогать нельзя:
-        // 8bitcn дописывает свою после нашей и всё равно перекрасит.
+        // Highlight own row: citrus fill on wide screens, inset citrus outline
+        // on the mobile card. Don't touch the row border: 8bitcn appends its
+        // own after ours and would repaint it anyway.
         isCurrent && 'bg-citrus/10 max-sm:shadow-[inset_0_0_0_3px_var(--color-citrus)]',
       )}
     >
@@ -111,7 +111,7 @@ function LeaderboardRow({
       >
         <div className="flex min-w-0 items-center gap-2">
           <Avatar avatarId={row.user.avatarId} name={row.user.name} size={32} />
-          {/* Имя — обычным sans (п. 6.7.1), длинное режется многоточием. */}
+          {/* Name in regular sans (spec § 6.7.1); long names truncate with ellipsis. */}
           <span className="min-w-0 truncate" title={row.user.name}>
             {row.user.name}
           </span>
@@ -159,18 +159,17 @@ function EmptyState() {
 }
 
 /**
- * Таблица рекордов аркадного автомата (п. 6.2, 6.7.5) на `Table` из 8bitcn:
- * двойная пиксельная рамка и жирная линия под шапкой — из библиотеки.
+ * Arcade high-score table (spec § 6.2, 6.7.5) on 8bitcn `Table`.
  *
- * `font="normal"` на всей таблице: имена участников обязаны быть обычным sans
- * («Константин Верещагин» пиксельным разносит строку, п. 6.7.1). Пиксельный шрифт
- * возвращается точечно классом `font-pixel` — только на ранге, то есть на слое
- * идентичности.
+ * `font="normal"` on the whole table: member names must be regular sans
+ * («Константин Верещагин» in pixel font blows up the row, spec § 6.7.1).
+ * Pixel font returns selectively via `font-pixel` — only on the rank,
+ * i.e. the identity layer.
  */
 export function Leaderboard({ period, currentUserId }: LeaderboardProps) {
   const { data, isLoading } = useLeaderboard(period);
 
-  // Участники с нулевой дистанцией уходят в конец списка серым (п. 6.2).
+  // Members with zero distance sink to the bottom, grayed out (spec § 6.2).
   const ordered = useMemo<LeaderboardRowDto[]>(() => {
     const rows = data?.rows ?? [];
     return [...rows.filter((r) => r.totalKm > 0), ...rows.filter((r) => r.totalKm <= 0)];
@@ -181,16 +180,16 @@ export function Leaderboard({ period, currentUserId }: LeaderboardProps) {
   if (ordered.length === 0) return <EmptyState />;
 
   return (
-    // Обёртка 8bitcn объявлена `w-fit` — таблица без этого сжалась бы по контенту.
+    // 8bitcn wrapper is `w-fit` — without this the table would shrink to content.
     <div className="w-full [&>div]:w-full">
       <Table
         role="table"
         font="normal"
         className={cn(
           'w-full table-fixed max-sm:block',
-          // Разделители строк библиотека красит в foreground/ring: на 100 строк
-          // это сплошной цитрусовый пунктир. Приглушаем селектором с запасом
-          // специфичности — className таблицы 8bitcn дописывает после нашего.
+          // The library paints row dividers in foreground/ring — a solid citrus
+          // dash across 100 rows. Muted with an extra-specificity selector,
+          // since 8bitcn appends its table className after ours.
           '[&_tr]:border-border-dim dark:[&_tr]:border-border-dim',
         )}
       >

@@ -12,8 +12,8 @@ import type {
 } from '@/lib/types';
 
 /**
- * Запросы зоны WALKS. Ни один из них не предполагает, что активная прогулка
- * в системе одна: активных ровно столько, сколько занятых дорожек (п. 7.2).
+ * WALKS-zone queries. None of them assume a single active walk system-wide:
+ * there are exactly as many active walks as busy treadmills (spec § 7.2).
  */
 
 interface ActiveRow {
@@ -69,11 +69,9 @@ const walkColumns = {
 };
 
 /**
- * Смены скорости для перечисленных прогулок (п. 6.3).
- *
- * Стартовый отрезок в таблице не хранится — он собирается из `walks`, поэтому
- * прогулка без единой смены скорости не даёт здесь ни одной строки, а старые
- * записи работают без бэкфилла.
+ * Speed changes for the given walks (spec § 6.3). The starting segment is not
+ * stored — it is assembled from `walks`, so a walk with no changes yields no
+ * rows here and old records work without a backfill.
  */
 async function loadSpeedChanges(walkIds: string[]): Promise<Map<string, WalkSpeedSegmentDto[]>> {
   const byWalk = new Map<string, WalkSpeedSegmentDto[]>();
@@ -99,7 +97,7 @@ async function loadSpeedChanges(walkIds: string[]): Promise<Map<string, WalkSpee
 }
 
 function toActiveWalk(row: ActiveRow, changes: WalkSpeedSegmentDto[] = []): ActiveWalkDto {
-  // Первый отрезок — скорость старта; дальше идут смены в порядке времени.
+  // First segment is the starting speed; changes follow in time order.
   const speedSegments: WalkSpeedSegmentDto[] = [
     { speedKmh: Number(row.speedKmh), startedAt: row.startedAt.toISOString() },
     ...changes,
@@ -112,7 +110,7 @@ function toActiveWalk(row: ActiveRow, changes: WalkSpeedSegmentDto[] = []): Acti
     treadmillName: row.treadmillName,
     treadmillMaxSpeedKmh: Number(row.treadmillMaxSpeedKmh),
     startedAt: row.startedAt.toISOString(),
-    // Наружу отдаём текущую скорость, а не стартовую: её показывают на экране.
+    // Expose the current speed, not the starting one: it's what the screen shows.
     speedKmh: speedSegments[speedSegments.length - 1].speedKmh,
     speedSegments,
     user: {
@@ -124,7 +122,7 @@ function toActiveWalk(row: ActiveRow, changes: WalkSpeedSegmentDto[] = []): Acti
   };
 }
 
-/** Окно удаления (п. 7.7): 15 минут с момента `ended_at`. */
+/** Deletion window (spec § 7.7): 15 minutes from `ended_at`. */
 export function canDeleteWalk(endedAt: Date | null): boolean {
   if (!endedAt) return false;
   return Date.now() - endedAt.getTime() <= DELETE_WINDOW_MINUTES * 60_000;
@@ -139,7 +137,7 @@ function toWalk(row: WalkRow): WalkDto {
     startedAt: row.startedAt.toISOString(),
     endedAt: row.endedAt ? row.endedAt.toISOString() : null,
     durationSec: row.durationSec === null ? null : Number(row.durationSec),
-    // numeric приходит строкой — приводим к числу перед выдачей клиенту.
+    // numeric arrives as a string — coerce before returning to the client.
     distanceKm: row.distanceKm === null ? null : Number(row.distanceKm),
     speedKmh: Number(row.speedKmh),
     status: row.status,
@@ -147,7 +145,7 @@ function toWalk(row: WalkRow): WalkDto {
   };
 }
 
-/** Активная прогулка участника (п. 7.1 — она максимум одна). */
+/** Participant's active walk (spec § 7.1 — at most one). */
 export async function getActiveWalk(userId: string): Promise<ActiveWalkDto | null> {
   const rows = await db
     .select(activeColumns)
@@ -161,7 +159,7 @@ export async function getActiveWalk(userId: string): Promise<ActiveWalkDto | nul
   return toActiveWalk(rows[0], (await loadSpeedChanges([rows[0].id])).get(rows[0].id));
 }
 
-/** Активная прогулка по её id — для экрана прогулки и смены скорости. */
+/** Active walk by id — for the walk screen and speed changes. */
 export async function getActiveWalkById(walkId: string): Promise<ActiveWalkDto | null> {
   const rows = await db
     .select(activeColumns)
@@ -175,7 +173,7 @@ export async function getActiveWalkById(walkId: string): Promise<ActiveWalkDto |
   return toActiveWalk(rows[0], (await loadSpeedChanges([walkId])).get(walkId));
 }
 
-/** Все активные прогулки: по одной на занятую дорожку (п. 7.2). */
+/** All active walks: one per busy treadmill (spec § 7.2). */
 export async function listActiveWalks(): Promise<ActiveWalkDto[]> {
   const rows = await db
     .select(activeColumns)
@@ -185,12 +183,12 @@ export async function listActiveWalks(): Promise<ActiveWalkDto[]> {
     .where(eq(walks.status, 'active'))
     .orderBy(asc(walks.startedAt));
 
-  // Один запрос на все прогулки сразу, а не N+1 по каждой.
+  // One query for all walks at once, not N+1 per walk.
   const changes = await loadSpeedChanges(rows.map((row) => row.id));
   return rows.map((row) => toActiveWalk(row, changes.get(row.id)));
 }
 
-/** История участника — свежие сверху. */
+/** Participant history — newest first. */
 export async function listUserWalks(userId: string, limit: number): Promise<WalkDto[]> {
   const safeLimit = Math.min(Math.max(Math.trunc(limit) || 0, 1), 200);
   const rows = await db
@@ -215,7 +213,7 @@ export async function getWalkById(id: string): Promise<WalkDto | null> {
   return rows[0] ? toWalk(rows[0]) : null;
 }
 
-/** Дорожка по id — вместе с `isActive`, чтобы отличить «нет такой» от «выключена». */
+/** Treadmill by id — with `isActive`, to tell "missing" from "disabled". */
 export async function getTreadmillById(id: string): Promise<{
   id: string;
   name: string;
@@ -239,8 +237,8 @@ export async function getTreadmillById(id: string): Promise<{
 }
 
 /**
- * Активные дорожки с текущей занятостью. Занятость приходит одним запросом
- * (left join по активной прогулке), а не N+1 подзапросами.
+ * Active treadmills with current occupancy, fetched in one query
+ * (left join on the active walk), not N+1 subqueries.
  */
 export async function listActiveTreadmills(): Promise<TreadmillDto[]> {
   const rows = await db
@@ -251,8 +249,8 @@ export async function listActiveTreadmills(): Promise<TreadmillDto[]> {
       sortOrder: treadmills.sortOrder,
       walkId: walks.id,
       startedAt: walks.startedAt,
-      // Текущая скорость: последняя смена, а при её отсутствии — скорость старта.
-      // Коррелированный подзапрос вместо ещё одного join: строка на дорожку одна.
+      // Current speed: the latest change, else the starting speed. A correlated
+      // subquery instead of another join: one row per treadmill.
       speedKmh: sql<number | null>`coalesce((
         select seg.speed_kmh
         from walk_speed_segments seg

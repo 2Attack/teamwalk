@@ -24,15 +24,15 @@ interface TelegramLinkDialogProps {
 }
 
 /**
- * Модалка привязки Telegram (п. 6.10.3): QR-код deep link'а и ссылка под ним.
+ * Telegram linking dialog (spec § 6.10.3): deep-link QR code plus a link below.
  *
- * Типовой сценарий — человек идёт по дорожке с ноутбуком, а Telegram у него
- * в телефоне: QR переносит ссылку между устройствами без набора руками.
- * Ссылка под кодом — для тех, у кого Telegram на этом же устройстве.
+ * Typical case: the user is on the treadmill with a laptop while Telegram is
+ * on their phone — the QR moves the link across devices without typing. The
+ * link below is for Telegram on the same device.
  *
- * Пока модалка открыта, статус перечитывается раз в несколько секунд: привязка
- * завершается в другом приложении, и «сама закрылась — значит получилось» —
- * единственная обратная связь, которую можно дать без авторизации.
+ * While open, the status is re-polled every few seconds: linking finishes in
+ * another app, and "it closed by itself, so it worked" is the only feedback
+ * possible without auth.
  */
 export function TelegramLinkDialog({ open, userId, onClose }: TelegramLinkDialogProps) {
   const { data: status, mutate: mutateStatus } = useTelegramStatus(userId);
@@ -40,10 +40,10 @@ export function TelegramLinkDialog({ open, userId, onClose }: TelegramLinkDialog
   const [link, setLink] = useState<TelegramLinkTokenDto | null>(null);
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  // Счётчик запросов токена: смена значения перезапускает эффект загрузки.
+  // Token request counter: bumping it re-runs the loading effect.
   const [attempt, setAttempt] = useState(0);
 
-  // Каждое открытие — свежий токен: у старого мог истечь TTL (15 минут).
+  // Fresh token on every open: the old one's TTL (15 min) may have expired.
   useEffect(() => {
     if (!open) return;
     setLink(null);
@@ -68,9 +68,9 @@ export function TelegramLinkDialog({ open, userId, onClose }: TelegramLinkDialog
     };
   }, [open, userId, attempt]);
 
-  // QR рисуется на клиенте из уже полученной ссылки — без внешних запросов
-  // (генераторы-сервисы нарушали бы правило «в рантайме сторонних запросов нет»).
-  // Чёрные модули на белом: инверсия под тёмную тему читается камерами хуже.
+  // QR is rendered client-side from the fetched link — no external requests
+  // (generator services would break the "no third-party requests at runtime" rule).
+  // Black modules on white: a dark-theme inversion scans worse.
   useEffect(() => {
     if (link === null) return;
     let cancelled = false;
@@ -84,7 +84,7 @@ export function TelegramLinkDialog({ open, userId, onClose }: TelegramLinkDialog
         if (!cancelled) setQrDataUrl(dataUrl);
       })
       .catch(() => {
-        // QR — усилитель, не единственный путь: ссылка ниже работает и без него.
+        // QR is an enhancer, not the only path: the link below works without it.
         if (!cancelled) setQrDataUrl(null);
       });
     return () => {
@@ -92,8 +92,8 @@ export function TelegramLinkDialog({ open, userId, onClose }: TelegramLinkDialog
     };
   }, [link]);
 
-  // Опрос статуса, пока модалка открыта: привязались — закрываемся.
-  // Заодно меняем протухший токен, не дожидаясь, пока человек отсканирует мёртвый QR.
+  // Poll status while the dialog is open: linked — close. Also swap an expired
+  // token instead of letting the user scan a dead QR.
   useEffect(() => {
     if (!open) return;
     const tick = () => {
@@ -149,10 +149,10 @@ export function TelegramLinkDialog({ open, userId, onClose }: TelegramLinkDialog
             </>
           ) : (
             <>
-              {/* Белая подложка обязательна: камере нужна «тихая зона» вокруг кода. */}
+              {/* White backing is mandatory: the camera needs a quiet zone around the code. */}
               <div className="flex size-56 items-center justify-center bg-white p-3">
                 {qrDataUrl !== null ? (
-                  /* Дата-URL, сгенерированный на месте, — не кандидат в next/image. */
+                  /* A locally generated data URL is not a next/image candidate. */
                   <img
                     src={qrDataUrl}
                     alt={m.telegram.qrAlt}

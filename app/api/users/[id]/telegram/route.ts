@@ -12,7 +12,7 @@ export const dynamic = 'force-dynamic';
 
 type RouteContext = { params: Promise<{ id: string }> };
 
-/** GET /api/users/:id/telegram — статус привязки для карточки и панели (п. 6.10.2). */
+/** GET /api/users/:id/telegram — link status for the card and panel (spec § 6.10.2). */
 export function GET(_request: Request, context: RouteContext) {
   return handle<TelegramStatusDto | ApiErrorBody>(async () => {
     const id = uuidSchema.parse((await context.params).id);
@@ -22,12 +22,12 @@ export function GET(_request: Request, context: RouteContext) {
   });
 }
 
-/** DELETE /api/users/:id/telegram — отвязка, эквивалент `/stop` из бота (п. 6.10.7). */
+/** DELETE /api/users/:id/telegram — unlink, equivalent to the bot's `/stop` (spec § 6.10.7). */
 export function DELETE(_request: Request, context: RouteContext) {
   return handle<TelegramStatusDto | ApiErrorBody>(async () => {
     const id = uuidSchema.parse((await context.params).id);
 
-    // Отвязка идемпотентна: повторный DELETE без привязки — не ошибка, а то же состояние.
+    // Unlink is idempotent: a repeat DELETE without a link is the same state, not an error.
     await unlink(id);
 
     const status = await getTelegramStatus(id);

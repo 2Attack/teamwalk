@@ -1,12 +1,9 @@
 /**
- * Перемешивание для выдачи хинтов.
- *
- * Живёт отдельным модулем, потому что нужно в двух местах: `hints/select.ts`
- * тасует статику перед показом, `hints/generate.ts` — перед добивкой пула.
- * Без общего места второй вызов пришлось бы дублировать.
+ * Shuffling for hint delivery. Separate module because both `hints/select.ts`
+ * and `hints/generate.ts` need it.
  */
 
-/** Тасование Фишера — Йетса по копии: исходный массив не мутируем. */
+/** Fisher-Yates shuffle over a copy: the input array is never mutated. */
 export function shuffle<T>(items: readonly T[]): T[] {
   const result = [...items];
   for (let i = result.length - 1; i > 0; i -= 1) {

@@ -24,17 +24,15 @@ import { nameSchema } from '@/lib/validation';
 interface AddUserDialogProps {
   open: boolean;
   onClose: () => void;
-  /** Весь список — из него собираются занятые аватары (п. 6.5). */
+  /** Full user list — used to derive taken avatars (spec § 6.5). */
   users: UserDto[];
-  /** Созданный участник сразу выбирается в селекте (п. 6.2). */
+  /** The created user is immediately selected in the picker (spec § 6.2). */
   onCreated: (user: UserDto) => void;
 }
 
 /**
- * Модалка создания участника: имя + пиксельный персонаж (п. 6.2).
- *
- * `font="normal"` на всём содержимом: имя, подсказка и текст ошибки — данные,
- * их читают. Пиксельными остаются только заголовок и метки кнопок (п. 6.7.1).
+ * Create-user dialog: name + pixel character (spec § 6.2).
+ * `font="normal"` on all content — only the title and button labels stay pixel (spec § 6.7.1).
  */
 export function AddUserDialog({ open, onClose, users, onCreated }: AddUserDialogProps) {
   const fieldId = useId();
@@ -49,24 +47,24 @@ export function AddUserDialog({ open, onClose, users, onCreated }: AddUserDialog
   const [formError, setFormError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
-  // При каждом открытии — чистое поле и случайный свободный аватар,
-  // чтобы «Создать» была активна сразу и участник не остался без картинки.
+  // On each open: clean field and a random free avatar, so "Create" is
+  // enabled right away and the user never ends up without a picture.
   useEffect(() => {
     if (!open) return;
     setName('');
     setNameError(null);
     setFormError(null);
     setAvatarId(randomAvatarId(users.map((u) => u.avatarId)));
-    // users намеренно не в зависимостях: пересбор аватара при фоновом
-    // обновлении списка сбрасывал бы выбор прямо под курсором.
+    // users deliberately excluded from deps: re-rolling the avatar on a
+    // background list refresh would reset the choice under the cursor.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
-    if (saving) return; // защита от двойного сабмита
+    if (saving) return; // guard against double submit
 
-    // Те же правила, что и на сервере: 2–60 символов, разрешённые символы.
+    // Same rules as the server: 2–60 chars, allowed characters only.
     const parsed = nameSchema.safeParse(name);
     if (!parsed.success) {
       setNameError(parsed.error.issues[0]?.message ?? m.addUser.invalidName);
@@ -105,12 +103,12 @@ export function AddUserDialog({ open, onClose, users, onCreated }: AddUserDialog
           <DialogDescription>{m.addUser.description}</DialogDescription>
         </DialogHeader>
 
-        {/* Форма забирает остаток высоты: сетка персонажей прокручивается внутри,
-            а ряд кнопок остаётся на виду на любом экране. */}
+        {/* Form takes the remaining height: the character grid scrolls inside,
+            the button row stays visible on any screen. */}
         <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col gap-5">
           <DialogBody className="space-y-5">
             <div className="space-y-2">
-              {/* `font="normal"`: метка — sans, как и поле под ней (п. 6.7.1). */}
+              {/* `font="normal"`: label is sans, same as the field below (spec § 6.7.1). */}
               <Label htmlFor={nameId} font="normal" className="block text-sm text-text-dim">
                 {m.addUser.nameLabel}
               </Label>
@@ -161,12 +159,12 @@ export function AddUserDialog({ open, onClose, users, onCreated }: AddUserDialog
 interface ChangeAvatarDialogProps {
   open: boolean;
   onClose: () => void;
-  /** Участник, которому меняем персонажа; `null` — диалог не показывается. */
+  /** User whose character is being changed; `null` — dialog hidden. */
   user: UserDto | null;
   users: UserDto[];
 }
 
-/** Смена персонажа по клику на свой аватар — та же сетка (п. 6.5). */
+/** Change character by clicking your avatar — same grid (spec § 6.5). */
 export function ChangeAvatarDialog({ open, onClose, user, users }: ChangeAvatarDialogProps) {
   const [avatarId, setAvatarId] = useState<string>(user?.avatarId ?? '');
   const [error, setError] = useState<string | null>(null);
@@ -180,7 +178,7 @@ export function ChangeAvatarDialog({ open, onClose, user, users }: ChangeAvatarD
 
   if (!user) return null;
 
-  // Свой текущий аватар «занятым» не считаем — иначе он выглядел бы недоступным.
+  // The user's current avatar is not "taken" — otherwise it would look unavailable.
   const taken = users.filter((u) => u.id !== user.id).map((u) => u.avatarId);
 
   async function handleSave() {
@@ -227,7 +225,7 @@ export function ChangeAvatarDialog({ open, onClose, user, users }: ChangeAvatarD
   );
 }
 
-/** Ошибка формы: полоса-акцент вместо голой красной строки. */
+/** Form error: accent bar instead of a bare red line. */
 function FormError({ text }: { text: string }) {
   return (
     <p
@@ -249,10 +247,8 @@ interface DialogActionsProps {
 }
 
 /**
- * Ряд действий модалки: метки кнопок — пиксельные, тач-таргет 44 px (п. 6.7.1, п. 8).
- * Собран на `DialogFooter` из 8bitcn, как и в модалках прогулки: свой ряд `div`
- * давал здесь другой отступ и другой вариант кнопки отмены, и четыре модалки
- * проекта выглядели по-разному.
+ * Dialog action row: pixel button labels, 44 px touch targets (spec § 6.7.1, § 8).
+ * Built on 8bitcn `DialogFooter` to keep all project dialogs visually consistent.
  */
 function DialogActions({
   confirmLabel,

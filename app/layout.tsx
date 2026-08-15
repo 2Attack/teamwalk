@@ -28,19 +28,15 @@ const ui = Inter({
 });
 
 export const metadata: Metadata = {
-  /*
-    На превью-деплоях Vercel заголовок помечается «PREVIEW», чтобы вкладку с
-    тестовым окружением нельзя было спутать с продом (шапка помечается так же —
-    см. AppHeader).
-  */
+  /* On Vercel preview deploys the title is tagged "PREVIEW" so the tab can't be
+     mistaken for prod (AppHeader tags the header the same way). */
   title: IS_VERCEL_PREVIEW ? `${APP_NAME} — PREVIEW` : `${APP_NAME} — ${m.app.titleSuffix}`,
   description: m.app.description,
   /*
-    iOS манифест игнорирует и режим установки читает из своих мета-тегов: без
-    `capable` ярлык на домашнем экране открывался бы обычной вкладкой Safari с
-    адресной строкой. `title` задаёт подпись под ярлыком, а `black-translucent`
-    пускает фон приложения под системную шторку — у нас под неё уходит тёмный
-    `--background`, и стык не виден.
+    iOS ignores the manifest and reads install mode from its own meta tags:
+    without `capable` a home-screen shortcut would open as a plain Safari tab.
+    `black-translucent` lets the dark `--background` extend under the status
+    bar, hiding the seam.
   */
   appleWebApp: {
     capable: true,
@@ -58,14 +54,14 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    /* `dark` статичен: приложение живёт в тёмном углу опенспейса и светлой темы
-       в MVP не имеет — класс нужен, чтобы работали dark:-варианты 8bitcn. */
+    /* Static `dark`: the MVP has no light theme; the class enables 8bitcn's
+       dark:-variants. */
     <html lang={LOCALE} className={cn('dark', pixel.variable, ui.variable)}>
       <body className="min-h-dvh antialiased">
         {children}
-        {/* Vercel Analytics: просмотры страниц и посетители. */}
+        {/* Vercel Analytics: page views and visitors. */}
         <Analytics />
-        {/* Vercel Speed Insights: метрики Web Vitals с прода (наш бюджет — п. 8 ТЗ). */}
+        {/* Vercel Speed Insights: Web Vitals from prod (our budget — spec § 8). */}
         <SpeedInsights />
       </body>
     </html>

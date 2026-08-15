@@ -1,20 +1,20 @@
 #!/usr/bin/env node
 /**
- * Генератор иконок приложения: фавикон, иконка iOS и набор для веб-манифеста.
+ * App icon generator: favicon, iOS icon, and the web manifest set.
  *
- * Рисунок — долька цитруса на пиксельной сетке 16×16. Спрайт ходьбы из
- * `public/sprites/walk.svg` на эту роль не подошёл: кадр фигуры занимает 10×27
- * пикселей, и на фавиконе 16×16 от неё остаётся нечитаемая вертикальная полоска.
- * Долька читается и в 16 пикселей, и отвечает названию приложения.
+ * The artwork is a citrus slice on a 16×16 pixel grid. The walk sprite from
+ * `public/sprites/walk.svg` did not fit this role: a figure frame is 10×27
+ * pixels, which shrinks to an unreadable vertical sliver on a 16×16 favicon.
+ * The slice stays legible at 16 pixels and matches the app's name.
  *
- * Сетка строится кодом, а не ASCII-матрицей: окружность и разрезы долек — это
- * формула, и подправить радиус проще числом, чем перерисовкой 256 символов.
+ * The grid is built in code, not as an ASCII matrix: the circle and segment
+ * cuts are a formula — tweaking a radius by number beats redrawing 256 chars.
  *
- * Цвета взяты из палитры приложения (`app/globals.css`) и спрайта: фон совпадает
- * с `--background` и с `themeColor` в layout.tsx, мякоть и корка — из палитры
- * самого спрайта ходьбы, поэтому иконка не выбивается из набора.
+ * Colors come from the app palette (`app/globals.css`) and the sprite: the
+ * background matches `--background` and `themeColor` in layout.tsx, flesh and
+ * rind come from the walk sprite's palette, so the icon fits the set.
  *
- * Запуск: `npm run gen:icons:app` (нужен `sharp` — он есть в зависимостях Next).
+ * Run: `npm run gen:icons:app` (needs `sharp` — it ships with Next's deps).
  */
 
 import { writeFileSync } from 'node:fs';
@@ -27,23 +27,23 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const PUBLIC = join(ROOT, 'public');
 const APP = join(ROOT, 'app');
 
-/** Сторона пиксельной сетки. Все растровые размеры кратны ей, кроме 180 (см. ниже). */
+/** Pixel grid side. All raster sizes are multiples of it, except 180 (see below). */
 const GRID = 16;
 
 const COLOR = {
-  /** `--background` из globals.css; тот же цвет объявлен как themeColor. */
+  /** `--background` from globals.css; the same color is declared as themeColor. */
   bg: '#17130F',
-  /** Корка и разрезы между дольками — тёмная оранжевая из палитры спрайта. */
+  /** Rind and cuts between segments — the dark orange from the sprite palette. */
   rind: '#C96C00',
-  /** Мякоть — основная оранжевая оттуда же. */
+  /** Flesh — the primary orange from the same palette. */
   flesh: '#FF8A00',
 };
 
 /**
- * Пиксели дольки. `null` — прозрачный.
+ * Slice pixels. `null` — transparent.
  *
- * Разрезы сделаны крестом, а не шестью лучами: на 16 пикселях луч под углом
- * 60° вырождается в пунктир из отдельных точек и читается как шум.
+ * Cuts form a cross rather than six rays: at 16 pixels a 60° ray degrades
+ * into a dotted line of separate points and reads as noise.
  */
 function slicePixels() {
   const c = GRID / 2;
@@ -66,12 +66,12 @@ function slicePixels() {
 }
 
 /**
- * SVG из сетки. Соседние пиксели одного цвета в строке сливаются в один rect:
- * без этого в файле лежало бы 256 прямоугольников вместо примерно сорока.
+ * SVG from the grid. Adjacent same-color pixels in a row merge into one rect:
+ * without this the file would hold 256 rectangles instead of about forty.
  *
- * `padding` — доля стороны, оставляемая пустой по краям. Нужен для maskable-иконки
- * Android: система обрезает её под свою маску, и рисунок обязан уместиться в
- * безопасную зону, иначе у дольки срежет края.
+ * `padding` is the fraction of the side left empty at the edges. Needed for the
+ * Android maskable icon: the system crops it to its own mask, and the artwork
+ * must fit the safe zone or the slice gets its edges cut off.
  */
 function toSvg({ background = null, padding = 0 } = {}) {
   const rows = slicePixels();
@@ -107,25 +107,25 @@ function toSvg({ background = null, padding = 0 } = {}) {
 const png = (svg, size) => sharp(Buffer.from(svg)).resize(size, size).png().toBuffer();
 
 /**
- * Контейнер ICO вокруг готового PNG.
+ * ICO container around a ready PNG.
  *
- * `sharp` формат ICO не пишет, а собственный фавикон нужен: браузеры сами тянут
- * `/favicon.ico`, и без него в табе остался бы дефолтный логотип Next. ICO с
- * Vista умеет хранить PNG как есть, поэтому достаточно 22-байтового заголовка.
+ * `sharp` cannot write ICO, but a real favicon is needed: browsers fetch
+ * `/favicon.ico` on their own, and without it the tab would keep the default
+ * Next logo. Since Vista, ICO can store PNG as-is, so a 22-byte header suffices.
  */
 function toIco(pngBuffer, size) {
   const header = Buffer.alloc(6);
   header.writeUInt16LE(0, 0); // reserved
-  header.writeUInt16LE(1, 2); // 1 — иконка (2 было бы курсором)
-  header.writeUInt16LE(1, 4); // одно изображение в файле
+  header.writeUInt16LE(1, 2); // 1 — icon (2 would be a cursor)
+  header.writeUInt16LE(1, 4); // one image in the file
 
   const entry = Buffer.alloc(16);
-  entry.writeUInt8(size >= 256 ? 0 : size, 0); // 0 означает 256
+  entry.writeUInt8(size >= 256 ? 0 : size, 0); // 0 means 256
   entry.writeUInt8(size >= 256 ? 0 : size, 1);
-  entry.writeUInt8(0, 2); // палитра не используется
+  entry.writeUInt8(0, 2); // no palette
   entry.writeUInt8(0, 3); // reserved
-  entry.writeUInt16LE(1, 4); // цветовых плоскостей
-  entry.writeUInt16LE(32, 6); // бит на пиксель
+  entry.writeUInt16LE(1, 4); // color planes
+  entry.writeUInt16LE(32, 6); // bits per pixel
   entry.writeUInt32LE(pngBuffer.length, 8);
   entry.writeUInt32LE(header.length + entry.length, 12);
 
@@ -134,20 +134,20 @@ function toIco(pngBuffer, size) {
 
 const transparent = toSvg();
 const opaque = toSvg({ background: COLOR.bg });
-// 20% полей с каждой стороны — безопасная зона maskable по спецификации W3C.
+// 20% margin on each side — the maskable safe zone per the W3C spec.
 const maskable = toSvg({ background: COLOR.bg, padding: 0.2 });
 
-// Фавикон вектором: пиксельная сетка масштабируется без размытия на любом экране.
+// Vector favicon: the pixel grid scales without blur on any screen.
 writeFileSync(join(APP, 'icon.svg'), transparent);
 writeFileSync(join(APP, 'favicon.ico'), toIco(await png(transparent, 32), 32));
 
-// iOS маску накладывает сам и прозрачность заливает чёрным — отдаём непрозрачную.
-// 180 не кратно 16, но это единственный размер вне сетки и на глаз незаметно.
+// iOS applies its own mask and fills transparency with black — ship it opaque.
+// 180 is not a multiple of 16, but it is the only off-grid size and invisible to the eye.
 writeFileSync(join(APP, 'apple-icon.png'), await png(opaque, 180));
 
 writeFileSync(join(PUBLIC, 'icon-192.png'), await png(opaque, 192));
 writeFileSync(join(PUBLIC, 'icon-512.png'), await png(opaque, 512));
 writeFileSync(join(PUBLIC, 'icon-maskable-512.png'), await png(maskable, 512));
 
-console.log('Иконки собраны: app/icon.svg, app/favicon.ico, app/apple-icon.png,');
+console.log('Icons built: app/icon.svg, app/favicon.ico, app/apple-icon.png,');
 console.log('public/icon-192.png, public/icon-512.png, public/icon-maskable-512.png');

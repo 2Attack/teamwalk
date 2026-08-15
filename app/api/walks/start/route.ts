@@ -23,14 +23,14 @@ import { fmt, m } from '@/lib/i18n';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-/** Сколько раз перевыбираем свободную дорожку, проиграв гонку за неё. */
+/** How many times to re-pick a free treadmill after losing the race for one. */
 const MAX_START_ATTEMPTS = 5;
 
 type Chosen =
   | { ok: true; treadmill: TreadmillDto }
   | { ok: false; response: ReturnType<typeof apiError> };
 
-/** Явно выбранная дорожка: отличаем «нет такой» от «выведена из строя» (п. 6.9.6). */
+/** Explicitly chosen treadmill: distinguish "no such" from "decommissioned" (spec § 6.9.6). */
 async function resolveExplicit(id: string, active: TreadmillDto[]): Promise<Chosen> {
   const found = active.find((t) => t.id === id);
   if (found) return { ok: true, treadmill: found };
@@ -49,7 +49,7 @@ async function resolveExplicit(id: string, active: TreadmillDto[]): Promise<Chos
   };
 }
 
-/** Дорожка не передана: одна активная подставляется сама, иначе первая свободная (п. 6.9). */
+/** No treadmill given: a single active one is auto-picked, otherwise the first free one (spec § 6.9). */
 function resolveAuto(active: TreadmillDto[], skip: ReadonlySet<string> = new Set()): Chosen {
   if (active.length === 0) {
     return {
@@ -58,7 +58,7 @@ function resolveAuto(active: TreadmillDto[], skip: ReadonlySet<string> = new Set
     };
   }
 
-  // Список уже отсортирован по sort_order, name.
+  // The list is already sorted by sort_order, name.
   const free = active.find((t) => !t.busy && !skip.has(t.id));
   if (free) return { ok: true, treadmill: free };
 
@@ -71,9 +71,9 @@ function resolveAuto(active: TreadmillDto[], skip: ReadonlySet<string> = new Set
 }
 
 /**
- * Drizzle 0.45 заворачивает ошибку драйвера в `DrizzleQueryError`, у которой
- * нет `code` — код `23505` и имя индекса лежат в `cause`. Разворачиваем цепочку,
- * иначе гонка отдалась бы клиенту как 500 вместо понятного 409.
+ * Drizzle 0.45 wraps the driver error in `DrizzleQueryError`, which has no
+ * `code` — `23505` and the index name live in `cause`. Unwrap the chain, or a
+ * race would surface to the client as 500 instead of a clear 409.
  */
 function violates(error: unknown, index?: string): boolean {
   let current: unknown = error;
@@ -85,14 +85,14 @@ function violates(error: unknown, index?: string): boolean {
   return false;
 }
 
-/** 409 по п. 7.1: у участника уже есть активная прогулка — отдаём её в `details`. */
+/** 409 per spec § 7.1: the member already has an active walk — returned in `details`. */
 async function alreadyActive(userId: string) {
   return apiError(409, 'WALK_ALREADY_ACTIVE', m.apiMessages.walkAlreadyActive, {
     details: await getActiveWalk(userId),
   });
 }
 
-/** 409 по п. 7.2: дорожку занял кто-то другой — отдаём имя и время начала. */
+/** 409 per spec § 7.2: someone else took the treadmill — return their name and start time. */
 async function treadmillBusy(treadmill: TreadmillDto) {
   const busy = (await listActiveTreadmills()).find((t) => t.id === treadmill.id)?.busy ?? null;
   const message = busy
@@ -103,9 +103,9 @@ async function treadmillBusy(treadmill: TreadmillDto) {
 }
 
 /**
- * POST /api/walks/start — создаёт активную прогулку.
- * Конкурентные ограничения обеспечивает БД (partial unique indexes, п. 7.1–7.2),
- * а не предварительные SELECT: читать «свободно ли» перед вставкой — гонка.
+ * POST /api/walks/start — creates an active walk.
+ * Concurrency limits are enforced by the DB (partial unique indexes,
+ * spec § 7.1–7.2), not by pre-SELECTs: checking "is it free" before insert is a race.
  */
 export async function POST(request: Request) {
   const parsed = startWalkSchema.safeParse(await readJson(request));
@@ -113,29 +113,29 @@ export async function POST(request: Request) {
   const { userId, speedKmh, treadmillId } = parsed.data;
 
   return handle<ActiveWalkDto | ApiErrorBody>(async () => {
-    // Ленивый фолбэк cron-рассылки (п. 6.10.5) — вторая точка после лидерборда:
-    // старт прогулки случается и в дни, когда рейтинг никто не открывал.
+    // Lazy cron-sweep fallback (spec § 6.10.5), second hook after the
+    // leaderboard: walks start even on days no one opens the ranking.
     ensureNotifySweep();
 
-    // Забытые прогулки освобождают дорожки до выбора (п. 7.6).
+    // Stale walks free up treadmills before selection (spec § 7.6).
     await closeStaleWalks();
 
-    // Своя идущая прогулка — это 7.1, а не 7.2: при одной дорожке она же её и
-    // занимает, и без этой проверки участник получил бы TREADMILL_BUSY вместо
-    // WALK_ALREADY_ACTIVE, а интерфейс не увёл бы его на экран своей прогулки.
-    // От гонки по-прежнему защищает partial unique index, а не этот SELECT.
+    // The member's own walk is § 7.1, not § 7.2: with a single treadmill it
+    // occupies that treadmill too, and without this check they'd get
+    // TREADMILL_BUSY instead of WALK_ALREADY_ACTIVE, so the UI wouldn't route
+    // them to their walk screen. The partial unique index, not this SELECT,
+    // still guards against the race.
     const own = await getActiveWalk(userId);
     if (own) {
       return apiError(409, 'WALK_ALREADY_ACTIVE', m.apiMessages.walkAlreadyActive, { details: own });
     }
 
     /*
-      Дорожку выбираем с повтором: при автоподстановке двое участников, нажавших
-      «Start» одновременно, читают один и тот же список и оба целятся в первую
-      свободную. Проигравший гонку не должен получать «занято» — при двух
-      дорожках параллельные прогулки это штатный режим (п. 7.2), поэтому он
-      перевыбирает следующую свободную. Если дорожку указали явно, повтора нет:
-      человек выбрал конкретный тренажёр, подменять его молча нельзя.
+      Retry-based selection: with auto-pick, two members hitting Start at once
+      read the same list and both target the first free treadmill. The race
+      loser should not get "busy" — parallel walks are normal with two
+      treadmills (spec § 7.2) — so they re-pick the next free one. An explicitly
+      chosen treadmill is never retried: it must not be silently substituted.
     */
     const failed = new Set<string>();
 
@@ -148,7 +148,7 @@ export async function POST(request: Request) {
 
       const treadmill = chosen.treadmill;
 
-      // Потолок скорости — свойство конкретной дорожки, CHECK его не проверяет.
+      // The speed ceiling is per-treadmill; the CHECK constraint doesn't cover it.
       if (speedKmh > treadmill.maxSpeedKmh) {
         return apiError(
           400,
@@ -166,7 +166,7 @@ export async function POST(request: Request) {
 
         const busyTreadmill =
           violates(error, 'walks_one_active_per_treadmill') ||
-          // 23505 без опознанного индекса: раз своей прогулки нет, занята дорожка.
+          // 23505 with no recognized index: since the user has no walk, the treadmill is busy.
           (violates(error) && !(await getActiveWalk(userId)));
 
         if (!busyTreadmill) {
@@ -184,8 +184,8 @@ export async function POST(request: Request) {
       return apiError(500, 'INTERNAL_ERROR', m.apiMessages.walkCreatedUnreadable);
     }
 
-    // Telegram никогда не в горячем пути (п. 6.10.1): уведомление о старте —
-    // после ответа клиенту; идемпотентность и «Это не я» — внутри notify.
+    // Telegram is never in the hot path (spec § 6.10.1): the start notification
+    // goes after the response; idempotency and "not me" live inside notify.
     waitUntil(notifyWalkStarted(walk));
 
     return NextResponse.json(walk, { status: 201 });

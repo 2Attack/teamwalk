@@ -15,13 +15,13 @@ interface HintTickerProps {
   className?: string;
 }
 
-/** Интервалы смены (п. 6.6.10): главная — 7 с, дорожка — 10 с, reduced-motion — 12 с. */
+/** Rotation intervals (spec § 6.6.10): home 7 s, walk 10 s, reduced-motion 12 s. */
 const INTERVAL_MS = { home: 7_000, walk: 10_000, reduced: 12_000 } as const;
-/** Печать не должна съедать паузу на чтение: 20 мс на символ, но не дольше 2.4 с всего. */
+/** Typing must not eat into reading time: 20 ms per char, capped at 2.4 s total. */
 const TYPE_CHAR_MS = 20;
 const TYPE_TOTAL_MAX_MS = 2_400;
 
-/** По контракту API пул непуст, но пустая панель выглядела бы как поломка. */
+/** The API contract guarantees a non-empty pool, but an empty panel would look broken. */
 const FALLBACK: HintDto = {
   id: 'fallback',
   tone: 'neutral',
@@ -29,7 +29,7 @@ const FALLBACK: HintDto = {
   source: 'static',
 };
 
-/** Фишер — Йетс над копией: исходный пул не мутируется. */
+/** Fisher–Yates over a copy: the source pool is not mutated. */
 function shuffle(items: readonly HintDto[]): HintDto[] {
   const copy = [...items];
   for (let i = copy.length - 1; i > 0; i -= 1) {
@@ -41,7 +41,7 @@ function shuffle(items: readonly HintDto[]): HintDto[] {
   return copy;
 }
 
-/** Новый круг: тасуем заново и следим, чтобы первая фраза не повторила последнюю. */
+/** New round: reshuffle, making sure the first phrase doesn't repeat the last one. */
 function reshuffle(items: readonly HintDto[], lastId: string | null): HintDto[] {
   const next = shuffle(items);
   if (next.length > 1 && next[0].id === lastId) return [next[1], next[0], ...next.slice(2)];
@@ -49,14 +49,9 @@ function reshuffle(items: readonly HintDto[], lastId: string | null): HintDto[] 
 }
 
 /**
- * Число уже «напечатанных» символов фразы.
- *
- * Раньше печать собиралась из отдельных CSS-анимаций на каждый символ с растущим
- * `animation-delay`. На фразе в 80–140 символов это 80–140 одновременных анимаций,
- * которые перезапускались каждые 7 секунд, и хвост строки просто переставал
- * доигрывать: фраза навсегда обрывалась на полуслове, а невидимый хвост держал
- * своё место в строке — отсюда и «дыры» в ленте. Здесь один таймер и один
- * счётчик, поэтому печать всегда доходит до конца.
+ * Number of characters "typed" so far. One timer and one counter — do not
+ * rebuild this as per-character CSS animations: with 80–140 chars restarting
+ * every 7 s the tail animations stall and phrases get cut off mid-word.
  */
 function useTypedCount(text: string, enabled: boolean): number {
   const total = text.length;
@@ -70,7 +65,7 @@ function useTypedCount(text: string, enabled: boolean): number {
     setCount(0);
     if (total === 0) return;
 
-    // Печать не должна съедать паузу на чтение: 20 мс на символ, но не дольше 2.4 с всего.
+    // Typing must not eat into reading time: 20 ms per char, capped at 2.4 s total.
     const stepMs = Math.max(1, Math.min(TYPE_CHAR_MS, TYPE_TOTAL_MAX_MS / total));
     const timer = window.setInterval(() => {
       setCount((value) => {
@@ -101,28 +96,25 @@ function useReducedMotionPreference(): boolean {
 }
 
 /**
- * Диалоговое окно NPC (п. 6.7.5) на `Alert` из 8bitcn: «уши» по углам рамки —
- * та самая рамка диалогового окна. Текст фразы набран пиксельным шрифтом
- * (`font="retro"`) — как реплика NPC в консольной игре.
+ * NPC dialog box (spec § 6.7.5) on 8bitcn `Alert`; phrase text is pixel font
+ * (`font="retro"`), like an NPC line in a console game.
  *
- * Плата за это — высота блока. У Press Start 2P ширина глифа равна кеглю, то
- * есть символов в строке ровно `ширина / font-size`, а фраза бывает до 140
- * символов: на телефоне это 6–7 строк вместо прежних двух. Высота задана в `lh`
- * (строках) и зафиксирована по худшему случаю, чтобы смена фразы не дёргала
- * вёрстку; на коротких фразах низ окна остаётся пустым — для диалогового окна
- * это нормально. `hyphens-auto` (у html стоит lang="ru") убирает рваный правый
- * край, из-за которого моноширинный текст терял бы ещё строку.
+ * The cost is block height: Press Start 2P glyph width equals the font size,
+ * and phrases run up to 140 chars — 6–7 lines on a phone. Height is fixed in
+ * `lh` units for the worst case so phrase changes don't shift layout; short
+ * phrases leave the bottom empty, which is fine for a dialog box.
+ * `hyphens-auto` (html has lang="ru") avoids a ragged right edge that would
+ * cost another line in monospaced text.
  *
- * В один момент в разметке живёт ровно один `<p>`: смена фразы — это смена `key`,
- * то есть размонтирование старого абзаца и монтирование нового. Кросс-фейда между
- * фразами нет сознательно — на нём две фразы накладывались друг на друга в одном
- * блоке фиксированной высоты, и лента читалась как каша из обрывков.
+ * Exactly one `<p>` exists at a time: phrase change swaps the `key`. No
+ * cross-fade on purpose — it overlapped two phrases inside the fixed-height
+ * box and made the feed unreadable.
  */
 export function HintTicker({ userId = null, variant = 'home', className }: HintTickerProps) {
   const { data } = useHints(userId ?? null);
   const reduced = useReducedMotionPreference();
-  // Наведение и фокус считаются раздельно: иначе уход мыши снимал бы паузу
-  // с фразы, которую пользователь читает, держа фокус на панели с клавиатуры.
+  // Hover and focus are tracked separately: otherwise mouse-leave would unpause
+  // a phrase the user is reading with keyboard focus on the panel.
   const [hovered, setHovered] = useState(false);
   const [focused, setFocused] = useState(false);
   const [order, setOrder] = useState<HintDto[]>([]);
@@ -131,7 +123,7 @@ export function HintTicker({ userId = null, variant = 'home', className }: HintT
   const pool = useMemo<HintDto[]>(() => (data?.hints.length ? data.hints : [FALLBACK]), [data]);
   const poolKey = pool.map((hint) => hint.id).join('|');
 
-  // Пул целиком обновляется раз в несколько минут — сверяем по составу id.
+  // The whole pool refreshes every few minutes — compare by id composition.
   useEffect(() => {
     setOrder(shuffle(pool));
     setIndex(0);
@@ -140,7 +132,7 @@ export function HintTicker({ userId = null, variant = 'home', className }: HintT
 
   const current = order[index] ?? pool[0];
 
-  /** Перебор по кругу без повторов: круг заканчивается — пул тасуется заново. */
+  /** Cycle without repeats: when the round ends, the pool is reshuffled. */
   const advance = useCallback(() => {
     if (index + 1 < order.length) {
       setIndex(index + 1);
@@ -155,14 +147,14 @@ export function HintTicker({ userId = null, variant = 'home', className }: HintT
 
   useEffect(() => {
     if (paused || order.length < 2) return;
-    // Таймер пересоздаётся после каждой смены, поэтому снятие паузы
-    // всегда даёт полный интервал на чтение, а не остаток предыдущего.
+    // The timer is recreated after every change, so unpausing always grants
+    // a full reading interval, not the remainder of the previous one.
     const timer = window.setInterval(advance, intervalMs);
     return () => window.clearInterval(timer);
   }, [paused, order.length, intervalMs, advance]);
 
   const text = current?.text ?? '';
-  // `prefers-reduced-motion` глушит печать целиком — фраза появляется сразу (п. 6.8.4).
+  // `prefers-reduced-motion` disables typing entirely — the phrase appears at once (spec § 6.8.4).
   const typed = useTypedCount(text, !reduced);
   const isWalk = variant === 'walk';
 
@@ -178,43 +170,40 @@ export function HintTicker({ userId = null, variant = 'home', className }: HintT
       <Alert
         font="retro"
         /*
-          `Alert` приходит с `role="alert"`, а у этой роли подразумеваемое
-          `aria-live` — `assertive`. Для ленты, которая сама меняется каждые
-          7 секунд, это означало бы, что скринридер перебивает пользователя на
-          каждой фразе. Явный `aria-live="off"` перекрывает подразумеваемое
-          значение роли (п. 6.8.4).
+          `Alert` ships with `role="alert"` (implicit `aria-live="assertive"`);
+          for a feed that rotates every 7 s the screen reader would interrupt
+          on every phrase. Explicit `aria-live="off"` overrides the role's
+          implicit value (spec § 6.8.4).
         */
         aria-live="off"
         aria-atomic="false"
-        // Иконка обёрнута в <span>, поэтому колоночный вариант базового Alert
-        // (он ищет прямого потомка-<svg>) сам не включится: задаём сетку
-        // «иконка + текст» явно.
+        // Icon is wrapped in a <span>, so the base Alert's column variant
+        // (it looks for a direct <svg> child) won't kick in: set the
+        // icon + text grid explicitly.
         className="grid-cols-[auto_1fr] items-start gap-x-3 px-4 py-4"
       >
-        {/* Иконка диалогового окна NPC — из общего пиксельного набора (п. 6.7.4). */}
+        {/* NPC dialog icon from the shared pixel set (spec § 6.7.4). */}
         <Icon name="hint" size={isWalk ? 24 : 16} className="mt-0.5" />
 
         <AlertDescription
           className={cn(
             /*
-              Высота окна считается в `lh` (строках), поэтому строка контейнера
-              обязана совпасть со строкой абзаца внутри — иначе «4 строки» окна
-              и 4 строки текста окажутся разной высоты. Совпадение приходится
-              задавать через `!`: базовый `AlertDescription` навязывает абзацу
-              свой межстрочный селектором `[&_p]`, а `text-xs` тянет за собой
-              собственный line-height — обе величины перебиваются явной.
+              Box height is in `lh` units, so the container's line-height must
+              match the paragraph's — hence the `!`: base `AlertDescription`
+              forces its own line-height via `[&_p]`, and `text-xs` brings its
+              own too; both are overridden explicitly.
 
-              Кегль — компромисс между читаемостью и высотой окна: на телефоне
-              минимум, при котором Press Start 2P ещё читается, на широком
-              экране крупнее (на дорожке фразу читают с полутора метров,
-              п. 6.6.10). Число строк взято по худшей фразе в 140 символов,
-              поэтому смена хинта не дёргает вёрстку.
+              Font size trades readability for box height: phone gets the
+              minimum at which Press Start 2P is still legible; wider screens
+              get larger (on the treadmill the phrase is read from ~1.5 m,
+              spec § 6.6.10). Line count fits the worst 140-char phrase, so
+              hint changes don't shift layout.
             */
             'block min-w-0 overflow-hidden text-text-main leading-[1.7]!',
             /*
-              Кегль растёт с `md`, а не с `sm`: на 640 px колонка ещё узкая, и
-              прибавка кегля именно там даёт худший случай переносов (6 строк
-              против 4). К 768 px ширины уже хватает.
+              Font size grows at `md`, not `sm`: at 640 px the column is still
+              narrow and a larger size there yields the worst wrapping
+              (6 lines vs 4). By 768 px there is enough width.
             */
             isWalk ? 'text-xs md:text-base' : 'text-[10px] md:text-xs',
             'h-[7lh] md:h-[4lh]',
@@ -222,16 +211,16 @@ export function HintTicker({ userId = null, variant = 'home', className }: HintT
         >
           <p
             key={current.id}
-            // Межстрочный повторяет родительский (и тоже через `!`): высота окна
-            // задана в его строках, а базовый `AlertDescription` иначе поставит
-            // абзацу свой.
+            // Line-height mirrors the parent (also with `!`): the box height is
+            // defined in its lines, and base `AlertDescription` would otherwise
+            // impose its own on the paragraph.
             className="m-0 hyphens-auto break-words leading-[1.7]!"
           >
             {text.slice(0, typed)}
             {/*
-              Ненапечатанный хвост остаётся в потоке невидимым: перенос строк
-              считается по фразе целиком и по ходу печати не съезжает, поэтому
-              строка не переверстывается на каждом символе (п. 6.7.6).
+              The untyped tail stays in flow, invisible: line wrapping is
+              computed for the whole phrase, so it doesn't reflow on every
+              character (spec § 6.7.6).
             */}
             <span aria-hidden="true" className="invisible">
               {text.slice(typed)}

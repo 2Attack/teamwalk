@@ -25,13 +25,14 @@ import { fmt, m, plural } from '@/lib/i18n';
 import type { FinishWalkResultDto } from '@/lib/types';
 
 /**
- * Экран успеха (п. 6.4) — «уведомление о награде» (п. 6.7.5): прибавка, позиция,
- * серия, новые достижения. Всё рисуется из ответа `POST /finish` — второго запроса
- * за достижениями, серией и рейтингом нет по построению.
+ * Success screen (spec § 6.4) — the "award notification" (spec § 6.7.5): gain,
+ * rank, streak, new achievements. All rendered from the `POST /finish`
+ * response — by construction there is no second request for achievements,
+ * streak, or rank.
  *
- * Пиксельный шрифт — на прибавке, номере места и заголовках блоков. Названия
- * достижений, описания и хинт идут обычным sans: длинные русские строки в
- * bitmap-шрифте не помещаются в 360px (п. 6.7.1).
+ * Pixel font on the gain, rank number, and block titles. Achievement titles,
+ * descriptions, and the hint are regular sans: long Russian strings in a
+ * bitmap font don't fit 360px (spec § 6.7.1).
  */
 
 const RECORD_ANIMATION_MS = 700;
@@ -41,7 +42,7 @@ function prefersReducedMotion(): boolean {
   return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 }
 
-/** Плавный набор числа: перерисовка текста, без анимации геометрии. */
+/** Smooth number count-up: text repaint, no geometry animation. */
 function useCountUp(target: number): number {
   const [value, setValue] = useState(() => (prefersReducedMotion() ? target : 0));
 
@@ -64,7 +65,7 @@ function useCountUp(target: number): number {
   return value;
 }
 
-/** Короткая метка места — пиксельная. Сама фраза о перемещении идёт ниже, sans. */
+/** Short rank label — pixel font. The movement phrase itself goes below, sans. */
 function rankDelta(rank: FinishWalkResultDto['rank']): string {
   const { current, previous } = rank;
   if (previous === null) return m.walkSuccess.rankFirst;
@@ -91,7 +92,7 @@ export function WalkSuccess({ result }: { result: FinishWalkResultDto }) {
     return endedAt + DELETE_WINDOW_MINUTES * 60_000;
   }, [walk.endedAt]);
 
-  // Окно удаления считается от времени сервера; кнопка исчезает синхронно с 403.
+  // The delete window counts from server time; the button vanishes in sync with the 403.
   useEffect(() => {
     const tick = () => setSecondsLeft(Math.max(0, Math.ceil((deadlineMs - Date.now()) / 1000)));
     tick();
@@ -122,7 +123,7 @@ export function WalkSuccess({ result }: { result: FinishWalkResultDto }) {
 
   return (
     <main className="mx-auto flex min-h-dvh w-full max-w-md flex-col justify-center gap-5 px-4 py-8">
-      {/* Анимируются только opacity и scale — transform, без reflow (п. 6.7.6). */}
+      {/* Only opacity and scale animate — transform, no reflow (spec § 6.7.6). */}
       <motion.div
         initial={{ opacity: 0, scale: 0.92 }}
         animate={{ opacity: 1, scale: 1 }}
@@ -140,8 +141,8 @@ export function WalkSuccess({ result }: { result: FinishWalkResultDto }) {
         </p>
       </motion.div>
 
-      {/* `font="normal"` проставляется на каждом слоте: 8bitcn вешает `retro`
-          на любой подкомпонент, которому его не передали явно. */}
+      {/* `font="normal"` is set on every slot: 8bitcn applies `retro` to any
+          subcomponent that doesn't receive it explicitly. */}
       <Card font="normal">
         <CardHeader font="normal">
           <CardTitle className="text-[16px] leading-relaxed">
@@ -180,8 +181,8 @@ export function WalkSuccess({ result }: { result: FinishWalkResultDto }) {
         </CardFooter>
       </Card>
 
-      {/* Тост всплывает и уходит, поэтому список наград дублируется текстом:
-          экран успеха — единственное место, где их показывают целиком. */}
+      {/* The toast comes and goes, so the award list is duplicated as text:
+          the success screen is the only place showing them in full. */}
       {newAchievements.length > 0 ? (
         <>
           <AchievementToast achievements={newAchievements} />
@@ -195,7 +196,7 @@ export function WalkSuccess({ result }: { result: FinishWalkResultDto }) {
                   <li key={achievement.code} className="space-y-2">
                     <div className="px-1.5">
                       <Badge font="normal" className="h-7">
-                        {/* У каждой ачивки своя пиксельная иконка (п. 6.8.3). */}
+                        {/* Each achievement has its own pixel icon (spec § 6.8.3). */}
                         <Icon name={achievementIcon(achievement.code)} size={16} />
                         {achievement.title}
                       </Badge>

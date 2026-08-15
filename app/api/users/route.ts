@@ -10,7 +10,7 @@ import { m } from '@/lib/i18n';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-/** GET /api/users — список участников, отсортированный по имени (п. 5.1). */
+/** GET /api/users — member list sorted by name (spec § 5.1). */
 export function GET() {
   return handle<UserDto[] | ApiErrorBody>(async () => {
     const users = await listUsers();
@@ -18,19 +18,19 @@ export function GET() {
   });
 }
 
-/** POST /api/users — создание участника (п. 6.2). */
+/** POST /api/users — create a member (spec § 6.2). */
 export function POST(request: Request) {
   return handle<UserDto | ApiErrorBody>(async () => {
-    // Схема сама нормализует имя (trim, схлопывание пробелов, Заглавные Буквы)
-    // и проверяет avatarId по каталогу пресетов.
+    // The schema normalizes the name (trim, collapse spaces, Title Case) and
+    // validates avatarId against the preset catalog.
     const input = createUserSchema.parse(await readJson(request));
 
     try {
       const user = await createUser(input);
       return NextResponse.json(user, { status: 201 });
     } catch (error) {
-      // Уникальность имени регистронезависима и нечувствительна к пробелам —
-      // это обеспечивает индекс users_name_uniq, а не предварительный SELECT (гонка).
+      // Name uniqueness is case- and whitespace-insensitive, enforced by the
+      // users_name_uniq index rather than a pre-SELECT (race-prone).
       if (isUniqueViolation(error, 'users_name_uniq')) {
         return apiError(409, 'NAME_TAKEN', m.apiMessages.userNameTaken, {
           field: 'name',

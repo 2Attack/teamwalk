@@ -1,9 +1,9 @@
--- TeamWalk — начальная схема (п. 4.1, 6.6.5, 6.8.5 ТЗ).
--- Скрипт идемпотентен: повторный запуск ничего не ломает.
+-- TeamWalk — initial schema (spec § 4.1, 6.6.5, 6.8.5).
+-- The script is idempotent: rerunning breaks nothing.
 
 create extension if not exists "pgcrypto";
 
--- Участники ---------------------------------------------------------------
+-- Members ------------------------------------------------------------------
 create table if not exists users (
   id            uuid primary key default gen_random_uuid(),
   name          text not null,
@@ -12,11 +12,11 @@ create table if not exists users (
   created_at    timestamptz not null default now()
 );
 
--- Регистронезависимая уникальность имени: два "Иван Петров" завести нельзя.
+-- Case-insensitive name uniqueness: no two "Ivan Petrov" allowed.
 create unique index if not exists users_name_uniq
   on users (lower(regexp_replace(btrim(name), '\s+', ' ', 'g')));
 
--- Дорожки -----------------------------------------------------------------
+-- Treadmills ---------------------------------------------------------------
 create table if not exists treadmills (
   id            uuid primary key default gen_random_uuid(),
   name          text not null,
@@ -30,7 +30,7 @@ create table if not exists treadmills (
 
 create unique index if not exists treadmills_name_uniq on treadmills (lower(btrim(name)));
 
--- Прогулки ----------------------------------------------------------------
+-- Walks --------------------------------------------------------------------
 do $$
 begin
   if not exists (select 1 from pg_type where typname = 'walk_status') then
@@ -61,7 +61,7 @@ create table if not exists walks (
   constraint walk_speed_range check (speed_kmh between 1 and 25)
 );
 
--- Не более одной активной прогулки на участника и на дорожку (п. 7.1, 7.2).
+-- At most one active walk per member and per treadmill (spec § 7.1, 7.2).
 create unique index if not exists walks_one_active_per_user
   on walks (user_id) where status = 'active';
 create unique index if not exists walks_one_active_per_treadmill
@@ -70,7 +70,7 @@ create unique index if not exists walks_one_active_per_treadmill
 create index if not exists walks_user_started_idx on walks (user_id, started_at desc);
 create index if not exists walks_started_idx      on walks (started_at desc);
 
--- Геймификация ------------------------------------------------------------
+-- Gamification -------------------------------------------------------------
 create table if not exists achievements (
   id        uuid primary key default gen_random_uuid(),
   user_id   uuid not null references users(id) on delete cascade,
@@ -89,7 +89,7 @@ create table if not exists streak_freezes (
 
 create unique index if not exists streak_freezes_uniq on streak_freezes (user_id, used_on);
 
--- Хинты -------------------------------------------------------------------
+-- Hints --------------------------------------------------------------------
 create table if not exists hints_cache (
   id           uuid primary key default gen_random_uuid(),
   text         text not null,
@@ -110,7 +110,7 @@ insert into hints_meta (id, locked_until)
 values (true, now())
 on conflict (id) do nothing;
 
--- Сид: без записи в treadmills стартовать прогулку нельзя (п. 9.1).
+-- Seed: without a treadmills row no walk can be started (spec § 9.1).
 insert into treadmills (name, max_speed_kmh, is_active, sort_order)
 select 'Дорожка', 10, true, 0
 where not exists (select 1 from treadmills);

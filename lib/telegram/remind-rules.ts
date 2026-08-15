@@ -9,42 +9,41 @@ import {
 import { diffOfficeDays, isWeekend, workdaysSince } from '@/lib/time';
 
 /**
- * Правила частоты и затухания напоминаний (п. 6.10.4 ТЗ).
+ * Reminder frequency and backoff rules (spec § 6.10.4).
  *
- * Чистый модуль без БД: все факты приходят снаружи офисными датами
- * `YYYY-MM-DD`, поэтому логика покрывается юнит-тестами без `DATABASE_URL`.
- * Проверка окна отправки (рабочий день, 11–17 МСК) сюда не входит —
- * она общая для напоминаний и дайджеста и живёт в sweep (п. 6.10.5).
+ * Pure module, no DB: facts arrive as office days `YYYY-MM-DD`, so the logic
+ * is unit-testable without `DATABASE_URL`. The send-window check (workday,
+ * 11–17 MSK) is shared with the digest and lives in the sweep (spec § 6.10.5).
  */
 
 export interface ReminderFacts {
-  /** Сегодняшний офисный день `YYYY-MM-DD`. */
+  /** Today's office day `YYYY-MM-DD`. */
   today: string;
   userCreatedDay: string;
-  /** День последней завершённой прогулки; null — прогулок не было. */
+  /** Day of the last finished walk; null — no walks yet. */
   lastWalkDay: string | null;
-  /** День привязки — базовая точка отсчёта, если прогулок не было. */
+  /** Linking day — the baseline when there are no walks. */
   linkedDay: string;
   lastRemindDay: string | null;
-  /** Напоминаний после последней прогулки (или привязки, если прогулок нет). */
+  /** Reminders sent since the last walk (or linking, if no walks). */
   remindsSinceWalk: number;
 }
 
 export function reminderDecision(facts: ReminderFacts): boolean {
-  // Новички не напоминаются (п. 6.10.4): они ещё ничего не «забросили».
+  // Newcomers get no reminders (spec § 6.10.4): they have not "dropped" anything yet.
   if (diffOfficeDays(facts.today, facts.userCreatedDay) < HINTS_NEWCOMER_DAYS) return false;
 
-  // Простой считаем только полностью пропущенными рабочими днями: сегодняшний
-  // день ещё идёт и пропуском не является, поэтому в рабочий день вычитаем его.
+  // Idle time counts only fully missed workdays: today is still in progress
+  // and is not a miss, so on a workday it is subtracted.
   const baseline = facts.lastWalkDay ?? facts.linkedDay;
   const idleWorkdays = workdaysSince(baseline, facts.today) - (isWeekend(facts.today) ? 0 : 1);
   if (idleWorkdays < REMIND_IDLE_WORKDAYS) return false;
 
-  // Затухание до молчания: человек, не отвечающий на шесть напоминаний,
-  // принял решение — уважаем его без команды /stop. Счётчик обнулит первый финиш.
+  // Backoff to silence: someone ignoring six reminders has decided — respect
+  // it without /stop. The next finish resets the counter.
   if (facts.remindsSinceWalk >= REMIND_SILENCE_AFTER) return false;
 
-  // После третьего напоминания без прогулки частота падает до раза в неделю.
+  // After the third reminder without a walk, frequency drops to once a week.
   const cooldown =
     facts.remindsSinceWalk >= REMIND_BACKOFF_AFTER
       ? REMIND_BACKOFF_COOLDOWN_WORKDAYS

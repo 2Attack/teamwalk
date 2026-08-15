@@ -19,15 +19,15 @@ interface PodiumProps {
 interface PlaceConfig {
   place: 1 | 2 | 3;
   avatarSize: number;
-  /** Высота тумбы — 1-е место всегда выше остальных (п. 6.2). */
+  /** Pedestal height — 1st place is always taller (spec § 6.2). */
   block: string;
-  /** Кратно 8 — иначе пиксельная сетка иконки уезжает с целых пикселей. */
+  /** Multiple of 8 — otherwise the icon's pixel grid drifts off whole pixels. */
   iconSize: number;
   accent: string;
   border: string;
 }
 
-/** Порядок вывода: 2 — слева, 1 — по центру и выше, 3 — справа. */
+/** Display order: 2nd left, 1st center and taller, 3rd right. */
 const PLACES: readonly PlaceConfig[] = [
   {
     place: 2,
@@ -55,7 +55,7 @@ const PLACES: readonly PlaceConfig[] = [
   },
 ];
 
-/** Смена лидера — перестроение, а не скачок (п. 6.7.6). */
+/** Leader change animates as a reorder, not a jump (spec § 6.7.6). */
 const SPRING = { type: 'spring', stiffness: 500, damping: 30 } as const;
 
 function PodiumSlot({
@@ -69,16 +69,16 @@ function PodiumSlot({
 }) {
   return (
     <motion.li
-      // Ключ — id участника: при смене лидера Motion делает FLIP по новой позиции.
+      // Key is the member id: on leader change Motion FLIPs to the new position.
       layout
       transition={SPRING}
-      // basis-0 + flex-1: три колонки одинаковой ширины на любом экране от 360 px.
+      // basis-0 + flex-1: three equal-width columns on any screen from 360 px.
       className="flex min-w-0 max-w-40 flex-1 basis-0 flex-col items-center"
     >
       {row ? (
         <>
           <Avatar avatarId={row.user.avatarId} name={row.user.name} size={config.avatarSize} />
-          {/* min-w-0 у родителя + w-full здесь: длинное имя режется многоточием. */}
+          {/* min-w-0 on the parent + w-full here: long names truncate with ellipsis. */}
           <p
             title={row.user.name}
             className={cn(
@@ -97,7 +97,7 @@ function PodiumSlot({
         </>
       ) : (
         <>
-          {/* Пустой id — Avatar сам рисует нейтральный силуэт, без запроса за картинкой. */}
+          {/* Empty id — Avatar draws the neutral silhouette itself, no image request. */}
           <Avatar
             avatarId=""
             size={config.avatarSize}
@@ -123,9 +123,9 @@ function PodiumSlot({
           {config.place}
         </span>
         {/*
-          Кубок — только у занятого места: пустая тумба не должна ничего обещать.
-          Форма у всех трёх одна, место различает цвет (золото/серебро/бронза):
-          три разные фигуры читались бы как три разные награды.
+          Trophy only on occupied places: an empty pedestal must promise nothing.
+          Same shape for all three, color tells the place (gold/silver/bronze) —
+          three different shapes would read as three different awards.
         */}
         {row ? <Icon name="trophy" size={config.iconSize} className={config.accent} /> : null}
       </div>
@@ -151,14 +151,14 @@ function PodiumSkeleton() {
 }
 
 /**
- * Пьедестал топ-3 как экран результатов матча (п. 6.2, 6.7.5).
- * Следует выбранному периоду вместе с таблицей: два противоречащих топ-3 на экране
- * недопустимы. В зачёт идут только участники с завершёнными прогулками.
+ * Top-3 podium styled as a match results screen (spec § 6.2, 6.7.5).
+ * Follows the selected period together with the table — two contradicting
+ * top-3s on screen are unacceptable. Only members with finished walks count.
  *
- * Своя вёрстка, а не компонент 8bitcn: готового аналога подиума в библиотеке нет
- * (docs/8BITCN.md), а `.pixel-panel` даёт ровно ту же геометрию — нулевое
- * скругление, рамка 3 px, тень без blur — и позволяет красить рамку тумбы
- * в золото/серебро/бронзу, чего рамка Card из 8bitcn не умеет.
+ * Custom markup rather than an 8bitcn component: the library has no podium
+ * (docs/8BITCN.md), and `.pixel-panel` gives the same geometry — zero radius,
+ * 3 px border, blur-less shadow — while allowing gold/silver/bronze pedestal
+ * borders, which the 8bitcn Card frame cannot do.
  */
 export function Podium({ period, currentUserId }: PodiumProps) {
   const { data, isLoading } = useLeaderboard(period);

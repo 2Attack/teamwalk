@@ -1,4 +1,4 @@
-<!-- Десятка: зарубки счёта с перечёркивающей ступенчатой диагональю. Сетка 24×24. -->
+<!-- The Ten: tally marks crossed by a stepped diagonal. 24×24 grid. -->
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
   <path d="M5 4h2v14H5zM9 4h2v14H9zM13 4h2v14h-2zM17 4h2v14h-2zM3 15h4v2H3zM7 12h4v2H7zM11 9h4v2h-4zM15 6h4v2h-4z"/>
 </svg>

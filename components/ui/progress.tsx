@@ -1,9 +1,9 @@
 /**
- * Полоса прогресса из дискретных сегментов — «энергошкала» аркадного табло
- * (собственный слой в стилистике 8bitcn/ui + SNES.css, п. 6.7.4).
+ * Progress bar of discrete segments — an arcade "energy gauge"
+ * (custom layer in the 8bitcn/ui + SNES.css style, spec § 6.7.4).
  *
- * Сегменты вместо плавной заливки: ширина блоков не анимируется вообще, поэтому
- * нет reflow — ограничение п. 6.7.6 соблюдено по построению.
+ * Segments instead of a smooth fill: block widths are never animated, so
+ * there is no reflow — spec § 6.7.6 holds by construction.
  */
 import type * as React from 'react';
 
@@ -11,14 +11,14 @@ import { cn } from '@/lib/cn';
 
 import { m } from '@/lib/i18n';
 
-/** 20 делений: читается как шкала, но не рассыпается в кашу на 360px. */
+/** 20 segments: reads as a gauge without turning to mush at 360px. */
 const SEGMENTS = 20;
 
 export interface ProgressProps {
   value: number;
   max?: number;
   className?: string;
-  /** Доступное имя для role="progressbar". */
+  /** Accessible name for role="progressbar". */
   label?: string;
 }
 
@@ -28,7 +28,7 @@ export function Progress({
   className,
   label = m.common.progress,
 }: ProgressProps): React.JSX.Element {
-  // Данные приходят из API и с сервера: NaN и max ≤ 0 надёжнее погасить здесь.
+  // Data comes from the API/server: safer to neutralize NaN and max <= 0 here.
   const safeMax = Number.isFinite(max) && max > 0 ? max : 100;
   const safeValue = Number.isFinite(value) ? Math.min(Math.max(value, 0), safeMax) : 0;
   const ratio = safeValue / safeMax;

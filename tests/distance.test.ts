@@ -2,42 +2,42 @@ import { describe, expect, it } from 'vitest';
 
 import { calcDistanceKm, calcSegmentedDistanceKm, formatSpeedTrail } from '@/lib/format';
 
-/** Дистанция при смене скорости на ходу (п. 6.3). */
+/** Distance with mid-walk speed changes (spec § 6.3). */
 
 const START = Date.parse('2026-08-12T09:00:00.000Z');
 const min = (n: number) => START + n * 60_000;
 const iso = (ms: number) => new Date(ms).toISOString();
 
 describe('calcSegmentedDistanceKm', () => {
-  it('без смен скорости совпадает с расчётом по одной скорости', () => {
+  it('with no speed changes matches the single-speed calculation', () => {
     const segments = [{ speedKmh: 4, startedAt: iso(START) }];
 
     expect(calcSegmentedDistanceKm(segments, min(30))).toBe(2);
     expect(calcSegmentedDistanceKm(segments, min(30))).toBe(calcDistanceKm(4, 30 * 60));
   });
 
-  it('не переписывает прошлое: пройденное до смены считается по прежней скорости', () => {
+  it('does not rewrite the past: distance before a change uses the old speed', () => {
     const segments = [
-      { speedKmh: 6, startedAt: iso(START) }, // 10 мин × 6 = 1.00 км
-      { speedKmh: 3, startedAt: iso(min(10)) }, // 10 мин × 3 = 0.50 км
+      { speedKmh: 6, startedAt: iso(START) }, // 10 min × 6 = 1.00 km
+      { speedKmh: 3, startedAt: iso(min(10)) }, // 10 min × 3 = 0.50 km
     ];
 
     expect(calcSegmentedDistanceKm(segments, min(20))).toBe(1.5);
-    // Сброс темпа не отнимает уже набежавшее: по одной последней скорости было бы 1.00.
+    // Slowing down does not take back what accrued: the last speed alone would give 1.00.
     expect(calcSegmentedDistanceKm(segments, min(20))).toBeGreaterThan(calcDistanceKm(3, 20 * 60));
   });
 
-  it('складывает несколько смен подряд', () => {
+  it('sums several consecutive changes', () => {
     const segments = [
-      { speedKmh: 4, startedAt: iso(START) }, // 15 мин × 4 = 1.00
-      { speedKmh: 5, startedAt: iso(min(15)) }, // 15 мин × 5 = 1.25
-      { speedKmh: 6, startedAt: iso(min(30)) }, // 30 мин × 6 = 3.00
+      { speedKmh: 4, startedAt: iso(START) }, // 15 min × 4 = 1.00
+      { speedKmh: 5, startedAt: iso(min(15)) }, // 15 min × 5 = 1.25
+      { speedKmh: 6, startedAt: iso(min(30)) }, // 30 min × 6 = 3.00
     ];
 
     expect(calcSegmentedDistanceKm(segments, min(60))).toBe(5.25);
   });
 
-  it('в момент смены отрезок нулевой длины ничего не добавляет', () => {
+  it('at the moment of a change a zero-length segment adds nothing', () => {
     const segments = [
       { speedKmh: 4, startedAt: iso(START) },
       { speedKmh: 9, startedAt: iso(min(15)) },
@@ -46,8 +46,8 @@ describe('calcSegmentedDistanceKm', () => {
     expect(calcSegmentedDistanceKm(segments, min(15))).toBe(1);
   });
 
-  it('не уходит в минус, если конец раньше начала отрезка', () => {
-    // Возможно только при рассинхроне часов клиента и сервера.
+  it('does not go negative when the end precedes a segment start', () => {
+    // Only possible when client and server clocks drift apart.
     const segments = [
       { speedKmh: 4, startedAt: iso(START) },
       { speedKmh: 9, startedAt: iso(min(20)) },
@@ -56,12 +56,12 @@ describe('calcSegmentedDistanceKm', () => {
     expect(calcSegmentedDistanceKm(segments, min(10))).toBe(0.67);
   });
 
-  it('пустой список даёт ноль, а не NaN', () => {
+  it('an empty list yields zero, not NaN', () => {
     expect(calcSegmentedDistanceKm([], min(10))).toBe(0);
   });
 
-  it('округляет один раз в конце: десяток смен не накапливает ошибку', () => {
-    // 10 отрезков по 1 минуте при 6 км/ч — ровно 1 км, хотя каждый по 0.1 км.
+  it('rounds once at the end: a dozen changes accumulate no error', () => {
+    // 10 one-minute segments at 6 km/h — exactly 1 km, though each is 0.1 km.
     const segments = Array.from({ length: 10 }, (_, i) => ({
       speedKmh: 6,
       startedAt: iso(min(i)),
@@ -72,15 +72,15 @@ describe('calcSegmentedDistanceKm', () => {
 });
 
 describe('formatSpeedTrail', () => {
-  it('одна скорость — обычная подпись', () => {
+  it('a single speed — a plain label', () => {
     expect(formatSpeedTrail([4])).toBe('4 км/ч');
   });
 
-  it('несколько скоростей перечисляются в порядке смен', () => {
+  it('multiple speeds are listed in change order', () => {
     expect(formatSpeedTrail([4, 6, 5])).toBe('4 → 6 → 5 км/ч');
   });
 
-  it('длинная череда смен сворачивается: подпись остаётся в одну строку', () => {
+  it('a long run of changes collapses: the label stays on one line', () => {
     expect(formatSpeedTrail([4, 5, 6, 5, 4, 3])).toBe('4 → … → 3 км/ч');
   });
 });

@@ -56,41 +56,41 @@ const GOOD: readonly string[] = [
   '{{u1}} держит уверенное последнее место. Это тоже стабильность.',
 ];
 
-describe('rejectReason: запрещённые темы', () => {
-  it.each(BAD)('отклоняет «%s»', (text, reason) => {
+describe('rejectReason: banned topics', () => {
+  it.each(BAD)('rejects «%s»', (text, reason) => {
     expect(rejectReason(text)).toBe(reason);
     expect(isSafe(text)).toBe(false);
   });
 
-  it('отклоняет все плохие фразы без исключений', () => {
+  it('rejects every bad phrase without exception', () => {
     expect(BAD.filter(([text]) => isSafe(text))).toEqual([]);
   });
 });
 
-describe('rejectReason: нормальные фразы', () => {
-  it.each(GOOD)('пропускает «%s»', (text) => {
+describe('rejectReason: normal phrases', () => {
+  it.each(GOOD)('passes «%s»', (text) => {
     expect(rejectReason(text)).toBeNull();
   });
 
-  it('«прошёл 20 км» не ловится как «прибавил 20 кг»', () => {
+  it('«прошёл 20 км» (walked 20 km) is not caught as «прибавил 20 кг» (gained 20 kg)', () => {
     expect(isSafe('{{u1}} прошёл 20 км за неделю')).toBe(true);
     expect(isSafe('{{u1}} прибавил 20 кг за неделю')).toBe(false);
   });
 
-  it('«здоровается» не ловится как «здоровье»', () => {
+  it('«здоровается» (greets) is not caught as «здоровье» (health)', () => {
     expect(isSafe('Дорожка здоровается с {{u1}} по имени')).toBe(true);
     expect(isSafe('{{u1}} бережёт здоровье')).toBe(false);
   });
 
-  it('«весело», «весь» и «вести» не ловятся как «вес»', () => {
+  it('«весело», «весь», «вести» are not caught as «вес» (weight)', () => {
     expect(isSafe('Весь отдел вышел на дорожку, и это было весело')).toBe(true);
   });
 });
 
-describe('статический каталог', () => {
+describe('static catalog', () => {
   // The catalog is the last degradation line: if the filter rejects it,
   // the pool can end up empty at the worst possible moment.
-  it.each(STATIC_HINTS.map((hint) => hint.text))('фраза каталога проходит фильтр: «%s»', (text) => {
+  it.each(STATIC_HINTS.map((hint) => hint.text))('catalog phrase passes the filter: «%s»', (text) => {
     expect(rejectReason(text)).toBeNull();
   });
 });
@@ -154,28 +154,28 @@ describe('en/es locales', () => {
   });
 });
 
-describe('rejectReason: длина и плейсхолдеры', () => {
-  it('отклоняет фразу длиннее лимита', () => {
+describe('rejectReason: length and placeholders', () => {
+  it('rejects a phrase over the limit', () => {
     expect(rejectReason(`${'а'.repeat(MAX_HINT_LENGTH + 1)}`)).toBe('too_long');
   });
 
-  it('пропускает фразу ровно по лимиту', () => {
+  it('passes a phrase exactly at the limit', () => {
     expect(rejectReason('а'.repeat(MAX_HINT_LENGTH))).toBeNull();
   });
 
-  it('отклоняет пустую строку и пробелы', () => {
+  it('rejects an empty string and whitespace', () => {
     expect(rejectReason('   ')).toBe('empty');
   });
 
-  it('отклоняет незакрытый плейсхолдер', () => {
+  it('rejects an unclosed placeholder', () => {
     expect(rejectReason('{{u1} отстаёт от {{u2}} на 3 км')).toBe('placeholder');
   });
 
-  it('отклоняет чужой плейсхолдер', () => {
+  it('rejects a foreign placeholder', () => {
     expect(rejectReason('{name} прошёл 5 км')).toBe('placeholder');
   });
 
-  it('пропускает корректные плейсхолдеры', () => {
+  it('passes valid placeholders', () => {
     expect(rejectReason('{{u10}} обошёл {{u3}} на 0.5 км')).toBeNull();
   });
 });

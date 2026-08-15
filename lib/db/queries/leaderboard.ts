@@ -9,32 +9,31 @@ import type { LeaderboardDto, LeaderboardRowDto } from '@/lib/types';
 import type { Period, PeriodSelection } from '@/lib/validation';
 
 /**
- * Агрегации рейтинга (п. 5.3 ТЗ).
- *
- * Вся таблица собирается одним запросом с `left join`: участник без прогулок
- * тоже попадает в рейтинг — с нулями и в конце списка (п. 6.2).
+ * Leaderboard aggregations (spec § 5.3). The whole table is built in one
+ * `left join` query: a participant with no walks still appears — with zeros,
+ * at the bottom (spec § 6.2).
  */
 
-/** Округление до сотых — км и скорость в DTO выдаются именно так. */
+/** Round to hundredths — DTO km and speed are emitted this way. */
 function round2(value: number): number {
   return Math.round(value * 100) / 100;
 }
 
-/** `numeric`/`bigint` приходят из драйвера строками — приводим к числу. */
+/** `numeric`/`bigint` arrive from the driver as strings — coerce to number. */
 function num(value: unknown): number {
   const parsed = Number(value ?? 0);
   return Number.isFinite(parsed) ? parsed : 0;
 }
 
-/** Сумма дистанции за период; `coalesce`, чтобы у «не ходивших» был 0, а не null. */
+/** Period distance sum; `coalesce` so non-walkers get 0, not null. */
 const totalKmExpr = sql<string>`coalesce(sum(${walks.distanceKm}), 0)`;
-/** Суммарное время в секундах за период. */
+/** Total period time in seconds. */
 const totalDurationExpr = sql<string>`coalesce(sum(${walks.durationSec}), 0)`;
-/** `count(w.id)` не считает строки-пустышки от left join. */
+/** `count(w.id)` skips the empty rows produced by the left join. */
 const walksCountExpr = sql<string>`count(${walks.id})`;
 /**
- * Последняя прогулка сразу в ISO: драйвер отдаёт timestamptz постгресовым
- * форматом со пробелом, а DTO требует ISO-8601.
+ * Last walk directly in ISO: the driver returns timestamptz in Postgres'
+ * space-separated format, while the DTO requires ISO-8601.
  */
 const lastWalkAtExpr = sql<
   string | null
@@ -50,7 +49,7 @@ interface AggregateRow {
   lastWalkAt: string | null;
 }
 
-/** Границы периода: у предустановленных верхней нет, у произвольного — обе. */
+/** Period bounds: presets have no upper bound, a custom range has both. */
 function selectionBounds(selection: PeriodSelection): { since: Date; until: Date | null } {
   if (selection.period === 'custom') {
     const { since, until } = officeRange(selection.from, selection.to);
@@ -60,8 +59,8 @@ function selectionBounds(selection: PeriodSelection): { since: Date; until: Date
 }
 
 /**
- * Строки рейтинга уже в нужном порядке (п. 7.8):
- * дистанция desc → общее время asc → имя asc.
+ * Leaderboard rows already in final order (spec § 7.8):
+ * distance desc → total time asc → name asc.
  */
 async function aggregate(selection: PeriodSelection): Promise<AggregateRow[]> {
   const { since, until } = selectionBounds(selection);
@@ -91,8 +90,8 @@ async function aggregate(selection: PeriodSelection): Promise<AggregateRow[]> {
 }
 
 /**
- * Серии не зависят от периода (п. 5.3), поэтому берутся отдельным вызовом.
- * Если модуль серий упал — лидерборд важнее, показываем нули.
+ * Streaks are period-independent (spec § 5.3), hence a separate call.
+ * If the streak module fails, the leaderboard matters more — show zeros.
  */
 async function safeStreaks(userIds: string[]): Promise<Map<string, number>> {
   if (userIds.length === 0) return new Map();
@@ -108,7 +107,7 @@ export async function getLeaderboard(selection: PeriodSelection): Promise<Leader
   const aggregated = await aggregate(selection);
   const [streaks, teamTotalKm] = await Promise.all([
     safeStreaks(aggregated.map((row) => row.id)),
-    // Всегда за всё время: иначе полоса маршрута еженедельно откатывалась бы (п. 5.3).
+    // Always all-time: otherwise the route bar would roll back weekly (spec § 5.3).
     getTeamTotalKm(),
   ]);
 
@@ -117,13 +116,13 @@ export async function getLeaderboard(selection: PeriodSelection): Promise<Leader
     const totalDurationSec = num(row.totalDurationSec);
 
     return {
-      // Одинаковые суммы получают последовательные номера по правилам сортировки.
+      // Equal totals get sequential ranks per the sort rules.
       rank: index + 1,
       user: { id: row.id, name: row.name, avatarId: row.avatarId },
       totalKm,
       walksCount: num(row.walksCount),
       totalDurationSec,
-      // По фактическим данным, а не по заявленной на старте скорости (п. 6.2).
+      // From actual data, not the speed declared at start (spec § 6.2).
       avgSpeedKmh: avgSpeedKmh(totalKm, totalDurationSec),
       streakDays: streaks.get(row.id) ?? 0,
       lastWalkAt: row.lastWalkAt,
@@ -133,7 +132,7 @@ export async function getLeaderboard(selection: PeriodSelection): Promise<Leader
   return { period: selection.period, rows, teamTotalKm };
 }
 
-/** Позиция участника в рейтинге за период; `null`, если такого участника нет. */
+/** Participant's rank for the period; `null` when no such participant. */
 export async function getUserRank(userId: string, period: Period = 'week'): Promise<number | null> {
   const aggregated = await aggregate({ period });
   const index = aggregated.findIndex((row) => row.id === userId);
@@ -145,7 +144,7 @@ export async function getTeamTotalKm(): Promise<number> {
   return teamTotalKm;
 }
 
-/** Командные итоги одним запросом: км за всё время, число прогулок и участников. */
+/** Team totals in one query: all-time km, walk count, participant count. */
 export async function getTeamStats(): Promise<{
   teamTotalKm: number;
   walksCount: number;

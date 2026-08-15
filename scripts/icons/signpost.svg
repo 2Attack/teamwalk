@@ -1,4 +1,4 @@
-<!-- Полтинник: дорожный указатель — полпути пройдено. Сетка 24×24. -->
+<!-- The Fifty: road sign — halfway there. 24×24 grid. -->
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
   <path d="M4 4h12v6H4zM16 5h2v4h-2zM18 6h2v2h-2zM11 10h2v9h-2zM8 19h8v2H8z"/>
 </svg>

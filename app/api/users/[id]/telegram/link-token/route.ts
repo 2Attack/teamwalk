@@ -14,19 +14,19 @@ export const dynamic = 'force-dynamic';
 type RouteContext = { params: Promise<{ id: string }> };
 
 /**
- * POST /api/users/:id/telegram/link-token — одноразовая ссылка привязки (п. 6.10.3):
- * токен с TTL 15 минут и deep link `https://t.me/<бот>?start=<токен>`.
+ * POST /api/users/:id/telegram/link-token — one-time link token (spec § 6.10.3):
+ * 15-minute TTL plus deep link `https://t.me/<bot>?start=<token>`.
  */
 export function POST(_request: Request, context: RouteContext) {
   return handle<TelegramLinkTokenDto | ApiErrorBody>(async () => {
     const id = uuidSchema.parse((await context.params).id);
 
-    // Нет токена бота или рубильник опущен — вся подсистема выключена (п. 6.10.7).
+    // No bot token or kill switch off — the whole subsystem is disabled (spec § 6.10.7).
     if (!telegramEnabled()) {
       return apiError(409, 'TELEGRAM_DISABLED', m.apiMessages.telegramNotConfigured);
     }
 
-    // Токен не выдаётся несуществующему участнику — иначе вставка упала бы по FK с 500.
+    // No token for a nonexistent member — the insert would fail on the FK with 500.
     const status = await getTelegramStatus(id);
     if (!status) return apiError(404, 'NOT_FOUND', m.apiMessages.userNotFound);
 

@@ -9,10 +9,10 @@ import type { TelegramLink } from '@/lib/db/schema';
 import type { TelegramStatusDto } from '@/lib/types';
 
 /**
- * Привязки Telegram и настройки уведомлений (п. 6.10.3, 6.10.6 ТЗ).
+ * Telegram links and notification preferences (spec § 6.10.3, 6.10.6).
  *
- * Вся конкурентность держится БД: одноразовость токена — атомарным
- * `UPDATE … RETURNING`, «один чат — один участник» — unique на `chat_id`.
+ * All concurrency is held by the DB: token one-shot use via atomic
+ * `UPDATE … RETURNING`, "one chat — one user" via a unique index on `chat_id`.
  */
 
 export async function getLink(userId: string): Promise<TelegramLink | null> {
@@ -33,7 +33,7 @@ export async function getLinkByChat(chatId: number): Promise<TelegramLink | null
   return rows[0] ?? null;
 }
 
-/** Одноразовый токен deep link'а: 32 hex-символа, TTL 15 минут (п. 6.10.3). */
+/** One-time deep-link token: 32 hex chars, 15-minute TTL (spec § 6.10.3). */
 export async function createLinkToken(userId: string): Promise<{ token: string; expiresAt: Date }> {
   const token = randomBytes(16).toString('hex');
   const expiresAt = new Date(Date.now() + TG_LINK_TOKEN_TTL_MINUTES * 60_000);
@@ -42,9 +42,9 @@ export async function createLinkToken(userId: string): Promise<{ token: string; 
 }
 
 /**
- * Атомарное погашение токена: `UPDATE … RETURNING` гарантирует, что два
- * параллельных `/start` с одним токеном привяжут чат не более одного раза.
- * `null` — токен неизвестен, просрочен или уже использован.
+ * Atomic token consumption: `UPDATE … RETURNING` guarantees two parallel
+ * `/start` with the same token link the chat at most once. `null` — token
+ * unknown, expired, or already used.
  */
 export async function consumeLinkToken(token: string): Promise<string | null> {
   const rows = await db
@@ -62,10 +62,10 @@ export async function consumeLinkToken(token: string): Promise<string | null> {
 }
 
 /**
- * Привязка чата к участнику с перепривязкой (п. 6.10.3): сносятся старые связи
- * и по `chat_id` (чат уходил другому участнику), и по `user_id` (участник был
- * привязан к другому чату). `displacedChatId` — чужой чат, потерявший карточку
- * этого участника: туда уходит уведомление о перепривязке.
+ * Link a chat to a user with relinking (spec § 6.10.3): old links are removed
+ * both by `chat_id` (the chat belonged to another user) and by `user_id` (the
+ * user was linked to another chat). `displacedChatId` — the foreign chat that
+ * lost this user's card; the relink notification goes there.
  */
 export async function upsertLink(
   userId: string,
@@ -83,14 +83,14 @@ export async function upsertLink(
 }
 
 /**
- * Отвязка возвращает приглашение (п. 6.10.2): «Больше не показывать» сбрасывается,
- * иначе человек, осознанно отвязавшийся, не смог бы привязаться заново с панели.
+ * Unlinking restores the invite panel (spec § 6.10.2): "Don't show again" is
+ * reset, otherwise a deliberately unlinked user could not relink from the panel.
  */
 async function resetNudgeDismissed(userId: string): Promise<void> {
   await db.update(users).set({ tgNudgeDismissed: false }).where(eq(users.id, userId));
 }
 
-/** Полная отвязка из приложения (`DELETE /api/users/:id/telegram`). */
+/** Full unlink from the app (`DELETE /api/users/:id/telegram`). */
 export async function unlink(userId: string): Promise<boolean> {
   const rows = await db
     .delete(telegramLinks)
@@ -101,7 +101,7 @@ export async function unlink(userId: string): Promise<boolean> {
   return true;
 }
 
-/** Полная отвязка командой `/stop` из бота. */
+/** Full unlink via the bot's `/stop` command. */
 export async function unlinkByChat(chatId: number): Promise<boolean> {
   const rows = await db
     .delete(telegramLinks)
@@ -112,7 +112,7 @@ export async function unlinkByChat(chatId: number): Promise<boolean> {
   return true;
 }
 
-/** «Больше не показывать» панель-приглашение (п. 6.10.2). */
+/** "Don't show again" for the invite panel (spec § 6.10.2). */
 export async function dismissNudge(userId: string): Promise<void> {
   await db.update(users).set({ tgNudgeDismissed: true }).where(eq(users.id, userId));
 }
@@ -125,7 +125,7 @@ export type PrefKey =
   | 'notifyFree'
   | 'attachHints';
 
-/** Инверсия в SQL, а не чтение-запись: два клика подряд не потеряют друг друга. */
+/** Inversion in SQL, not read-then-write: two rapid clicks cannot lose each other. */
 function prefUpdate(key: PrefKey) {
   switch (key) {
     case 'notifyStart':
@@ -143,7 +143,7 @@ function prefUpdate(key: PrefKey) {
   }
 }
 
-/** Тумблер категории из `/settings`. `null` — чат не привязан. */
+/** Category toggle from `/settings`. `null` — chat not linked. */
 export async function togglePref(chatId: number, key: PrefKey): Promise<TelegramLink | null> {
   const rows = await db
     .update(telegramLinks)
@@ -153,7 +153,7 @@ export async function togglePref(chatId: number, key: PrefKey): Promise<Telegram
   return rows[0] ?? null;
 }
 
-/** `/mute`: `null` снимает заглушку, дата в будущем — глушит до неё (п. 6.10.3). */
+/** `/mute`: `null` unmutes, a future date mutes until then (spec § 6.10.3). */
 export async function setMutedUntil(chatId: number, until: Date | null): Promise<void> {
   await db
     .update(telegramLinks)
@@ -162,9 +162,9 @@ export async function setMutedUntil(chatId: number, until: Date | null): Promise
 }
 
 /**
- * Статус для панели-приглашения и модалки привязки (п. 6.10.2): панель видна,
- * пока участник не привязан и не нажал «Больше не показывать», — счётчиков
- * и кулдаунов нет. `null` — участник не найден.
+ * Status for the invite panel and linking modal (spec § 6.10.2): the panel is
+ * shown until the user links or hits "Don't show again" — no counters or
+ * cooldowns. `null` — user not found.
  */
 export async function getTelegramStatus(userId: string): Promise<TelegramStatusDto | null> {
   const userRows = await db

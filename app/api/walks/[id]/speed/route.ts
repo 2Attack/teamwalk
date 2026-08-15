@@ -12,15 +12,15 @@ export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 /**
- * POST /api/walks/:id/speed — смена скорости прямо во время прогулки (п. 6.3).
+ * POST /api/walks/:id/speed — change speed mid-walk (spec § 6.3).
  *
- * Это insert отрезка, а не update прогулки: новая скорость действует с `now()`,
- * а пройденное до неё по-прежнему считается по прежней. Переписывать
- * `walks.speed_kmh` значило бы задним числом пересчитать всю дистанцию —
- * сбросив темп в конце, человек «потерял» бы уже пройденные километры.
+ * Inserts a segment rather than updating the walk: the new speed applies from
+ * `now()`, while distance already covered keeps its old speed. Rewriting
+ * `walks.speed_kmh` would retroactively recompute the whole distance —
+ * slowing down at the end would "lose" kilometers already walked.
  *
- * Момент смены ставит сервер, а не клиент: часы планшета у дорожки могут врать,
- * а по этим отметкам считается дистанция.
+ * The server timestamps the change, not the client: the tablet clock may be
+ * wrong, and distance is computed from these marks.
  */
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -36,13 +36,13 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   return handle<ActiveWalkDto | ApiErrorBody>(async () => {
     const walk = await getActiveWalkById(walkId);
     if (!walk) {
-      // Разделяем «нет такой» и «уже не идёт»: экран прогулки ведёт себя по-разному.
+      // Distinguish "no such walk" from "no longer active": the walk screen reacts differently.
       const known = await getWalkById(walkId);
       if (!known) return apiError(404, 'NOT_FOUND', m.apiMessages.walkNotFound);
       return apiError(409, 'WALK_NOT_ACTIVE', m.apiMessages.walkNotActiveSpeed);
     }
 
-    // Потолок — свойство конкретной дорожки, CHECK его не проверяет (как и на старте).
+    // The ceiling is per-treadmill; the CHECK constraint doesn't cover it (same as at start).
     if (speedKmh > walk.treadmillMaxSpeedKmh) {
       return apiError(
         400,
@@ -52,15 +52,15 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       );
     }
 
-    // Та же скорость — не событие: отрезок нулевой длины только засорил бы историю.
-    // Повтор запроса после потери сети приходит сюда же и получает 200 (п. 8).
+    // Same speed is a no-op: a zero-length segment would only clutter history.
+    // A retry after a lost connection lands here too and gets 200 (spec § 8).
     if (speedKmh === walk.speedKmh) return NextResponse.json(walk);
 
     await db.insert(walkSpeedSegments).values({ walkId, speedKmh });
 
     const updated = await getActiveWalkById(walkId);
     if (!updated) {
-      // Прогулку успели закрыть параллельно: скорость записана, но отдать нечего.
+      // The walk was closed concurrently: the speed is recorded, but there's nothing to return.
       return apiError(409, 'WALK_NOT_ACTIVE', m.apiMessages.walkJustFinished);
     }
 

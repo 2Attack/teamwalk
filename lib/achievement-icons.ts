@@ -1,11 +1,9 @@
 import type { IconName } from '@/lib/icons.generated';
 
 /**
- * Иконка достижения по коду (п. 6.8.3). Живёт отдельно от каталога
- * `lib/game/achievements.ts`: тот тянет БД и на клиент не импортируется,
- * а иконка — чисто презентационное свойство.
- *
- * Все семь нарисованы под конкретную ачивку — `scripts/icons/*.svg`.
+ * Achievement icon by code (spec § 6.8.3). Kept separate from
+ * `lib/game/achievements.ts`: that catalog pulls in the DB and is never
+ * imported on the client, while the icon is purely presentational.
  */
 const ACHIEVEMENT_ICONS: Record<string, IconName> = {
   first_walk: 'footprint',
@@ -30,7 +28,7 @@ const ACHIEVEMENT_ICONS: Record<string, IconName> = {
   connected: 'send',
 };
 
-/** Незнакомый код (каталог пополнили раньше, чем иконки) — звезда. */
+/** Unknown code (catalog updated before icons) falls back to a star. */
 export function achievementIcon(code: string): IconName {
   return ACHIEVEMENT_ICONS[code] ?? 'star';
 }

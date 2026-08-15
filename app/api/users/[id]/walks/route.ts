@@ -29,13 +29,13 @@ const limitSchema = z.coerce
 
 const deleteWindowMs = DELETE_WINDOW_MINUTES * 60 * 1000;
 
-/** Окно удаления проверяется на сервере, а не только скрытием кнопки в UI (п. 7.7). */
+/** The delete window is enforced server-side, not just by hiding the UI button (spec § 7.7). */
 function canDelete(status: WalkStatus, endedAt: Date | null, now: number): boolean {
   if (status !== 'finished' || !endedAt) return false;
   return now - endedAt.getTime() <= deleteWindowMs;
 }
 
-/** GET /api/users/:id/walks?limit=20 — история прогулок участника (п. 5.1). */
+/** GET /api/users/:id/walks?limit=20 — member's walk history (spec § 5.1). */
 export function GET(request: Request, context: RouteContext) {
   return handle<WalkDto[] | ApiErrorBody>(async () => {
     const id = uuidSchema.parse((await context.params).id);
@@ -73,7 +73,7 @@ export function GET(request: Request, context: RouteContext) {
       startedAt: row.startedAt.toISOString(),
       endedAt: row.endedAt ? row.endedAt.toISOString() : null,
       durationSec: row.durationSec,
-      // numeric(5,2) приходит из драйвера строкой — клиенту нужно число.
+      // numeric(5,2) arrives from the driver as a string — the client needs a number.
       distanceKm: row.distanceKm === null ? null : Number(row.distanceKm),
       speedKmh: row.speedKmh,
       status: row.status,

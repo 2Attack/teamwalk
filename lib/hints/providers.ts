@@ -8,21 +8,20 @@ import { SYSTEM_PROMPT, buildUserPrompt } from './prompt';
 import type { HintSnapshot } from './snapshot';
 
 /**
- * Единственный LLM-провайдер — Vercel AI Gateway через AI SDK (`ai`).
- * Строка `provider/model` роутится через Gateway автоматически; фолбэки между
- * провайдерами и ретраи на снятых моделях Gateway делает на своей стороне,
- * поэтому перебор моделей-кандидатов, живший здесь раньше, больше не нужен.
+ * The only LLM provider — Vercel AI Gateway via the AI SDK (`ai`). The
+ * `provider/model` string is routed by the Gateway, which also handles
+ * provider fallbacks and retries on retired models — no local candidate loop.
  *
- * Экономика: наценки на токены нет (list price), $5/мес бесплатных кредитов
- * покрывают наш объём с большим запасом (~250 генераций/мес ≈ $0.3 на Grok).
+ * Economics: tokens at list price; the $5/month free credits cover our volume
+ * with a wide margin (~250 generations/month ≈ $0.3 on Grok).
  *
- * Дефолт — Grok non-reasoning: жанр «шутливые подписи» ему ближе всех дешёвых
- * моделей, а отсутствие «размышлений» снимает проблему сожранного ими бюджета
- * токенов. Резкость тона страхует постфильтр (`filter.ts`) — как и всегда.
+ * Default is Grok non-reasoning: it fits the "witty captions" genre best among
+ * cheap models, and no reasoning means no token budget eaten by it. Tone is
+ * backstopped by the post-filter (`filter.ts`), as always.
  *
- * Модель выносится в env: тарифы снимают модели без предупреждения, и падение
- * вызова обязано деградировать до прошлого пула и статики (п. 8), а не ронять
- * страницу.
+ * The model is env-configurable: providers retire models without notice, and
+ * a failed call must degrade to the previous pool and static catalog
+ * (spec § 8), not break the page.
  */
 export const GATEWAY_MODEL = process.env.AI_GATEWAY_MODEL ?? 'xai/grok-4.1-fast-non-reasoning';
 
@@ -36,11 +35,11 @@ export interface LlmResult {
 }
 
 /**
- * AI SDK сам находит креды: `AI_GATEWAY_API_KEY`, `VERCEL_OIDC_TOKEN` (локально
- * после `vercel env pull`), а на деплоях Vercel OIDC-токен приходит заголовком
- * запроса, не env-переменной — поэтому на Vercel (`VERCEL=1`) пробуем всегда
- * и отдаём поиск кредов SDK. Без кредов вызов упадёт и подсистема живёт на
- * статическом каталоге — та же деградация, что была без ключей.
+ * The AI SDK finds credentials itself: `AI_GATEWAY_API_KEY`, or
+ * `VERCEL_OIDC_TOKEN` locally after `vercel env pull`. On Vercel deploys the
+ * OIDC token arrives as a request header, not an env var — so with `VERCEL=1`
+ * we always try and let the SDK look. Without credentials the call fails and
+ * the subsystem lives on the static catalog — the usual degradation.
  */
 function gatewayEnabled(): boolean {
   return Boolean(
@@ -57,9 +56,8 @@ export function llmEnabled(): boolean {
 }
 
 /**
- * Gateway → (ошибка/квота/пусто) → `null`.
- * `null` означает «пул не обновляем», а не «сломались»: вызывающий код остаётся
- * на предыдущем пуле либо на статике.
+ * Gateway → (error/quota/empty) → `null`. `null` means "keep the pool", not
+ * "broken": the caller stays on the previous pool or the static catalog.
  */
 export async function requestHints(snapshot: HintSnapshot): Promise<LlmResult | null> {
   if (!gatewayEnabled()) {
@@ -72,20 +70,20 @@ export async function requestHints(snapshot: HintSnapshot): Promise<LlmResult | 
     const { object } = await generateObject({
       model: GATEWAY_MODEL,
       output: 'array',
-      // Схема ответа — та же Zod-схема, которой раньше валидировали руками:
-      // ответ, не прошедший её, отбрасывается целиком, чинить JSON запрещено (п. 6.6.3).
+      // Same Zod schema previously used for manual validation: a response
+      // failing it is discarded whole, JSON repair is forbidden (spec § 6.6.3).
       schema: llmHintSchema,
       system: SYSTEM_PROMPT,
       prompt: buildUserPrompt(snapshot),
       temperature: 1.1,
       /*
-        У «думающих» моделей бюджет считается вместе с размышлениями: на живом
-        ключе Gemini из 2048 токенов 1778 уходило в них, ответ обрывался на
-        середине JSON. Дефолтный Grok non-reasoning не думает, но модель
-        задаётся env-переменной — запас держим под любую из каталога.
+        Reasoning models count thinking against the budget: on a live Gemini
+        key 1778 of 2048 tokens went to reasoning and the JSON was cut mid-way.
+        The default Grok does not think, but the model is env-configurable —
+        keep headroom for any catalog entry.
       */
       maxOutputTokens: 8192,
-      // Одна повторная попытка (п. 8), дальше — прошлый пул и статика.
+      // One retry (spec § 8), then the previous pool and static catalog.
       maxRetries: 1,
       abortSignal: AbortSignal.timeout(HINTS_LLM_TIMEOUT_MS),
     });
@@ -96,7 +94,7 @@ export async function requestHints(snapshot: HintSnapshot): Promise<LlmResult | 
         provider: 'gateway',
         model: GATEWAY_MODEL,
         latencyMs,
-        error: 'пустой ответ',
+        error: 'empty response',
       });
       return null;
     }

@@ -3,7 +3,7 @@ import { INTL_LOCALE, m } from './i18n';
 
 /** Number, time and name formatting. Shared by the client and the server. */
 
-/** `00:14:32` либо `14:32`, если меньше часа (п. 6.3). */
+/** `00:14:32`, or `14:32` when under an hour (spec § 6.3). */
 export function formatDuration(totalSec: number): string {
   const safe = Math.max(0, Math.floor(totalSec));
   const h = Math.floor(safe / 3600);
@@ -26,7 +26,7 @@ export function formatDurationHuman(totalSec: number): string {
   return parts.join(' ');
 }
 
-/** Километры с двумя знаками: `1.25`. */
+/** Kilometers with two decimals: `1.25`. */
 export function formatKm(km: number | string | null | undefined): string {
   const value = typeof km === 'string' ? Number(km) : (km ?? 0);
   if (!Number.isFinite(value)) return '0.00';
@@ -78,24 +78,22 @@ export function nameKey(raw: string): string {
   return raw.trim().replace(/\s+/g, ' ').toLocaleLowerCase(INTL_LOCALE);
 }
 
-/** Расчётная дистанция по скорости и длительности, округление до 0.01 (п. 6.4). */
+/** Distance from speed and duration, rounded to 0.01 (spec § 6.4). */
 export function calcDistanceKm(speedKmh: number, durationSec: number): number {
   return Math.round(((speedKmh * durationSec) / 3600) * 100) / 100;
 }
 
-/** Отрезок постоянной скорости: `startedAt` — момент, с которого она действует. */
+/** Constant-speed segment: `startedAt` is the moment the speed takes effect. */
 interface SpeedSegmentLike {
   speedKmh: number;
   startedAt: string;
 }
 
 /**
- * Дистанция по отрезкам скорости (п. 6.3): каждый отрезок идёт до начала
- * следующего, последний — до `endMs`.
- *
- * Смена скорости не переписывает пройденное: 10 минут при 6 км/ч остаются
- * километром, даже если дальше человек сбросил темп до 3. Округление одно, в
- * самом конце — иначе на десятке смен накапливалась бы ошибка в сотых.
+ * Distance over speed segments (spec § 6.3): each segment runs until the next
+ * one starts, the last until `endMs`. A speed change never rewrites distance
+ * already walked. Rounding happens once at the end — per-segment rounding
+ * would accumulate hundredths of error across many changes.
  */
 export function calcSegmentedDistanceKm(
   segments: readonly SpeedSegmentLike[],
@@ -109,7 +107,7 @@ export function calcSegmentedDistanceKm(
     const stopMs = next === undefined ? endMs : new Date(next.startedAt).getTime();
     if (!Number.isFinite(startMs) || !Number.isFinite(stopMs)) continue;
 
-    // Отрицательная длительность возможна только при рассинхроне часов — не вычитаем.
+    // Negative duration is only possible with clock skew — never subtract.
     const seconds = Math.max(0, (Math.min(stopMs, endMs) - startMs) / 1000);
     km += (segments[i].speedKmh * seconds) / 3600;
   }
@@ -117,7 +115,7 @@ export function calcSegmentedDistanceKm(
   return Math.round(km * 100) / 100;
 }
 
-/** Больше — уже не подпись, а строка данных: сворачиваем до «откуда → куда». */
+/** Beyond this a caption becomes a data dump: collapse to "first → last". */
 const SPEED_TRAIL_MAX = 4;
 
 /** `4 км/ч`, `4 → 6 → 5 км/ч`; a long chain collapses into `4 → … → 3 км/ч`. */
@@ -127,13 +125,13 @@ export function formatSpeedTrail(speeds: readonly number[]): string {
   return `${speeds[0]} → … → ${speeds[speeds.length - 1]} ${m.units.kmh}`;
 }
 
-/** Фактическая средняя скорость: км / часы. `0`, если времени нет. */
+/** Actual average speed: km / hours. `0` when there is no time. */
 export function avgSpeedKmh(totalKm: number, totalDurationSec: number): number {
   if (totalDurationSec <= 0) return 0;
   return Math.round((totalKm / (totalDurationSec / 3600)) * 100) / 100;
 }
 
-/** Принимает `1.25` и `1,25`, возвращает число либо null (п. 6.4). */
+/** Accepts `1.25` and `1,25`, returns a number or null (spec § 6.4). */
 export function parseDecimalInput(raw: string): number | null {
   const normalized = raw.trim().replace(',', '.');
   if (!/^\d*\.?\d*$/.test(normalized) || normalized === '' || normalized === '.') return null;

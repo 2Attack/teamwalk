@@ -16,12 +16,12 @@ interface TreadmillPickerProps {
 }
 
 /**
- * Выбор дорожки (п. 6.9.3). Рендерится **только при двух и более активных
- * дорожках** — никаких фиче-флагов: добавили запись в БД, селектор появился сам.
+ * Treadmill picker (spec § 6.9.3). Renders **only with two or more active
+ * treadmills** — no feature flags: add a DB row and the picker appears.
  *
- * Кнопки с `font="normal"`: название дорожки и строка занятости — данные, их
- * читают, и «занята: Константин Верещагин, идёт 14:32» пиксельным шрифтом
- * не помещается в колонку (п. 6.7.1).
+ * Buttons use `font="normal"`: name and busy line are data, and
+ * «занята: Константин Верещагин, идёт 14:32» in pixel font doesn't fit
+ * the column (spec § 6.7.1).
  */
 export function TreadmillPicker({ treadmills, value, onChange }: TreadmillPickerProps) {
   const labelId = useId();
@@ -51,15 +51,15 @@ export function TreadmillPicker({ treadmills, value, onChange }: TreadmillPicker
               role="radio"
               aria-checked={selected}
               font="normal"
-              // Занятую дорожку выбрать нельзя: на ней физически кто-то идёт (п. 6.9.3).
+              // A busy treadmill can't be selected: someone is physically on it (spec § 6.9.3).
               disabled={busy !== null}
               variant={selected && !busy ? 'default' : 'outline'}
               onClick={() => onChange(treadmill.id)}
               className={cn(
                 'h-auto min-h-11 w-full flex-col items-start gap-1 px-3 py-2.5 text-left whitespace-normal',
-                // Штатное `disabled:opacity-50` увело бы имя и таймер ниже
-                // контраста 4.5:1, а их как раз и нужно прочитать (п. 8).
-                // Вместо этого гасим только пиксельную рамку.
+                // Stock `disabled:opacity-50` would push the name and timer
+                // below 4.5:1 contrast, and those must stay readable (spec § 8).
+                // Dim only the pixel frame instead.
                 busy && 'disabled:opacity-100 [&_[data-slot=button-decorations]>span]:opacity-40',
               )}
             >
@@ -89,7 +89,7 @@ export function busyLabel(busy: TreadmillBusyDto, now: number): string {
   });
 }
 
-/** Прошло секунд с момента старта; отрицательные значения гасятся до нуля. */
+/** Seconds elapsed since start; negative values clamp to zero. */
 export function elapsedSec(startedAtIso: string, now: number): number {
   const started = new Date(startedAtIso).getTime();
   if (!Number.isFinite(started)) return 0;
@@ -97,9 +97,8 @@ export function elapsedSec(startedAtIso: string, now: number): number {
 }
 
 /**
- * Тик раз в секунду для живых таймеров занятости.
- * Интервал заводится только когда он реально нужен — планшет у дорожки
- * висит открытым часами, лишний таймер ему ни к чему (п. 8).
+ * One-second tick for live busy timers. The interval runs only when actually
+ * needed — the treadmill tablet stays open for hours (spec § 8).
  */
 export function useNowTick(active: boolean): number {
   const [now, setNow] = useState(() => Date.now());

@@ -10,19 +10,19 @@ interface StreakBadgeProps {
   className?: string;
 }
 
-/** Порог «горячей» серии (п. 6.8.2): с пяти рабочих дней подряд — отдельная подсветка. */
+/** "Hot" streak threshold (spec § 6.8.2): 5+ consecutive work days get their own highlight. */
 const HOT_STREAK_DAYS = 5;
 
 /**
- * Значок серии рядом с именем (п. 6.8.2) — `Badge` из 8bitcn.
+ * Streak badge next to the name (spec § 6.8.2) — 8bitcn `Badge`.
  *
- * Состояние передаётся вариантом библиотеки, а не своими цветами: `default` —
- * цитрусовая заливка «горячей» серии, `secondary` — обычная, `outline` — нулевая.
- * Нулевая серия не исчезает, а гаснет: пустое место в колонке читается как ошибка
- * загрузки, приглушённый ноль — как факт.
+ * State maps to library variants, not custom colors: `default` — citrus fill
+ * for a "hot" streak, `secondary` — normal, `outline` — zero. A zero streak
+ * dims rather than disappears: an empty cell reads as a loading error, a muted
+ * zero reads as a fact.
  *
- * `font` оставлен пиксельным (дефолт библиотеки): внутри только иконка и число —
- * это слой идентичности, а не данных (п. 6.7.1).
+ * `font` stays pixel (library default): only an icon and a number inside —
+ * identity layer, not data (spec § 6.7.1).
  */
 export function StreakBadge({ days, className }: StreakBadgeProps) {
   const safeDays = Number.isFinite(days) ? Math.max(0, Math.floor(days)) : 0;
@@ -37,14 +37,14 @@ export function StreakBadge({ days, className }: StreakBadgeProps) {
       title={label}
       variant={isHot ? 'default' : safeDays === 0 ? 'outline' : 'secondary'}
       /*
-        Badge из 8bitcn раскладывает className сам: `text-*`/`bg-*`/`border-*`
-        уходят на саму плашку и боковые пиксельные планки, всё остальное —
-        на контейнер. Поэтому размер задаём контейнеру (`min-h-7`), а кегль —
-        визуальным классом; `mx-1.5` оставляет место планкам по бокам.
+        8bitcn Badge splits className itself: `text-*`/`bg-*`/`border-*` go to
+        the chip and side pixel bars, everything else to the container. So size
+        goes on the container (`min-h-7`), font size via a visual class;
+        `mx-1.5` leaves room for the side bars.
       */
       className={cn('mx-1.5 min-h-7 align-middle', 'text-[16px]', className)}
     >
-      {/* Иконка из общего пиксельного набора (п. 6.7.4), смысл несёт aria-label. */}
+      {/* Icon from the shared pixel set (spec § 6.7.4); meaning is carried by aria-label. */}
       <Icon name="flame" size={16} />
       <span className="tabular-nums">{safeDays}</span>
     </Badge>

@@ -33,7 +33,7 @@ export interface PlayerStats {
 
 export interface PlayerProfileCardProps {
   className?: string;
-  /** Адаптация: строка под именем — например, ряд ачивок. */
+  /** Adaptation: a row below the name — e.g. the achievement row. */
   belowName?: React.ReactNode;
   playerName: string;
   avatarSrc?: string;
@@ -41,11 +41,11 @@ export interface PlayerProfileCardProps {
   level?: number;
   stats?: PlayerStats;
   playerClass?: string;
-  /** Адаптация: содержимое бейджа вместо «Lv.{level}» — например, «#3» из рейтинга. */
+  /** Adaptation: badge content instead of "Lv.{level}" — e.g. "#3" from the leaderboard. */
   badge?: React.ReactNode;
-  /** Адаптация: вариант бейджа — топ-3 рисуется на outline, чтобы кубок читался. */
+  /** Adaptation: badge variant — top-3 uses outline so the trophy stays readable. */
   badgeVariant?: "default" | "secondary" | "destructive" | "outline";
-  /** Адаптация: дополнительные классы плашки — например, цвет кубка топ-3. */
+  /** Adaptation: extra badge classes — e.g. the top-3 trophy color. */
   badgeClassName?: string;
   showLevel?: boolean;
   showHealth?: boolean;
@@ -91,8 +91,8 @@ export default function PlayerProfileCard({
     ? Math.round((stats.experience.current / stats.experience.max) * 100)
     : 0;
 
-  // Адаптация: без единого включённого бара CardContent не рендерится вовсе —
-  // иначе пустой блок оставлял бы лишний отступ под шапкой.
+  // Adaptation: with no enabled bars, CardContent is not rendered at all —
+  // otherwise the empty block would leave extra spacing under the header.
   const hasBars =
     (showHealth && stats?.health) ||
     (showMana && stats?.mana) ||
@@ -100,10 +100,10 @@ export default function PlayerProfileCard({
     customStats.length > 0;
 
   return (
-    // Адаптация под п. 6.7.1: font="normal" на карточке — подпись-«класс»
-    // читают обычным sans; пиксельные — имя-заголовок и бейдж уровня.
+    // Adapted per spec § 6.7.1: font="normal" on the card — the "class" caption
+    // is read in regular sans; pixel goes to the name heading and level badge.
     <Card font="normal" className={cn("w-full max-w-md", className)} {...props}>
-      {/* Адаптация: нижний отступ шапки нужен только перед барами. */}
+      {/* Adaptation: the header's bottom padding is only needed before the bars. */}
       <CardHeader className={hasBars ? "pb-4" : "pb-0"}>
         <div className="flex items-center gap-4">
           <Avatar className="size-16" variant="pixel" font="retro">
@@ -116,13 +116,13 @@ export default function PlayerProfileCard({
           <div className="flex-1 min-w-0">
             <div className="space-y-1">
               <div className="flex flex-col gap-1 md:flex-row md:items-center md:gap-2 justify-between">
-                {/* Имя — заголовок карточки, пиксельный допустим (п. 6.7.1);
-                    font-pixel подключён с кириллическим subset. */}
+                {/* Name is the card heading, pixel is allowed (spec § 6.7.1);
+                    font-pixel is loaded with a Cyrillic subset. */}
                 <h3 className="font-pixel text-sm leading-relaxed truncate">{playerName}</h3>
                 {showLevel && (
                   <span>
-                    {/* Адаптация: геометрия и кегль — как у StreakBadge в
-                        лидерборде, чтобы бейджи по проекту были одной породы. */}
+                    {/* Adaptation: geometry and font size match StreakBadge in
+                        the leaderboard, so badges across the project look alike. */}
                     <Badge
                       variant={badgeVariant}
                       className={cn(
@@ -142,7 +142,7 @@ export default function PlayerProfileCard({
                   </span>
                 )}
               </div>
-              {/* Адаптация: строка под именем — ряд ачивок и т. п. */}
+              {/* Adaptation: the row below the name — achievements etc. */}
               {belowName}
             </div>
           </div>

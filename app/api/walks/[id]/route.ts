@@ -13,9 +13,9 @@ export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 /**
- * DELETE /api/walks/:id — удаление ошибочной записи в 15-минутном окне (п. 7.7).
- * Окно проверяется на сервере, прямо в WHERE: скрытой кнопки в UI недостаточно.
- * Достижения не отзываются — `achievements.walk_id` обнуляется по `on delete set null`.
+ * DELETE /api/walks/:id — delete a mistaken entry within the 15-minute window (spec § 7.7).
+ * The window is enforced server-side, right in the WHERE: a hidden UI button is not enough.
+ * Achievements are not revoked — `achievements.walk_id` nulls via `on delete set null`.
  */
 export async function DELETE(_request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -24,7 +24,7 @@ export async function DELETE(_request: Request, { params }: { params: Promise<{ 
   const walkId = idCheck.data;
 
   return handle<{ ok: boolean } | ApiErrorBody>(async () => {
-    // Константа из конфига, не пользовательский ввод.
+    // Config constant, not user input.
     const window = sql.raw(`interval '${Number(DELETE_WINDOW_MINUTES)} minutes'`);
 
     const deleted = await db

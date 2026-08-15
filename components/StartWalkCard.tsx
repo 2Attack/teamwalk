@@ -301,7 +301,7 @@ function StartCard({
  * in weight with «Start walk». `h-auto min-h-8` instead of a fixed height: the
  * 8-bit button's pixel frame hangs outside the box and adds 6 px on top and
  * bottom, a hard height would clip it. The label is pixel-font — it is an
- * action, not data (§ 6.7.1); narrow screens keep the short «Добавить», the
+ * action, not data (§ 6.7.1); narrow screens keep the short label, the
  * full text stays available to screen readers via `aria-label`.
  */
 function AddUserButton({ onClick }: { onClick: () => void }) {

@@ -13,11 +13,11 @@ import { regenerateHints } from './generate';
 import { staticHintDtos } from './registry';
 
 /**
- * Отдача пула и ленивая регенерация (п. 6.6.5, 6.6.7 ТЗ).
+ * Pool serving and lazy regeneration (spec § 6.6.5, 6.6.7).
  *
- * Ключевое свойство: обращения к LLM в горячем пути нет по построению.
- * Кэш отдаётся немедленно, даже если он часовой давности; обновление живёт
- * в фоне после того, как ответ пользователю уже ушёл.
+ * Key property: no LLM call in the hot path, by construction. The cache is
+ * served immediately even when stale; the refresh runs in the background
+ * after the response has been sent.
  */
 
 interface CacheRow {
@@ -33,8 +33,8 @@ function toDto(row: CacheRow): HintDto {
   const tone = hintToneSchema.safeParse(row.tone);
   return {
     id: row.id,
-    // Тон в БД — обычный text: если туда попало что-то неожиданное,
-    // лента не должна ломаться из-за одной строки.
+    // `tone` is plain text in the DB: an unexpected value must not break
+    // the feed over a single row.
     tone: tone.success ? tone.data : 'neutral',
     text: row.text,
     source: row.source === 'llm' ? 'llm' : 'static',
@@ -43,9 +43,9 @@ function toDto(row: CacheRow): HintDto {
 
 
 /**
- * Правила подбора: не более одной колкой фразы про одного человека,
- * и если запрошен конкретный участник — его фраза гарантированно попадает в пул
- * (иначе на экране активной прогулки человек ни разу себя не увидит).
+ * Selection rules: at most one tease per person, and when a specific user is
+ * requested their phrase is guaranteed into the pool (otherwise the active
+ * walk screen would never show them their own line).
  */
 function applySelectionRules(rows: readonly CacheRow[], userId?: string): CacheRow[] {
   const teased = new Set<string>();
@@ -64,7 +64,7 @@ function applySelectionRules(rows: readonly CacheRow[], userId?: string): CacheR
   return [...own.slice(0, 1), ...rest, ...own.slice(1)];
 }
 
-/** Пул из 8–12 строк. Никогда не пустой: на дне цепочки статический каталог. */
+/** Pool of 8–12 lines. Never empty: the static catalog is the bottom of the chain. */
 export async function getHintsPool(userId?: string): Promise<HintsResponseDto> {
   // Rows of another locale (left over after a NEXT_PUBLIC_LOCALE switch) are
   // ignored: static filler in the new language is better than a mixed feed.
@@ -77,7 +77,7 @@ export async function getHintsPool(userId?: string): Promise<HintsResponseDto> {
 
   const fromCache = applySelectionRules(rows, userId).slice(0, HINTS_POOL_MAX).map(toDto);
 
-  // Кэш меньше минимального пула (или пуст) — добиваем статикой, без дублей.
+  // Cache below the pool minimum (or empty) — top up with static, no duplicates.
   const seen = new Set(fromCache.map((hint) => hint.text));
   const missing = Math.max(0, HINTS_POOL_MIN - fromCache.length);
   const filler = shuffle(staticHintDtos().filter((hint) => !seen.has(hint.text))).slice(0, missing);
@@ -103,9 +103,9 @@ async function isStale(): Promise<boolean> {
 }
 
 /**
- * Лок одним запросом. Advisory-локи Postgres здесь не подходят: они живут
- * в сессии, а HTTP-драйвер Neon стейтлесс — каждая команда идёт своим запросом.
- * Пустой результат означает, что регенерацию уже запустил другой инстанс.
+ * Single-query lock. Postgres advisory locks do not fit: they are session
+ * scoped, and the stateless Neon HTTP driver sends each command as its own
+ * request. An empty result means another instance already started.
  */
 async function acquireLock(): Promise<boolean> {
   await db.insert(hintsMeta).values({ id: true }).onConflictDoNothing();
@@ -127,9 +127,9 @@ async function refreshIfStale(): Promise<void> {
 }
 
 /**
- * Ленивая регенерация stale-while-revalidate. Возвращает управление немедленно:
- * работа уходит в `waitUntil`, функция доживает уже после ответа пользователю.
- * Любая ошибка здесь гасится — свежесть хинтов не стоит 500-й на главной.
+ * Lazy stale-while-revalidate regeneration. Returns immediately: the work
+ * goes to `waitUntil` and outlives the response. Errors are swallowed —
+ * hint freshness is not worth a 500 on the home page.
  */
 export function ensureFreshPool(): void {
   waitUntil(

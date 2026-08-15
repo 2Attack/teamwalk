@@ -10,14 +10,14 @@ export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 /**
- * GET /api/achievements?userId= — каталог достижений с отметкой полученных (п. 6.8.6).
- * Без `userId` отдаётся тот же каталог со всеми `earnedAt: null`: витрина условий
- * должна открываться и до выбора участника.
+ * GET /api/achievements?userId= — achievement catalog with earned marks (spec § 6.8.6).
+ * Without `userId` returns the same catalog with all `earnedAt: null`: the
+ * catalog must be viewable before a member is selected.
  */
 export function GET(request: Request) {
   return handle<AchievementDto[] | ApiErrorBody>(async () => {
     const raw = new URL(request.url).searchParams.get('userId');
-    // Кривой userId — это 400, а не молча пустые отметки.
+    // Malformed userId is a 400, not silently empty marks.
     const userId = raw ? uuidSchema.parse(raw) : null;
 
     const earned = userId

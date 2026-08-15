@@ -12,24 +12,21 @@ import {
 import { uiText } from '@/lib/telegram/texts';
 
 /**
- * Автозакрытие зависших прогулок (п. 7.6): человек забыл нажать «End walk».
+ * Auto-close stale walks (spec § 7.6): someone forgot to press "End walk".
+ * Invoked lazily from API handlers — cheaper and more reliable than cron on
+ * the Hobby plan. The status change releases the record from the partial
+ * unique indexes, unblocking both the participant and the treadmill.
  *
- * Вызывается ленивой проверкой из `/api/walks/active`, `/api/treadmills`,
- * `/api/walks/start` и лидерборда — это дешевле и надёжнее cron на Hobby-плане.
- *
- * Смена статуса выводит запись из-под partial unique index, поэтому забытая
- * прогулка перестаёт блокировать и участника, и дорожку.
- *
- * `duration_sec` проставляется (иначе непонятно, сколько дорожка была занята),
- * а дистанция — **никогда**: она неизвестна, а вывести её из скорости за 8 часов
- * значило бы записать человеку километры, которых он не проходил.
+ * `duration_sec` is set (to know how long the treadmill was occupied), but
+ * distance never is: it is unknown, and deriving it from 8 hours of speed
+ * would credit kilometers nobody walked.
  */
 export async function closeStaleWalks(): Promise<number> {
-  // Константа из конфига, не пользовательский ввод — можно вклеить в литерал интервала.
+  // Config constant, not user input — safe to inline into the interval literal.
   const staleInterval = sql.raw(`interval '${Number(STALE_WALK_HOURS)} hours'`);
 
-  // До закрытия: автозакрытие при аншлаге — тоже освобождение (п. 6.10.4).
-  // При выключенном Telegram вернёт false без запроса к БД.
+  // Check before closing: auto-close during a full house also frees a
+  // treadmill (spec § 6.10.4). Returns false without a DB query when Telegram is off.
   const wasFullHouse = await wereAllTreadmillsBusy();
 
   const closed = await db
@@ -50,12 +47,12 @@ export async function closeStaleWalks(): Promise<number> {
   if (closed.length > 0) {
     console.warn('[walks] autoclosed stale walks', { count: closed.length });
 
-    // Уведомление в Telegram (п. 6.10.4): иначе человек узнаёт об автозакрытии
-    // через неделю из рейтинга. Вне горячего пути, дедупликация — внутри notify.
+    // Telegram notification (spec § 6.10.4): otherwise the user learns about the
+    // auto-close a week later from the leaderboard. Off the hot path; dedup lives in notify.
     waitUntil(notifyAutoClosed(closed.map((r) => ({ walkId: r.id, userId: r.userId }))));
 
-    // Переход «всё занято → свободно» случается один раз — событие вешаем на
-    // первую закрытую прогулку; имя дорожки дочитываем уже в фоне.
+    // The "all busy → free" transition happens once — attach the event to the
+    // first closed walk; the treadmill name is fetched in the background.
     if (wasFullHouse) {
       const first = closed[0];
       waitUntil(

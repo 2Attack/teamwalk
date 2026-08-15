@@ -3,19 +3,19 @@ import { describe, expect, it } from 'vitest';
 import { computeStreak } from '../lib/game/streak';
 
 /**
- * Календарь августа 2026 (для наглядности кейсов):
- * пн 03, вт 04, ср 05, чт 06, пт 07 | сб 08, вс 09 |
- * пн 10, вт 11, ср 12, чт 13, пт 14 | сб 15, вс 16 | пн 17, вт 18 …
+ * August 2026 calendar (for readability of the cases):
+ * Mon 03, Tue 04, Wed 05, Thu 06, Fri 07 | Sat 08, Sun 09 |
+ * Mon 10, Tue 11, Wed 12, Thu 13, Fri 14 | Sat 15, Sun 16 | Mon 17, Tue 18 …
  */
 const LIMIT = 2;
 
 describe('computeStreak', () => {
-  it('пустая история — серии нет, заморозки нетронуты', () => {
+  it('empty history — no streak, freezes untouched', () => {
     const result = computeStreak([], '2026-08-13', [], LIMIT);
     expect(result).toEqual({ days: 0, frozen: false, freezesLeft: 2, freezesToUse: [] });
   });
 
-  it('считает подряд идущие рабочие дни, включая сегодняшний', () => {
+  it('counts consecutive workdays including today', () => {
     const result = computeStreak(
       ['2026-08-11', '2026-08-12', '2026-08-13'],
       '2026-08-13',
@@ -26,20 +26,20 @@ describe('computeStreak', () => {
     expect(result.frozen).toBe(false);
   });
 
-  it('вчера ходил, сегодня ещё нет — серия жива и заморозка не тратится', () => {
+  it('walked yesterday, not yet today — streak alive, no freeze spent', () => {
     const result = computeStreak(['2026-08-11', '2026-08-12'], '2026-08-13', [], LIMIT);
     expect(result.days).toBe(2);
     expect(result.freezesToUse).toEqual([]);
     expect(result.freezesLeft).toBe(2);
   });
 
-  it('выходные не разрывают серию: пятница + понедельник = 2 дня', () => {
+  it('weekends do not break the streak: Friday + Monday = 2 days', () => {
     const result = computeStreak(['2026-08-07', '2026-08-10'], '2026-08-10', [], LIMIT);
     expect(result.days).toBe(2);
     expect(result.frozen).toBe(false);
   });
 
-  it('выходные не увеличивают серию: прогулка в субботу не считается', () => {
+  it('weekends do not grow the streak: a Saturday walk does not count', () => {
     const result = computeStreak(
       ['2026-08-07', '2026-08-08', '2026-08-10'],
       '2026-08-10',
@@ -49,15 +49,15 @@ describe('computeStreak', () => {
     expect(result.days).toBe(2);
   });
 
-  it('сегодня выходной — серия считается по последнему рабочему дню', () => {
-    // Суббота 15-го: серия чт+пт остаётся видимой и не требует заморозок.
+  it('today is a weekend — the streak counts from the last workday', () => {
+    // Saturday the 15th: the Thu+Fri streak stays visible and needs no freezes.
     const result = computeStreak(['2026-08-13', '2026-08-14'], '2026-08-15', [], LIMIT);
     expect(result.days).toBe(2);
     expect(result.freezesToUse).toEqual([]);
   });
 
-  it('один пропущенный рабочий день гасится заморозкой', () => {
-    // Пропущена среда 12-го, серия вт → чт не рвётся.
+  it('one missed workday is covered by a freeze', () => {
+    // Wednesday the 12th missed; the Tue → Thu streak does not break.
     const result = computeStreak(
       ['2026-08-11', '2026-08-13'],
       '2026-08-13',
@@ -70,8 +70,8 @@ describe('computeStreak', () => {
     expect(result.freezesLeft).toBe(1);
   });
 
-  it('два пропуска за месяц гасятся двумя заморозками, лимит исчерпан', () => {
-    // Пропущены ср 12 и пн 10, серия вт 11 → чт 13 → … → пт 07.
+  it('two misses in a month use two freezes, exhausting the limit', () => {
+    // Wed 12 and Mon 10 missed; streak Tue 11 → Thu 13 → … → Fri 07.
     const result = computeStreak(
       ['2026-08-07', '2026-08-11', '2026-08-13'],
       '2026-08-13',
@@ -83,9 +83,10 @@ describe('computeStreak', () => {
     expect(result.freezesLeft).toBe(0);
   });
 
-  it('третий пропуск за месяц сбрасывает серию', () => {
-    // Пропущены ср 12, пн 10 и пт 07 — на третий заморозок уже нет, серия обрывается
-    // на 11-м. Заморозка за 10-е при этом не тратится: спасать ей уже нечего.
+  it('a third miss in a month resets the streak', () => {
+    // Wed 12, Mon 10, and Fri 07 missed — no freeze left for the third, so the
+    // streak ends at the 11th. The freeze for the 10th is not spent: there is
+    // nothing left for it to save.
     const result = computeStreak(
       ['2026-08-06', '2026-08-11', '2026-08-13'],
       '2026-08-13',
@@ -97,8 +98,8 @@ describe('computeStreak', () => {
     expect(result.freezesLeft).toBe(1);
   });
 
-  it('уже израсходованная заморозка учитывается в бюджете месяца', () => {
-    // 05-е погашено раньше, поэтому на пропуск 10-го бюджета уже не хватает.
+  it('an already-spent freeze counts against the month budget', () => {
+    // The 5th was covered earlier, so the budget no longer stretches to the 10th.
     const result = computeStreak(
       ['2026-08-07', '2026-08-11', '2026-08-13'],
       '2026-08-13',
@@ -110,7 +111,7 @@ describe('computeStreak', () => {
     expect(result.freezesLeft).toBe(0);
   });
 
-  it('повторный расчёт не тратит заморозку дважды', () => {
+  it('recomputation does not spend a freeze twice', () => {
     const result = computeStreak(
       ['2026-08-11', '2026-08-13'],
       '2026-08-13',
@@ -123,8 +124,8 @@ describe('computeStreak', () => {
     expect(result.freezesLeft).toBe(1);
   });
 
-  it('лимит заморозок — на календарный месяц, прошлый месяц бюджет не съедает', () => {
-    // Пропуск 31 июля гасится июльской заморозкой, июльские траты не мешают августу.
+  it('the freeze limit is per calendar month; last month does not eat the budget', () => {
+    // The July 31 miss is covered by a July freeze; July spending does not affect August.
     const result = computeStreak(
       ['2026-07-30', '2026-08-03'],
       '2026-08-03',
@@ -136,8 +137,8 @@ describe('computeStreak', () => {
     expect(result.freezesLeft).toBe(2);
   });
 
-  it('заморозка не тратится, если спасать нечего', () => {
-    // Единственная прогулка — сегодня; более ранних дней нет, пропуски гасить незачем.
+  it('a freeze is not spent when there is nothing to save', () => {
+    // The only walk is today; no earlier days, no misses to cover.
     const result = computeStreak(['2026-08-13'], '2026-08-13', [], LIMIT);
     expect(result.days).toBe(1);
     expect(result.frozen).toBe(false);
@@ -145,14 +146,14 @@ describe('computeStreak', () => {
     expect(result.freezesLeft).toBe(2);
   });
 
-  it('без заморозок любой пропуск сбрасывает серию до нуля', () => {
+  it('without freezes any miss resets the streak to zero', () => {
     const result = computeStreak(['2026-08-11'], '2026-08-13', [], 0);
     expect(result.days).toBe(0);
     expect(result.freezesToUse).toEqual([]);
     expect(result.freezesLeft).toBe(0);
   });
 
-  it('давняя серия без прогулок на этой неделе не воскресает', () => {
+  it('an old streak with no walks this week does not resurrect', () => {
     const result = computeStreak(
       ['2026-08-03', '2026-08-04', '2026-08-05'],
       '2026-08-13',

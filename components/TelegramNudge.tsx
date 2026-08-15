@@ -14,12 +14,12 @@ interface TelegramNudgeProps {
 }
 
 /**
- * Панель «Привяжи Telegram» на экране активной прогулки (п. 6.10.2).
+ * "Link Telegram" panel on the active-walk screen (spec § 6.10.2).
  *
- * Видна, пока участник не привязан (и подсистема включена): без счётчиков
- * и кулдаунов. Убирают её два события: привязка и «Больше не показывать» —
- * отказ хранится в БД на участнике и действует с любого устройства, отвязка
- * его сбрасывает. «Подключить» открывает модалку с QR-кодом и ссылкой (п. 6.10.3).
+ * Visible while the member is unlinked (and the subsystem is enabled) — no
+ * counters or cooldowns. Two events remove it: linking, and "don't show again"
+ * (the dismissal is stored in the DB per member, works from any device, and is
+ * reset by unlinking). "Connect" opens the QR/link dialog (spec § 6.10.3).
  */
 export function TelegramNudge({ userId }: TelegramNudgeProps) {
   const { data: status, mutate: mutateStatus } = useTelegramStatus(userId);
@@ -27,28 +27,28 @@ export function TelegramNudge({ userId }: TelegramNudgeProps) {
 
   const dismissForever = () => {
     if (status === undefined) return;
-    // Сначала прячем (оптимистичный mutate), потом сообщаем серверу: отказ должен
-    // сработать мгновенно, а ошибка записи — не повод вернуть панель на экран.
+    // Hide first (optimistic mutate), then tell the server: the dismissal must
+    // apply instantly, and a write error is no reason to bring the panel back.
     void mutateStatus({ ...status, dismissed: true }, { revalidate: false });
     void apiSend<unknown>('POST', `/api/users/${userId}/telegram/dismiss`).catch(
       () => undefined,
     );
   };
 
-  // До ответа сервера панели нет: мигнувшая и исчезнувшая — хуже, чем чуть позже.
+  // No panel until the server responds: flashing and vanishing is worse than late.
   if (status === undefined || !status.enabled || status.linked || status.dismissed) return null;
 
   return (
     <section
       aria-label={m.telegram.nudgeAria}
-      // px-1.5 — место под боковые пиксели рамки Alert.
+      // px-1.5 — room for the Alert frame's side pixels.
       className="px-1.5"
     >
-      {/* Alert из 8bitcn рисует пиксельную рамку сам; font="normal" — пиксельный
-          шрифт вешаем точечно на заголовок, текст читают обычным sans (п. 6.7.1). */}
+      {/* 8bitcn Alert draws its own pixel frame; font="normal" — pixel font goes
+          only on the title, body text is regular sans (spec § 6.7.1). */}
       <Alert font="normal" className="flex flex-col gap-2 bg-bg-panel p-3">
         <AlertTitle className="flex items-center gap-2 font-pixel text-[12px] leading-none text-citrus">
-          {/* Речевой пузырь из общего пиксельного набора — бот же пишет (п. 6.7.4). */}
+          {/* Speech bubble from the shared pixel set — it's the bot talking (spec § 6.7.4). */}
           <Icon name="hint" size={16} />
           {m.telegram.nudgeTitle}
         </AlertTitle>

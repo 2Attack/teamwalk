@@ -14,9 +14,9 @@ export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 /**
- * POST /api/walks/:id/cancel — отмена без сохранения результата.
- * Дистанция не проставляется никогда: её не было (п. 7.6).
- * Повтор на уже отменённой прогулке — 200, а не ошибка.
+ * POST /api/walks/:id/cancel — cancel without saving a result.
+ * Distance is never set: there was none (spec § 7.6).
+ * A repeat on an already-cancelled walk is 200, not an error.
  */
 export async function POST(_request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -25,8 +25,8 @@ export async function POST(_request: Request, { params }: { params: Promise<{ id
   const walkId = idCheck.data;
 
   return handle<{ ok: boolean } | ApiErrorBody>(async () => {
-    // До апдейта: отмена при полностью занятых дорожках — тоже освобождение
-    // (п. 6.10.4). При выключенном Telegram вернёт false без запроса к БД.
+    // Before the update: cancelling while all treadmills are busy also frees
+    // one (spec § 6.10.4). With Telegram disabled returns false without a DB query.
     const wasFullHouse = await wereAllTreadmillsBusy();
 
     const cancelled = await db
@@ -42,13 +42,13 @@ export async function POST(_request: Request, { params }: { params: Promise<{ id
     if (cancelled.length === 0) {
       const current = await getWalkById(walkId);
       if (!current) return apiError(404, 'NOT_FOUND', m.apiMessages.walkNotFound);
-      // Идемпотентность: повторная отмена — это успех, а не конфликт.
+      // Idempotency: a repeat cancel is success, not a conflict.
       if (current.status === 'cancelled') return NextResponse.json({ ok: true });
       return apiError(409, 'WALK_NOT_ACTIVE', m.apiMessages.walkAlreadyFinished);
     }
 
-    // Свежая отмена освободила дорожку при аншлаге — событие для ждавших
-    // (п. 6.10.4). Чтение нужно только ради имени дорожки и длительности.
+    // A fresh cancel freed a treadmill during a full house — notify those
+    // waiting (spec § 6.10.4). The read is only for the treadmill name and duration.
     if (wasFullHouse) {
       const walk = await getWalkById(walkId);
       if (walk) {

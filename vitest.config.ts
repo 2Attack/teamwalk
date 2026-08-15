@@ -3,12 +3,12 @@ import { fileURLToPath } from 'node:url';
 import { defineConfig } from 'vitest/config';
 
 /**
- * Юнит-тесты запускаются в Node без окружения браузера: проверяем чистую логику
- * (постфильтр хинтов, серии), а не React-компоненты.
+ * Unit tests run in Node without a browser environment: they cover pure logic
+ * (hint post-filter, streaks), not React components.
  */
 export default defineConfig({
   resolve: {
-    // Тот же алиас, что в tsconfig.json — иначе импорты `@/lib/...` не резолвятся.
+    // Same alias as in tsconfig.json — `@/lib/...` imports fail to resolve otherwise.
     alias: { '@': fileURLToPath(new URL('./', import.meta.url)) },
   },
   test: {

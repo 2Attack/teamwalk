@@ -1,4 +1,4 @@
-<!-- Пятничный: солнце садится за горизонт — неделя закрыта. Сетка 24×24. -->
+<!-- Friday Closer: sun setting behind the horizon — the week is done. 24×24 grid. -->
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
   <path d="M9 6h6v2H9zM8 8h8v4H8zM11 2h2v2h-2zM4 4h2v2H4zM18 4h2v2h-2zM3 12h18v2H3zM6 16h4v2H6zM14 16h4v2h-4z"/>
 </svg>

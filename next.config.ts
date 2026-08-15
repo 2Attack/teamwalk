@@ -1,11 +1,11 @@
 import type { NextConfig } from 'next';
 
 const nextConfig: NextConfig = {
-  // Файлы-инструкции для ИИ-агентов Next генерирует сам; в репозитории они не нужны —
-  // источник истины по проекту это TeamWalk_TZ.md и docs/CONTRACT.md.
+  // Next generates AI-agent instruction files on its own; the repo doesn't need
+  // them — the project's sources of truth are TeamWalk_TZ.md and docs/CONTRACT.md.
   agentRules: false,
 
-  // Аватары и спрайты неизменяемы: имя файла = версия, менять их незачем.
+  // Avatars and sprites are immutable: file name = version, no reason to change them.
   async headers() {
     return [
       {

@@ -15,7 +15,7 @@ import {
   uuid,
 } from 'drizzle-orm/pg-core';
 
-/** Статусы прогулки (п. 4.1 ТЗ). */
+/** Walk statuses (spec § 4.1). */
 export const walkStatus = pgEnum('walk_status', ['active', 'finished', 'cancelled']);
 
 export const users = pgTable(
@@ -26,9 +26,9 @@ export const users = pgTable(
     avatarId: text('avatar_id').notNull(),
     hintsOptOut: boolean('hints_opt_out').notNull().default(false),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-    /** «Больше не показывать» панели «Привяжи Telegram» (п. 6.10.2): в БД, а не
-     * в localStorage, — отказ действует с любого устройства; отвязка сбрасывает.
-     * Соседние tg_nudge_count/tg_nudge_last_at в БД остались, но упразднены. */
+    /** "Don't show again" for the Telegram-link panel (spec § 6.10.2). Stored in
+     * the DB, not localStorage, so the opt-out holds on any device; unlinking
+     * resets it. tg_nudge_count/tg_nudge_last_at still exist in the DB but are retired. */
     tgNudgeDismissed: boolean('tg_nudge_dismissed').notNull().default(false),
   },
   (t) => [
@@ -101,7 +101,7 @@ export const walks = pgTable(
     speedKmh: smallint('speed_kmh').notNull(),
     endedAt: timestamp('ended_at', { withTimezone: true }),
     durationSec: integer('duration_sec'),
-    /** numeric(5,2) — деньги-подобная точность, не float (п. 4.2 ТЗ). */
+    /** numeric(5,2) — money-like precision, not float (spec § 4.2). */
     distanceKm: numeric('distance_km', { precision: 5, scale: 2 }),
     status: walkStatus('status').notNull().default('active'),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
@@ -119,11 +119,10 @@ export const walks = pgTable(
 );
 
 /**
- * Отрезки скорости внутри прогулки (п. 6.3): скорость можно менять на ходу.
- *
- * Первый отрезок здесь не лежит — им служит `walks.speedKmh` с `walks.startedAt`.
- * Поэтому прогулка без единой смены скорости не порождает ни одной строки,
- * а `walks.speedKmh` навсегда остаётся скоростью старта.
+ * Speed segments within a walk (spec § 6.3): speed can change mid-walk.
+ * The first segment is not stored here — `walks.speedKmh` + `walks.startedAt`
+ * serve as it, so a walk with no speed changes produces zero rows and
+ * `walks.speedKmh` stays the starting speed forever.
  */
 export const walkSpeedSegments = pgTable(
   'walk_speed_segments',
@@ -133,7 +132,7 @@ export const walkSpeedSegments = pgTable(
       .notNull()
       .references(() => walks.id, { onDelete: 'cascade' }),
     speedKmh: smallint('speed_kmh').notNull(),
-    /** Момент, с которого действует эта скорость. */
+    /** The moment this speed takes effect. */
     startedAt: timestamp('started_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [index('walk_speed_segments_walk_idx').on(t.walkId, t.startedAt)],
@@ -169,7 +168,7 @@ export const hintsCache = pgTable(
   'hints_cache',
   {
     id: uuid('id').primaryKey().defaultRandom(),
-    /** Текст уже с подставленными именами. */
+    /** Text with names already substituted. */
     text: text('text').notNull(),
     tone: text('tone').notNull(),
     subjectId: uuid('subject_id').references(() => users.id, { onDelete: 'cascade' }),
@@ -181,32 +180,32 @@ export const hintsCache = pgTable(
   (t) => [index('hints_cache_generated_idx').on(t.generatedAt.desc())],
 );
 
-/** Одна строка-мьютекс против параллельной регенерации пула (п. 6.6.5). */
+/** Single-row mutex against concurrent pool regeneration (spec § 6.6.5). */
 export const hintsMeta = pgTable('hints_meta', {
   id: boolean('id').primaryKey().default(true),
   lockedUntil: timestamp('locked_until', { withTimezone: true }).notNull().defaultNow(),
 });
 
-/** Привязка Telegram и настройки уведомлений (п. 6.10.6). */
+/** Telegram link and notification preferences (spec § 6.10.6). */
 export const telegramLinks = pgTable('telegram_links', {
   userId: uuid('user_id')
     .primaryKey()
     .references(() => users.id, { onDelete: 'cascade' }),
-  /** Один чат — один участник. */
+  /** One chat — one participant. */
   chatId: bigint('chat_id', { mode: 'number' }).notNull().unique(),
   linkedAt: timestamp('linked_at', { withTimezone: true }).notNull().defaultNow(),
-  /** `/mute`; null — не заглушено. */
+  /** `/mute`; null = not muted. */
   mutedUntil: timestamp('muted_until', { withTimezone: true }),
   notifyStart: boolean('notify_start').notNull().default(true),
   notifyFinish: boolean('notify_finish').notNull().default(true),
   notifyRemind: boolean('notify_remind').notNull().default(true),
   notifyDigest: boolean('notify_digest').notNull().default(true),
-  /** «Дорожка освободилась» — только на переходе «всё занято → свободно» (п. 6.10.4). */
+  /** "Treadmill freed" — only on the "all busy → free" transition (spec § 6.10.4). */
   notifyFree: boolean('notify_free').notNull().default(true),
   attachHints: boolean('attach_hints').notNull().default(true),
 });
 
-/** Одноразовые токены deep link'а привязки (п. 6.10.3). */
+/** One-time tokens for the link deep link (spec § 6.10.3). */
 export const telegramLinkTokens = pgTable('telegram_link_tokens', {
   token: text('token').primaryKey(),
   userId: uuid('user_id')
@@ -216,13 +215,13 @@ export const telegramLinkTokens = pgTable('telegram_link_tokens', {
   usedAt: timestamp('used_at', { withTimezone: true }),
 });
 
-/** Идемпотентность webhook: Telegram ретраит недоставленные апдейты. */
+/** Webhook idempotency: Telegram retries undelivered updates. */
 export const telegramUpdates = pgTable('telegram_updates', {
   updateId: bigint('update_id', { mode: 'number' }).primaryKey(),
   receivedAt: timestamp('received_at', { withTimezone: true }).notNull().defaultNow(),
 });
 
-/** Журнал отправок: дедупликация и вся логика частоты напоминаний (п. 6.10.5). */
+/** Send log: dedup and all reminder-cadence logic (spec § 6.10.5). */
 export const notificationLog = pgTable(
   'notification_log',
   {
@@ -240,7 +239,7 @@ export const notificationLog = pgTable(
   ],
 );
 
-/** Мьютекс ленивого фолбэка рассылки — копия `hints_meta` (п. 6.10.5). */
+/** Mutex for the lazy notification fallback — a copy of `hints_meta` (spec § 6.10.5). */
 export const notifyMeta = pgTable('notify_meta', {
   id: boolean('id').primaryKey().default(true),
   lockedUntil: timestamp('locked_until', { withTimezone: true }).notNull().defaultNow(),
