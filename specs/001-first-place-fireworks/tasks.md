@@ -68,9 +68,12 @@ on load/reload/tab-switch, hidden-tab skip) plus `npx vitest run tests/leader-tr
       (or null); on `fire`, skip if `document.visibilityState === 'hidden'` (research D5),
       else bump a `burstId` state; render `<FireworksOverlay>` only while a burst is
       active and clear it in `onDone` (FR-003: restart, never queue).
-- [ ] T005 [US1] Validate: `npm run typecheck`, `npm test`, then quickstart.md
+- [x] T005 [US1] Validate: `npm run typecheck`, `npm test`, then quickstart.md
       Scenarios 1, 2 and 4 against local dev (`npm run dev`); confirm the burst is
       silent (FR-007 — no audio APIs anywhere in the new code).
+      *Done 2026-08-16 on local dev: 4 leader takeovers via seeded walks — burst
+      renders in palette colors, ends and unmounts within 6 s (FR-006), no fire on
+      reload or period-tab switches (FR-004), click during burst lands (FR-002).*
 
 **Checkpoint**: US1 fully functional — celebration fires exactly on observed leader
 changes and never intercepts input.
@@ -94,6 +97,8 @@ celebratory frame.
       (research D4).
 - [ ] T007 [US2] Validate: quickstart.md Scenario 3; re-run `npm run typecheck` and
       `npm test`.
+      *typecheck/test green; Scenario 3 needs DevTools reduced-motion emulation —
+      not scriptable in this setup, verify by hand locally or on the preview.*
 
 **Checkpoint**: both stories complete; all functional requirements FR-001..FR-008 covered.
 
