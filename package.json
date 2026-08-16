@@ -13,6 +13,7 @@
     "gen:icons": "node scripts/gen-icons.mjs",
     "gen:icons:app": "node scripts/gen-app-icons.mjs",
     "db:migrate": "node --experimental-strip-types scripts/db-migrate.mts",
+    "tg:webhook": "node --experimental-strip-types scripts/tg-set-webhook.mts",
     "db:push": "drizzle-kit push"
   },
   "dependencies": {
