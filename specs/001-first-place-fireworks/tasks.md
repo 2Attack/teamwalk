@@ -69,7 +69,8 @@ on load/reload/tab-switch, hidden-tab skip) plus `npx vitest run tests/leader-tr
       else bump a `burstId` state; render `<FireworksOverlay>` only while a burst is
       active and clear it in `onDone` (FR-003: restart, never queue).
 - [ ] T005 [US1] Validate: `npm run typecheck`, `npm test`, then quickstart.md
-      Scenarios 1, 2 and 4 against local dev (`npm run dev`).
+      Scenarios 1, 2 and 4 against local dev (`npm run dev`); confirm the burst is
+      silent (FR-007 — no audio APIs anywhere in the new code).
 
 **Checkpoint**: US1 fully functional — celebration fires exactly on observed leader
 changes and never intercepts input.
