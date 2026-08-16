@@ -5,12 +5,12 @@
 </p>
 
 <p align="center">
+  <a href="https://github.com/attack-it/teamwalk/actions/workflows/pages.yml"><img src="https://github.com/attack-it/teamwalk/actions/workflows/pages.yml/badge.svg" alt="Landing deploy"></a>
+  <a href="https://attack-it.github.io/teamwalk/"><img src="https://img.shields.io/badge/landing-live-e8933a" alt="Landing"></a>
   <img src="https://img.shields.io/badge/Next.js_16-App_Router-black?logo=nextdotjs" alt="Next.js 16">
   <img src="https://img.shields.io/badge/TypeScript-strict-3178C6?logo=typescript&logoColor=white" alt="TypeScript strict">
-  <img src="https://img.shields.io/badge/Tailwind_CSS-4-38BDF8?logo=tailwindcss&logoColor=white" alt="Tailwind CSS 4">
   <img src="https://img.shields.io/badge/Drizzle-Neon_Postgres-C5F74F?logo=drizzle&logoColor=black" alt="Drizzle + Neon">
-  <img src="https://img.shields.io/badge/tested_with-Vitest-6E9F18?logo=vitest&logoColor=white" alt="Vitest">
-  <img src="https://img.shields.io/badge/license-MIT-a3e635" alt="MIT license">
+  <a href="../LICENSE"><img src="https://img.shields.io/github/license/attack-it/teamwalk?color=a3e635" alt="License"></a>
 </p>
 
 Quién caminó, cuándo y cuánto — con tabla de clasificación, rachas, logros, una ruta de equipo compartida por ciudades reales y un ticker de pistas humorísticas generadas a partir de datos reales. **Sin autenticación por diseño**: te eliges de una lista y empezar una caminata es un solo toque.
