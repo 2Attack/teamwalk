@@ -5,7 +5,7 @@ Sync Impact Report
 - Added sections: Core Principles (I–VII), Platform Constraints, Development Workflow, Governance
 - Removed sections: none
 - Follow-up TODOs: none
-- Source of derived principles: CLAUDE.md, docs/CONTRACT.md, docs/8BITCN.md
+- Source of derived principles: CLAUDE.md, docs/8BITCN.md
 -->
 
 # TeamWalk Constitution
@@ -14,7 +14,7 @@ Sync Impact Report
 
 ### I. Spec Is the Source of Truth
 
-`docs/CONTRACT.md` and the feature specs under `specs/` are the source of truth for
+`CLAUDE.md` and the feature specs under `specs/` are the source of truth for
 behavior. New feature specs MUST NOT contradict the shipped behavior; when they extend it,
 the extension is explicit. Streaks, records, achievements and route progress follow the
 documented formulas exactly — no invented game mechanics.
@@ -37,8 +37,8 @@ with Zod schemas from `lib/validation.ts` at every route boundary. Errors flow o
 `apiError` / `validationError` / `handle` from `lib/api.ts`. Drizzle `numeric` values are
 converted with `Number(...)` before returning to clients. The layer order is fixed:
 `app/api/**` → `lib/db/queries/*` + `lib/game/*` → `lib/db/schema.ts`; the client talks only
-to SWR hooks and `apiSend`. `docs/CONTRACT.md` maps who exports what — reuse the foundation,
-never duplicate it.
+to SWR hooks and `apiSend`. Reuse the foundation (`lib/api.ts`, `lib/format.ts`,
+`lib/time.ts`, `lib/db/*`), never duplicate it.
 
 ### IV. Localization Is Structural, Not Cosmetic
 
@@ -98,9 +98,9 @@ no third-party requests at runtime; generated files are never edited by hand.
 
 ## Governance
 
-This constitution supersedes ad-hoc practice for everything it covers. `CLAUDE.md` and
-`docs/CONTRACT.md` remain the operational guidance and MUST stay consistent with it; when
-they drift, the constitution is amended or the docs are corrected in the same PR.
+This constitution supersedes ad-hoc practice for everything it covers. `CLAUDE.md` remains
+the operational guidance and MUST stay consistent with it; when they drift, the
+constitution is amended or the docs are corrected in the same PR.
 
 Amendments are made by PR that edits this file, states the rationale, and bumps the version:
 MAJOR for removing/redefining a principle, MINOR for adding or materially expanding one,

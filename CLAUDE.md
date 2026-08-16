@@ -46,7 +46,7 @@ Layers: `app/api/**` (Route Handlers) → `lib/db/queries/*` (aggregations) and 
 
 - **Localization.** The product language is set by `NEXT_PUBLIC_LOCALE` (`en` by default, `ru`, `es`) — one locale per deployment, no UI switcher. The test run is pinned to `ru` in `vitest.config.ts` — content tests assert Russian strings. UI strings go only through `m`/`fmt`/`plural` from `lib/i18n` (dictionaries in `lib/i18n/messages/{ru,en,es}.ts`; `ru` is the reference, the `Messages` type enforces full key parity). The hint catalog (`lib/hints/catalog/*`), LLM prompts and bot texts (`lib/telegram/texts/*`) are per-locale too. Never hardcode new user-facing text — add it to all three dictionaries. The variable is inlined at build time: changing the locale = redeploy.
 
-`docs/CONTRACT.md` is the map of zones and cross-module signatures: what lives where and who exports what. Use the foundation (`lib/api.ts`, `lib/format.ts`, `lib/time.ts`, `lib/db/*`, etc.) — do not duplicate it.
+Use the foundation (`lib/api.ts`, `lib/format.ts`, `lib/time.ts`, `lib/db/*`, etc.) — do not duplicate it.
 
 ## API-layer rules
 

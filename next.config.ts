@@ -2,7 +2,7 @@ import type { NextConfig } from 'next';
 
 const nextConfig: NextConfig = {
   // Next generates AI-agent instruction files on its own; the repo doesn't need
-  // them — the project's source of truth is docs/CONTRACT.md.
+  // them — the project's source of truth is CLAUDE.md.
   agentRules: false,
 
   // Avatars and sprites are immutable: file name = version, no reason to change them.
