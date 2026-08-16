@@ -1,0 +1,54 @@
+# Full self-hosted stack: app + Postgres + Neon HTTP proxy.
+# The app's Neon driver switches to the local endpoint when the DB host ends
+# with `localtest.me` (lib/db/index.ts), so the proxy gets that hostname as a
+# network alias and nothing in the app needs patching.
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: teamwalk
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      # The proxy consults this "control plane" table before every request.
+      - ./docker/neon-control-plane.sql:/docker-entrypoint-initdb.d/neon-control-plane.sql:ro
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U postgres -d teamwalk']
+      interval: 2s
+      timeout: 3s
+      retries: 15
+
+  neon-proxy:
+    image: ghcr.io/timowilhelm/local-neon-http-proxy:main
+    environment:
+      PG_CONNECTION_STRING: postgres://postgres:${POSTGRES_PASSWORD:-postgres}@db:5432/teamwalk
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      default:
+        # `db` must match the endpoint_id seeded in neon-control-plane.sql.
+        aliases:
+          - db.localtest.me
+
+  app:
+    build:
+      context: .
+      args:
+        # en (default), ru or es — inlined at build time, rebuild to change.
+        NEXT_PUBLIC_LOCALE: ${NEXT_PUBLIC_LOCALE:-en}
+    # restart covers the race where migrations run before the proxy is ready.
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgres://postgres:${POSTGRES_PASSWORD:-postgres}@db.localtest.me:4444/teamwalk?sslmode=require
+      # Optional: uncomment and fill to enable the Telegram bot and LLM hints.
+      # TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN}
+      # TELEGRAM_WEBHOOK_SECRET: ${TELEGRAM_WEBHOOK_SECRET}
+      # AI_GATEWAY_API_KEY: ${AI_GATEWAY_API_KEY}
+    ports:
+      - '3000:3000'
+    depends_on:
+      - neon-proxy
+
+volumes:
+  pgdata:
