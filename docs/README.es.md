@@ -1,7 +1,7 @@
-<p align="right"><a href="README.md">English</a> · <a href="README.ru.md">Русский</a> · <b>Español</b></p>
+<p align="right"><a href="../README.md">English</a> · <a href="README.ru.md">Русский</a> · <b>Español</b></p>
 
 <p align="center">
-  <img src="docs/screenshots/header.png" alt="TeamWalk — walk together, compete gently, ship steps. Un tracker interno de la cinta de andar de la oficina para equipos: sin cuentas ni autenticación — para equipos que confían entre sí y solo quieren caminar más." width="100%">
+  <img src="screenshots/header.png" alt="TeamWalk — walk together, compete gently, ship steps. Un tracker interno de la cinta de andar de la oficina para equipos: sin cuentas ni autenticación — para equipos que confían entre sí y solo quieren caminar más." width="100%">
 </p>
 
 <p align="center">
@@ -52,7 +52,7 @@ La configuración manual son los mismos tres pasos: importar el repo → añadir
 
 ### Docker (self-hosted)
 
-La app habla el protocolo SQL-over-HTTP de Neon, así que el stack es app + Postgres + [Neon HTTP proxy](https://github.com/TimoWilhelm/local-neon-http-proxy) — todo cableado en [`docker-compose.yml`](docker-compose.yml):
+La app habla el protocolo SQL-over-HTTP de Neon, así que el stack es app + Postgres + [Neon HTTP proxy](https://github.com/TimoWilhelm/local-neon-http-proxy) — todo cableado en [`docker-compose.yml`](../docker-compose.yml):
 
 ```bash
 NEXT_PUBLIC_LOCALE=es docker compose up --build   # en (por defecto), ru o es
@@ -103,4 +103,4 @@ Un idioma por despliegue, definido por `NEXT_PUBLIC_LOCALE`: UI, errores de API,
 
 Kit de UI — [8bitcn/ui](https://8bitcn.com) sobre [shadcn/ui](https://ui.shadcn.com) · iconos — [pixelarticons](https://pixelarticons.com) (MIT) · avatares — [DiceBear](https://dicebear.com) `pixel-art` · fuentes y sprites generados en el repo.
 
-Distribuido bajo la licencia [MIT](LICENSE).
+Distribuido bajo la licencia [MIT](../LICENSE).

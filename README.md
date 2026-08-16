@@ -1,4 +1,4 @@
-<p align="right"><b>English</b> · <a href="README.ru.md">Русский</a> · <a href="README.es.md">Español</a></p>
+<p align="right"><b>English</b> · <a href="docs/README.ru.md">Русский</a> · <a href="docs/README.es.md">Español</a></p>
 
 <p align="center">
   <img src="docs/screenshots/header.png" alt="TeamWalk — walk together, compete gently, ship steps. An internal office treadmill tracker for teams: no accounts, no auth — built for trust-based teams who just want to walk more." width="100%">

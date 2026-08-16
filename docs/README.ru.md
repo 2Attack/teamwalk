@@ -1,7 +1,7 @@
-<p align="right"><a href="README.md">English</a> · <b>Русский</b> · <a href="README.es.md">Español</a></p>
+<p align="right"><a href="../README.md">English</a> · <b>Русский</b> · <a href="README.es.md">Español</a></p>
 
 <p align="center">
-  <img src="docs/screenshots/header.png" alt="TeamWalk — walk together, compete gently, ship steps. Внутренний трекер офисной беговой дорожки для команд: без аккаунтов и авторизации — для команд, которые доверяют друг другу и просто хотят больше ходить." width="100%">
+  <img src="screenshots/header.png" alt="TeamWalk — walk together, compete gently, ship steps. Внутренний трекер офисной беговой дорожки для команд: без аккаунтов и авторизации — для команд, которые доверяют друг другу и просто хотят больше ходить." width="100%">
 </p>
 
 <p align="center">
@@ -52,7 +52,7 @@ npm run dev
 
 ### Docker (self-hosted)
 
-Приложение говорит на Neon-протоколе SQL-over-HTTP, поэтому стек — приложение + Postgres + [Neon HTTP proxy](https://github.com/TimoWilhelm/local-neon-http-proxy); всё собрано в [`docker-compose.yml`](docker-compose.yml):
+Приложение говорит на Neon-протоколе SQL-over-HTTP, поэтому стек — приложение + Postgres + [Neon HTTP proxy](https://github.com/TimoWilhelm/local-neon-http-proxy); всё собрано в [`docker-compose.yml`](../docker-compose.yml):
 
 ```bash
 NEXT_PUBLIC_LOCALE=ru docker compose up --build   # en (по умолчанию), ru или es
@@ -103,4 +103,4 @@ docker run -p 3000:3000 -e DATABASE_URL=postgres://…neon.tech/… teamwalk
 
 UI-кит — [8bitcn/ui](https://8bitcn.com) поверх [shadcn/ui](https://ui.shadcn.com) · иконки — [pixelarticons](https://pixelarticons.com) (MIT) · аватары — [DiceBear](https://dicebear.com) `pixel-art` · шрифты и спрайты генерируются в репозитории.
 
-Распространяется под лицензией [MIT](LICENSE).
+Распространяется под лицензией [MIT](../LICENSE).
