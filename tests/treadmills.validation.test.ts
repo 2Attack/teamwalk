@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { createTreadmillSchema, patchTreadmillSchema } from '@/lib/validation';
 
 /**
- * Validation rules for treadmill CRUD (spec § 6.11.3): shared by the settings
+ * Validation rules for treadmill CRUD: shared by the settings
  * UI and the API route handlers, so they are tested once here.
  */
 

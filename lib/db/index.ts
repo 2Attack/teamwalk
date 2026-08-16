@@ -25,7 +25,7 @@ function connect(): { sql: NeonQueryFunction<false, false>; db: Db } {
       host.endsWith('localtest.me') ? `http://${host}:4444/sql` : `https://${host}/sql`;
   }
 
-  // Neon HTTP driver: serverless has no long-lived connections (spec § 3.1),
+  // Neon HTTP driver: serverless has no long-lived connections,
   // so a `pg` pool is off the table here.
   cachedSql = neon(url);
   cachedDb = drizzle(cachedSql, { schema });

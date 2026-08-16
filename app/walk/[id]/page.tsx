@@ -39,9 +39,9 @@ import { fmt, m } from '@/lib/i18n';
 import type { ActiveWalkDto, FinishWalkResultDto, StatsDto, WalkDto } from '@/lib/types';
 
 /**
- * Active walk screen (§ 6.3) — HUD: avatar and name, a large timer, running
+ * Active walk screen — HUD: avatar and name, a large timer, running
  * distance, day record, the walker, the hint ticker and buttons at the
- * bottom, in the thumb zone (§ 6.7.5).
+ * bottom, in the thumb zone.
  */
 
 type DialogMode = 'none' | 'finish' | 'accidental' | 'cancel';
@@ -127,7 +127,7 @@ function rankBadge(rank: number | null): React.ReactNode {
 /**
  * Loading — the 8bitcn game loading screen (loading-screen block): progress
  * bar and rotating tips from the static hint catalog — same metaphor as the
- * ticker (§ 6.6). The progress is decorative: the SWR request has no real
+ * ticker. The progress is decorative: the SWR request has no real
  * percentage and the screen lives a fraction of a second.
  */
 const LOADING_TIPS = STATIC_HINTS.map((hint) => hint.text);
@@ -199,7 +199,7 @@ export default function WalkPage({ params }: { params: Promise<{ id: string }> }
   const { data: mine, isLoading } = useActiveWalk(storedUserId ?? null);
   const matched = mine !== undefined && mine !== null && mine.id === id ? mine : null;
   // The screen was opened on someone else's device or without a localStorage
-  // record — active walks are listed in /api/stats (§ 7.2), take it from there.
+  // record — active walks are listed in /api/stats, take it from there.
   const needsFallback = storedUserId !== undefined && matched === null && !isLoading;
   const { data: stats } = useSWR<StatsDto>(needsFallback ? '/api/stats' : null, apiGet, {
     refreshInterval: 30_000,
@@ -280,12 +280,12 @@ export default function WalkPage({ params }: { params: Promise<{ id: string }> }
     // usually appears straight after the start countdown's dark "GO!" frame.
     <main className="animate-screen-in mx-auto flex min-h-dvh w-full max-w-lg flex-col gap-6 px-4 pt-6 pb-2">
       {/* Player card — the 8bitcn player-profile-card block. The badge is the
-          weekly-rank position; top-3 gets a trophy in podium colors (§ 6.2),
+          weekly-rank position; top-3 gets a trophy in podium colors,
           no badge without a single walk this week. HP/XP bars are off —
           progress toward the record is already shown by the timer. */}
       <header className="flex flex-col gap-3 px-1.5">
         {/* Start line — above the card, centered; a short label, the pixel
-            font is appropriate (§ 6.7.1). */}
+            font is appropriate. */}
         <p className="text-center font-pixel text-[10px] leading-relaxed text-text-dim">
           {fmt(m.walk.startLine, {
             time: formatTimeOfDay(walk.startedAt),
@@ -306,13 +306,13 @@ export default function WalkPage({ params }: { params: Promise<{ id: string }> }
           showHealth={false}
           showMana={false}
           showExperience={false}
-          // Earned achievements — a row under the name, with tooltips (§ 6.8.3).
+          // Earned achievements — a row under the name, with tooltips.
           belowName={<AchievementIcons achievements={userStats?.achievements ?? []} />}
         />
       </header>
 
       {/* Telegram link invite — above the timer; always visible while the
-          participant is not linked (§ 6.10.2). */}
+          participant is not linked. */}
       <TelegramNudge userId={walk.userId} />
 
       <WalkTimer
@@ -338,7 +338,7 @@ export default function WalkPage({ params }: { params: Promise<{ id: string }> }
         />
       </div>
 
-      {/* variant="walk": 10 s interval and larger font — the phrase is read from the treadmill (§ 6.6.10). */}
+      {/* variant="walk": 10 s interval and larger font — the phrase is read from the treadmill. */}
       <HintTicker userId={walk.userId} variant="walk" />
 
       {/* Buttons pinned and sticky at the bottom: on the tablet by the
@@ -380,7 +380,7 @@ export default function WalkPage({ params }: { params: Promise<{ id: string }> }
       />
 
       {/* Cancel confirmation. A short walk (< 10 s) leads here too: it is
-          almost always an accidental press, but saving is still allowed (§ 7.5). */}
+          almost always an accidental press, but saving is still allowed. */}
       <Dialog
         open={mode === 'cancel' || mode === 'accidental'}
         onOpenChange={(next: boolean) => {

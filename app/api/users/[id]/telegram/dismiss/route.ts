@@ -14,7 +14,7 @@ type RouteContext = { params: Promise<{ id: string }> };
 
 /**
  * POST /api/users/:id/telegram/dismiss — "don't show again" for the invite
- * panel (spec § 6.10.2). Stored on the member in the DB, not localStorage, so
+ * panel. Stored on the member in the DB, not localStorage, so
  * it applies across devices; unlinking Telegram resets it.
  */
 export function POST(_request: Request, context: RouteContext) {

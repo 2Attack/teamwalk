@@ -15,9 +15,9 @@ import {
 import { normalizeName } from './format';
 import { fmt, INTL_LOCALE, m } from './i18n';
 
-/** Zod schemas — the same ones on the client and in the API (spec § 3). */
+/** Zod schemas — the same ones on the client and in the API. */
 
-/** Letters (Cyrillic/Latin), digits, space, hyphen, apostrophe, dot (spec § 6.2). */
+/** Letters (Cyrillic/Latin), digits, space, hyphen, apostrophe, dot. */
 const NAME_ALLOWED = /^[\p{L}\p{Nd} '.\-]+$/u;
 
 export const nameSchema = z
@@ -63,14 +63,14 @@ export const startWalkSchema = z.object({
   treadmillId: uuidSchema.optional(),
 });
 
-/** Mid-walk speed change (spec § 6.3): the same bounds as at start. */
+/** Mid-walk speed change: the same bounds as at start. */
 export const changeSpeedSchema = z.object({
   speedKmh: speedSchema,
 });
 
 /**
- * Treadmill CRUD on the settings screen (spec § 6.11.3). The speed ceiling uses
- * the DB sanity bounds (spec § 4.2); the name follows the participant-name rules
+ * Treadmill CRUD on the settings screen. The speed ceiling uses
+ * the DB sanity bounds; the name follows the participant-name rules
  * except title-casing: «У окна» must not become «У Окна». Case-insensitive
  * uniqueness is enforced by the `treadmills_name_uniq` index.
  */
@@ -114,7 +114,7 @@ export const patchTreadmillSchema = z
   });
 
 /**
- * Team routes (spec § 6.12.2). City and route names follow the treadmill-name
+ * Team routes. City and route names follow the treadmill-name
  * rules (2–60 chars, whitespace collapse, no title-casing). Points: the first
  * is the start at km 0, km strictly increase, cities are unique, 2–20 points.
  */
@@ -161,7 +161,7 @@ export const activateRouteSchema = z.object({
   resetProgress: z.boolean(),
 });
 
-/** Request of `POST /api/routes/generate` (spec § 6.12.4). */
+/** Request of `POST /api/routes/generate`. */
 export const generateRouteSchema = z.object({
   prompt: z
     .string()
@@ -209,7 +209,7 @@ export const officeDaySchema = z
 
 /**
  * Leaderboard period selection: a preset or a custom range of office days
- * (both bounds inclusive). One schema for the client and the API (spec § 3).
+ * (both bounds inclusive). One schema for the client and the API.
  */
 export const periodSelectionSchema = z.union([
   z
@@ -226,7 +226,7 @@ export const periodSelectionSchema = z.union([
 ]);
 export type PeriodSelection = z.infer<typeof periodSelectionSchema>;
 
-/** LLM response with hints (spec § 6.6.3). */
+/** LLM response with hints. */
 export const hintToneSchema = z.enum(['praise', 'tease', 'neutral', 'tip']);
 
 export const llmHintSchema = z.object({

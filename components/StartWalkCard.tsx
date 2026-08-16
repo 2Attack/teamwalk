@@ -45,7 +45,7 @@ interface StartWalkCardProps {
  */
 const GO_DWELL_MS = 400;
 
-/** Walk start block: participant → treadmill → speed → «Start walk» (§ 6.1). */
+/** Walk start block: participant → treadmill → speed → «Start walk». */
 export function StartWalkCard({
   users,
   userId,
@@ -59,7 +59,7 @@ export function StartWalkCard({
   const [treadmillId, setTreadmillId] = useState<string | null>(null);
   const [speed, setSpeed] = useState<number | null>(null);
   const [starting, setStarting] = useState(false);
-  // «Start walk» runs the 3-2-1 countdown first (§ 6.2); the POST fires at "GO!".
+  // «Start walk» runs the 3-2-1 countdown first; the POST fires at "GO!".
   const [counting, setCounting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   // The add-participant dialog lives here, not in `UserSelect`: the button that
@@ -84,7 +84,7 @@ export function StartWalkCard({
   useTelegramStatus(counting ? userId : null);
 
   // Treadmill preselection: the participant's last treadmill if free,
-  // otherwise the first free one by sortOrder (§ 6.9.3).
+  // otherwise the first free one by sortOrder.
   const pickedFor = useRef<string | null>(null);
   useEffect(() => {
     if (treadmills === undefined) return;
@@ -93,12 +93,12 @@ export function StartWalkCard({
     setTreadmillId((prev) => pickTreadmill(treadmills, sameUser ? prev : null, userStats?.lastTreadmillId));
   }, [treadmills, userId, userStats?.lastTreadmillId]);
 
-  // Speed preselection: last walk's speed, default for a new participant (§ 6.2).
+  // Speed preselection: last walk's speed, default for a new participant.
   useEffect(() => {
     setSpeed(userId === null ? null : (userStats?.lastSpeedKmh ?? DEFAULT_SPEED_KMH));
   }, [userId, userStats?.lastSpeedKmh]);
 
-  // Switched to a treadmill with a lower cap — clamp the chosen value (§ 6.9.3).
+  // Switched to a treadmill with a lower cap — clamp the chosen value.
   useEffect(() => {
     setSpeed((prev) => (prev !== null && prev > maxSpeed ? maxSpeed : prev));
   }, [maxSpeed]);
@@ -112,10 +112,10 @@ export function StartWalkCard({
         userId,
         speedKmh: speed,
         // Omit the treadmill when there is none: with a single active one the
-        // server substitutes it itself (§ 6.9.2).
+        // server substitutes it itself.
         ...(activeTreadmillId ? { treadmillId: activeTreadmillId } : {}),
       });
-      // Seamless landing (§ 6.2): the walk screen renders from this cache
+      // Seamless landing: the walk screen renders from this cache
       // entry without a refetch, and prefetch + one "GO!" beat let the route
       // payload arrive so the push commits without a loading-screen flash.
       await primeActiveWalk(walk);
@@ -157,7 +157,7 @@ export function StartWalkCard({
     return <StartWalkCardSkeleton />;
   }
 
-  // The only scenario where starting is impossible at all (§ 6.9.6).
+  // The only scenario where starting is impossible at all.
   if (list.length === 0) {
     return (
       <StartCard title={m.startCard.noTreadmillsTitle}>
@@ -250,7 +250,7 @@ export function StartWalkCard({
 
 /**
  * Shared frame of the start block: pixel-font title, regular sans content —
- * otherwise names and labels inside the card become unreadable (§ 6.7.1).
+ * otherwise names and labels inside the card become unreadable.
  */
 function StartCard({
   title,
@@ -275,7 +275,7 @@ function StartCard({
           `retro` by itself; now it has to be restored by hand. */}
       <CardHeader className="retro items-center">
         {/* text-sm on mobile: the pixel font is wide, «Старт прогулки» at 16px
-            hits the edge of a 360 px screen (§ 6.7.2).
+            hits the edge of a 360 px screen.
             `retro` in the class is mandatory — className in 8bitcn overrides it. */}
         <CardTitle className="retro text-sm leading-snug break-words sm:text-base">
           {title}
@@ -301,7 +301,7 @@ function StartCard({
  * in weight with «Start walk». `h-auto min-h-8` instead of a fixed height: the
  * 8-bit button's pixel frame hangs outside the box and adds 6 px on top and
  * bottom, a hard height would clip it. The label is pixel-font — it is an
- * action, not data (§ 6.7.1); narrow screens keep the short label, the
+ * action, not data; narrow screens keep the short label, the
  * full text stays available to screen readers via `aria-label`.
  */
 function AddUserButton({ onClick }: { onClick: () => void }) {
@@ -342,7 +342,7 @@ export function StartWalkCardSkeleton() {
   );
 }
 
-/** Why starting is impossible; `null` — it is possible. Busy state is visible before the press (§ 6.9.2). */
+/** Why starting is impossible; `null` — it is possible. Busy state is visible before the press. */
 function startBlocker(
   list: TreadmillDto[],
   free: TreadmillDto[],

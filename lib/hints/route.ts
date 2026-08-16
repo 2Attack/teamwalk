@@ -1,7 +1,7 @@
 import type { RouteCityDto } from '@/lib/types';
 
 /**
- * Team position math (spec § 6.6.8, 6.12). The route lives in the `routes`
+ * Team position math. The route lives in the `routes`
  * table only — the former hardcoded fallback is retired: an empty table is the
  * legitimate "no route selected" state, and callers must guard for it
  * (`points.length >= 2`) before projecting a position.
@@ -17,7 +17,7 @@ export interface RoutePosition {
 
 /**
  * Team position on a route. Pure over its inputs; the arithmetic is ours, not
- * the LLM's (spec § 6.6.8). Expects a non-empty points list — callers with a
+ * the LLM's. Expects a non-empty points list — callers with a
  * possibly empty route check that themselves.
  */
 export function positionOnRoute(points: RouteCityDto[], totalKm: number): RoutePosition {

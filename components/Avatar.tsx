@@ -1,7 +1,7 @@
 'use client';
 
 /**
- * Member avatar (spec § 6.5) — 8bitcn `Avatar`, `pixel` variant.
+ * Member avatar — 8bitcn `Avatar`, `pixel` variant.
  *
  * Portrait is static DiceBear output from `/public/avatars/{id}.svg`
  * (`npm run gen:assets`). Fallback is required for two cases: the preset was
@@ -33,7 +33,7 @@ const NO_FRAME = '[&>div:first-child]:hidden';
 /**
  * Square mask instead of round: `variant="pixel"` hardcodes `rounded-full` on
  * both the avatar and the fallback, while zero radius is a project-wide rule
- * (`--radius: 0`, spec § 6.7.1). Our classes come after the library's, so
+ * (`--radius: 0`). Our classes come after the library's, so
  * tailwind-merge keeps ours.
  */
 const SQUARE = 'rounded-none';

@@ -118,7 +118,7 @@ export default function LoadingScreen({
         />
       </div>
 
-      {/* Tips section. Adapted per spec § 6.7.1: tips are read — regular sans
+      {/* Tips section. Adapted: tips are read — regular sans
           instead of pixel retro, and no pulsing that interrupts reading. */}
       {tips.length > 0 && (
         <div className="w-full max-w-md min-h-16 flex items-center justify-center">

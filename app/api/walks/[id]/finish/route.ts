@@ -22,7 +22,7 @@ import { m } from '@/lib/i18n';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-/** Gamification must never break an already-saved walk (spec § 7.3, 8). */
+/** Gamification must never break an already-saved walk. */
 async function safe<T>(run: () => Promise<T>, fallback: T, label: string): Promise<T> {
   try {
     return await run();
@@ -36,7 +36,7 @@ function fallbackProgress(): TeamProgressDto {
   return { totalKm: 0, passed: null, next: null, kmLeft: 0, progressRatio: 0, route: [] };
 }
 
-/** Success-screen summary, built without a second client request (spec § 6.8.6). */
+/** Success-screen summary, built without a second client request. */
 async function buildResult(walk: WalkDto, previousRank: number | null): Promise<FinishWalkResultDto> {
   const [newAchievements, streak, before, after, teamProgress, rank] = await Promise.all([
     safe(() => awardAchievements(walk.userId, walk.id), [], 'awardAchievements'),
@@ -63,7 +63,7 @@ async function buildResult(walk: WalkDto, previousRank: number | null): Promise<
 
 /**
  * POST /api/walks/:id/finish — finish a walk.
- * Idempotent (spec § 8): a retry after a lost connection returns 200 with the current state.
+ * Idempotent: a retry after a lost connection returns 200 with the current state.
  */
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -94,7 +94,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     );
 
     // "All treadmills busy?" also pre-update: after freeing one the
-    // busy-to-free transition is no longer observable (spec § 6.10.4). With
+    // busy-to-free transition is no longer observable. With
     // Telegram disabled returns false without a DB query.
     const wasFullHouse = await wereAllTreadmillsBusy();
 
@@ -127,13 +127,13 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
 
     const result = await buildResult(finished, previousRank);
 
-    // Telegram is never in the hot path (spec § 6.10.1): notify after the
+    // Telegram is never in the hot path: notify after the
     // response and only on a fresh finish; idempotent retries never reach this
     // point, and notify dedups by `finish:<walkId>`.
     waitUntil(notifyWalkFinished(result));
 
     // Finishing during a full house freed a treadmill — notify those waiting
-    // (spec § 6.10.4). Dedup by `free:<walkId>` lives inside notify.
+    //. Dedup by `free:<walkId>` lives inside notify.
     if (wasFullHouse) {
       waitUntil(
         notifyTreadmillFreed({

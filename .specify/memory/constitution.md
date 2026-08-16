@@ -5,7 +5,7 @@ Sync Impact Report
 - Added sections: Core Principles (I–VII), Platform Constraints, Development Workflow, Governance
 - Removed sections: none
 - Follow-up TODOs: none
-- Source of derived principles: CLAUDE.md, TeamWalk_TZ.md, docs/CONTRACT.md, docs/8BITCN.md
+- Source of derived principles: CLAUDE.md, docs/CONTRACT.md, docs/8BITCN.md
 -->
 
 # TeamWalk Constitution
@@ -14,11 +14,10 @@ Sync Impact Report
 
 ### I. Spec Is the Source of Truth
 
-`TeamWalk_TZ.md` is the product specification. Every behavioral requirement traces back to a
-section of it (code and docs reference them as "spec § N.N"). Feature specs created under
-`specs/` MUST NOT contradict it; when they extend it, the extension is explicit. Streaks,
-records, achievements and route progress follow the spec's formulas exactly — no invented
-game mechanics.
+`docs/CONTRACT.md` and the feature specs under `specs/` are the source of truth for
+behavior. New feature specs MUST NOT contradict the shipped behavior; when they extend it,
+the extension is explicit. Streaks, records, achievements and route progress follow the
+documented formulas exactly — no invented game mechanics.
 
 ### II. Stateless Server, Database Owns State
 

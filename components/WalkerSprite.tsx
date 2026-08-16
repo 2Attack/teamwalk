@@ -1,7 +1,7 @@
 'use client';
 
 /**
- * Walking character — the face of the walk screen (spec § 6.7.6).
+ * Walking character — the face of the walk screen.
  *
  * Sprite sheet: 8 frames of 32×32 → 256×32. The `walk-cycle` keyframes in
  * globals.css shift the background exactly 256px per cycle, so the animated
@@ -18,7 +18,7 @@ import { m } from '@/lib/i18n';
 const FRAME_PX = 32;
 const SHEET_PX = 256;
 
-/** Stepped mapping of stride tempo to speed: no smooth interpolation (spec § 6.7.6). */
+/** Stepped mapping of stride tempo to speed: no smooth interpolation. */
 function stepDurationSec(speedKmh: number): number {
   // Speed comes from the server: NaN would break the CSS animation entirely.
   if (!Number.isFinite(speedKmh) || speedKmh <= 2) return 1.2;

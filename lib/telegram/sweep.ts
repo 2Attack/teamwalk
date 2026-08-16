@@ -14,7 +14,7 @@ import { reminderDecision, type ReminderFacts } from './remind-rules';
 import { digestText, remindText } from './texts';
 
 /**
- * Reminders and the weekly digest (spec § 6.10.5).
+ * Reminders and the weekly digest.
  *
  * Main entry — Vercel Cron (`GET /api/cron/notify`); lazy fallback —
  * `ensureNotifySweep()` on API access, modeled on `closeStaleWalks()`.
@@ -120,7 +120,7 @@ async function sendReminders(now: Date, today: string): Promise<void> {
   }
 }
 
-/** Weekly digest: Mondays only, silent (spec § 6.10.4). */
+/** Weekly digest: Mondays only, silent. */
 async function sendDigest(today: string): Promise<void> {
   // Previous week: from Monday −7 through Sunday inclusive.
   const from = addOfficeDays(today, -7);
@@ -168,7 +168,7 @@ async function sendDigest(today: string): Promise<void> {
 }
 
 /**
- * One sweep pass. Window (spec § 6.10.4): workday, [11:00; 17:00) MSK — a
+ * One sweep pass. Window: workday, [11:00; 17:00) MSK — a
  * fallback firing at 19:00 sends nothing and defers to tomorrow.
  */
 export async function runNotifySweep(now: Date = new Date()): Promise<void> {
@@ -185,7 +185,7 @@ export async function runNotifySweep(now: Date = new Date()): Promise<void> {
 }
 
 /**
- * Single-query lock, same mechanics as `hints_meta` (spec § 6.6.5): advisory
+ * Single-query lock, same mechanics as `hints_meta`: advisory
  * locks do not survive the stateless Neon HTTP driver. The one-hour interval
  * caps fallback frequency; an empty result — a sweep ran recently.
  */

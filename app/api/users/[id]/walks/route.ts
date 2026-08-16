@@ -29,13 +29,13 @@ const limitSchema = z.coerce
 
 const deleteWindowMs = DELETE_WINDOW_MINUTES * 60 * 1000;
 
-/** The delete window is enforced server-side, not just by hiding the UI button (spec § 7.7). */
+/** The delete window is enforced server-side, not just by hiding the UI button. */
 function canDelete(status: WalkStatus, endedAt: Date | null, now: number): boolean {
   if (status !== 'finished' || !endedAt) return false;
   return now - endedAt.getTime() <= deleteWindowMs;
 }
 
-/** GET /api/users/:id/walks?limit=20 — member's walk history (spec § 5.1). */
+/** GET /api/users/:id/walks?limit=20 — member's walk history. */
 export function GET(request: Request, context: RouteContext) {
   return handle<WalkDto[] | ApiErrorBody>(async () => {
     const id = uuidSchema.parse((await context.params).id);

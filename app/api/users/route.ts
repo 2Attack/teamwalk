@@ -10,7 +10,7 @@ import { m } from '@/lib/i18n';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-/** GET /api/users — member list sorted by name (spec § 5.1). */
+/** GET /api/users — member list sorted by name. */
 export function GET() {
   return handle<UserDto[] | ApiErrorBody>(async () => {
     const users = await listUsers();
@@ -18,7 +18,7 @@ export function GET() {
   });
 }
 
-/** POST /api/users — create a member (spec § 6.2). */
+/** POST /api/users — create a member. */
 export function POST(request: Request) {
   return handle<UserDto | ApiErrorBody>(async () => {
     // The schema normalizes the name (trim, collapse spaces, Title Case) and

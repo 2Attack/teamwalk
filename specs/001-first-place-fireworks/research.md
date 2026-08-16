@@ -1,7 +1,6 @@
 # Phase 0 Research: First-Place Fireworks
 
-All Technical Context unknowns resolved. Decisions below reference spec FRs and
-TeamWalk_TZ.md § 6.8.
+All Technical Context unknowns resolved. Decisions below reference spec FRs.
 
 ## D1. Rendering: hand-rolled canvas 2D, no library
 

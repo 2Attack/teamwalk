@@ -23,7 +23,7 @@ export function GET(_request: Request, context: RouteContext) {
   });
 }
 
-/** PATCH /api/users/:id — change name, avatar, or hints flag (spec § 5.1, 6.5). */
+/** PATCH /api/users/:id — change name, avatar, or hints flag. */
 export function PATCH(request: Request, context: RouteContext) {
   return handle<UserDto | ApiErrorBody>(async () => {
     const id = uuidSchema.parse((await context.params).id);

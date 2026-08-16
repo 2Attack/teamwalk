@@ -30,7 +30,7 @@ type Chosen =
   | { ok: true; treadmill: TreadmillDto }
   | { ok: false; response: ReturnType<typeof apiError> };
 
-/** Explicitly chosen treadmill: distinguish "no such" from "decommissioned" (spec § 6.9.6). */
+/** Explicitly chosen treadmill: distinguish "no such" from "decommissioned". */
 async function resolveExplicit(id: string, active: TreadmillDto[]): Promise<Chosen> {
   const found = active.find((t) => t.id === id);
   if (found) return { ok: true, treadmill: found };
@@ -49,7 +49,7 @@ async function resolveExplicit(id: string, active: TreadmillDto[]): Promise<Chos
   };
 }
 
-/** No treadmill given: a single active one is auto-picked, otherwise the first free one (spec § 6.9). */
+/** No treadmill given: a single active one is auto-picked, otherwise the first free one. */
 function resolveAuto(active: TreadmillDto[], skip: ReadonlySet<string> = new Set()): Chosen {
   if (active.length === 0) {
     return {
@@ -85,14 +85,14 @@ function violates(error: unknown, index?: string): boolean {
   return false;
 }
 
-/** 409 per spec § 7.1: the member already has an active walk — returned in `details`. */
+/** 409: the member already has an active walk — returned in `details`. */
 async function alreadyActive(userId: string) {
   return apiError(409, 'WALK_ALREADY_ACTIVE', m.apiMessages.walkAlreadyActive, {
     details: await getActiveWalk(userId),
   });
 }
 
-/** 409 per spec § 7.2: someone else took the treadmill — return their name and start time. */
+/** 409: someone else took the treadmill — return their name and start time. */
 async function treadmillBusy(treadmill: TreadmillDto) {
   const busy = (await listActiveTreadmills()).find((t) => t.id === treadmill.id)?.busy ?? null;
   const message = busy
@@ -104,8 +104,8 @@ async function treadmillBusy(treadmill: TreadmillDto) {
 
 /**
  * POST /api/walks/start — creates an active walk.
- * Concurrency limits are enforced by the DB (partial unique indexes,
- * spec § 7.1–7.2), not by pre-SELECTs: checking "is it free" before insert is a race.
+ * Concurrency limits are enforced by the DB (partial unique indexes),
+ * not by pre-SELECTs: checking "is it free" before insert is a race.
  */
 export async function POST(request: Request) {
   const parsed = startWalkSchema.safeParse(await readJson(request));
@@ -113,14 +113,14 @@ export async function POST(request: Request) {
   const { userId, speedKmh, treadmillId } = parsed.data;
 
   return handle<ActiveWalkDto | ApiErrorBody>(async () => {
-    // Lazy cron-sweep fallback (spec § 6.10.5), second hook after the
+    // Lazy cron-sweep fallback, second hook after the
     // leaderboard: walks start even on days no one opens the ranking.
     ensureNotifySweep();
 
-    // Stale walks free up treadmills before selection (spec § 7.6).
+    // Stale walks free up treadmills before selection.
     await closeStaleWalks();
 
-    // The member's own walk is § 7.1, not § 7.2: with a single treadmill it
+    // The member's own walk takes precedence: with a single treadmill it
     // occupies that treadmill too, and without this check they'd get
     // TREADMILL_BUSY instead of WALK_ALREADY_ACTIVE, so the UI wouldn't route
     // them to their walk screen. The partial unique index, not this SELECT,
@@ -134,7 +134,7 @@ export async function POST(request: Request) {
       Retry-based selection: with auto-pick, two members hitting Start at once
       read the same list and both target the first free treadmill. The race
       loser should not get "busy" — parallel walks are normal with two
-      treadmills (spec § 7.2) — so they re-pick the next free one. An explicitly
+      treadmills — so they re-pick the next free one. An explicitly
       chosen treadmill is never retried: it must not be silently substituted.
     */
     const failed = new Set<string>();
@@ -184,7 +184,7 @@ export async function POST(request: Request) {
       return apiError(500, 'INTERNAL_ERROR', m.apiMessages.walkCreatedUnreadable);
     }
 
-    // Telegram is never in the hot path (spec § 6.10.1): the start notification
+    // Telegram is never in the hot path: the start notification
     // goes after the response; idempotency and "not me" live inside notify.
     waitUntil(notifyWalkStarted(walk));
 

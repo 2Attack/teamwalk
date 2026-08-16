@@ -51,7 +51,7 @@ export function officeWeekday(day: string): number {
   return new Date(`${day}T00:00:00Z`).getUTCDay();
 }
 
-/** Weekend = Saturday or Sunday. No public-holiday calendar in the MVP (spec § 6.8.5). */
+/** Weekend = Saturday or Sunday. No public-holiday calendar in the MVP. */
 export function isWeekend(day: string): boolean {
   const wd = officeWeekday(day);
   return wd === 0 || wd === 6;
@@ -63,14 +63,14 @@ const hourFormatter = new Intl.DateTimeFormat('en-GB', {
   hourCycle: 'h23',
 });
 
-/** Hour of day (0-23) in the office timezone — notification window (spec § 6.10.5). */
+/** Hour of day (0-23) in the office timezone — notification window. */
 export function officeHour(date: Date = new Date()): number {
   return Number(hourFormatter.format(date));
 }
 
 /**
  * Number of workdays in the office-date interval `(from; to]` — right bound
- * inclusive, left exclusive. All reminder cadences (spec § 6.10.4) rest on
+ * inclusive, left exclusive. All reminder cadences rest on
  * this half-open interval: "N workdays passed since event X".
  */
 export function workdaysSince(from: string, to: string): number {
@@ -88,7 +88,7 @@ export function prevWorkday(day: string): string {
   return cur;
 }
 
-/** Leaderboard period start. Week = Monday 00:00 Moscow time (spec § 6.8.2). */
+/** Leaderboard period start. Week = Monday 00:00 Moscow time. */
 export function periodStart(period: 'week' | 'month' | 'all', now: Date = new Date()): Date {
   if (period === 'all') return new Date(0);
   const today = toOfficeDay(now);

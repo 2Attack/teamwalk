@@ -11,7 +11,7 @@ export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 /**
- * POST /api/routes/generate — AI route draft (spec § 6.12.4). The only place
+ * POST /api/routes/generate — AI route draft. The only place
  * in the product where the user consciously waits for the LLM: an explicit
  * admin click, a timeout, and an honest error leaving the editor manual.
  * Writes nothing to the DB — the draft goes back into the editor.

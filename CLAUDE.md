@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-TeamWalk — an internal office treadmill walking tracker (Next.js App Router, TypeScript strict, React 19, Tailwind 4, Drizzle + Neon Postgres HTTP driver, Zod, SWR). Requirements live in `TeamWalk_TZ.md` (references like "spec § 6.7.1" in code and docs point to its sections). No authorization by design — the trust model is "our own people".
+TeamWalk — an internal office treadmill walking tracker (Next.js App Router, TypeScript strict, React 19, Tailwind 4, Drizzle + Neon Postgres HTTP driver, Zod, SWR). No authorization by design — the trust model is "our own people".
 
 **Language:** UI texts go only through the `lib/i18n` dictionaries (en/ru/es, see "Localization"). Code comments and commit messages — **English only**; types and names in English. Keep comments **short**: one or two sentences, only a non-obvious constraint or the "why" — no restating the code, no edit history, no obvious explanations.
 

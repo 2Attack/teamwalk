@@ -7,9 +7,9 @@ import { TreadmillSettings } from '@/components/TreadmillSettings';
 import { m } from '@/lib/i18n';
 
 /**
- * Settings screen (spec § 6.11): a page rather than a dialog — the sections
- * are CRUD lists with dialogs of their own. No authorization by design
- * (spec § 7.9). Sections: treadmills (§ 6.11.2) and the team route (§ 6.12).
+ * Settings screen: a page rather than a dialog — the sections
+ * are CRUD lists with dialogs of their own. No authorization by design.
+ * Sections: treadmills and the team route.
  */
 export default function SettingsPage() {
   return (

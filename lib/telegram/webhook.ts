@@ -22,11 +22,11 @@ import {
 } from './texts';
 
 /**
- * Processing of one Telegram update (spec § 6.10.3). Never throws: the
+ * Processing of one Telegram update. Never throws: the
  * webhook must answer 200 fast, and Telegram retries undelivered updates —
  * idempotency is held by the unique index on `update_id`.
  *
- * The bot can do almost nothing (spec § 6.10.1): the only mutation is
+ * The bot can do almost nothing: the only mutation is
  * cancelling one's own active walk; the rest is notification settings.
  */
 
@@ -99,7 +99,7 @@ async function handleStart(chatId: number, token: string | null): Promise<void> 
   }
   await sendMessage(chatId, welcomeText(name));
 
-  // "Connected" (spec § 6.8.3) — the only achievement granted outside the
+  // "Connected" — the only achievement granted outside the
   // finish transaction: awarded here, congratulation goes to the fresh chat.
   const unlocked = await db
     .insert(achievements)
@@ -167,7 +167,7 @@ async function handleCancel(cbId: string, walkId: string, link: TelegramLink): P
     return;
   }
 
-  // Before the cancel: this path frees the treadmill just like POST /cancel (spec § 6.10.4).
+  // Before the cancel: this path frees the treadmill just like POST /cancel.
   const wasFullHouse = await wereAllTreadmillsBusy();
 
   const cancelled = await db

@@ -9,8 +9,8 @@ export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 /**
- * `GET /api/stats` — overall team statistics (spec § 5.3).
- * Multiple walks may be active — one per treadmill (spec § 7.2) — hence a list.
+ * `GET /api/stats` — overall team statistics.
+ * Multiple walks may be active — one per treadmill — hence a list.
  */
 export async function GET() {
   return handle(async () => {

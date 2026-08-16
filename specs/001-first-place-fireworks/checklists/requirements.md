@@ -33,7 +33,7 @@
 
 - "Canvas" appears only in the quoted user input; the spec itself stays
   implementation-free. The bundle-size and pixel-style constraints in
-  Assumptions/FR-008 restate product commitments from TeamWalk_TZ.md § 6.8,
+  Assumptions/FR-008 restate existing product commitments,
   not technology choices.
 - Ambiguities resolved as documented assumptions instead of clarification
   markers: celebration is shared (all viewers), scope is the home-screen

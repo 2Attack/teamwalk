@@ -1,17 +1,17 @@
 import { TELEGRAM_ENABLED } from '@/lib/config';
 
 /**
- * Low-level Telegram Bot API client (spec § 6.10).
+ * Low-level Telegram Bot API client.
  *
- * Telegram is never in the hot path (spec § 6.10.1): every error here is
+ * Telegram is never in the hot path: every error here is
  * swallowed into `null`/`false` — no call throws. An API error gets one
- * retry, then a log entry and give-up (spec § 6.10.5): a notification is not
+ * retry, then a log entry and give-up: a notification is not
  * important enough to build a queue for.
  */
 
 const API_TIMEOUT_MS = 10_000;
 
-/** Subsystem is on: bot token present and the kill switch not thrown (spec § 6.10.7). */
+/** Subsystem is on: bot token present and the kill switch not thrown. */
 export function telegramEnabled(): boolean {
   return TELEGRAM_ENABLED;
 }
@@ -64,7 +64,7 @@ async function callApi(method: string, payload: Record<string, unknown>): Promis
 /** The bot username only changes with the token — a harmless per-process memo. */
 let cachedUsername: string | null = null;
 
-/** Bot `username` for the deep link `https://t.me/<bot>?start=…` (spec § 6.10.3). */
+/** Bot `username` for the deep link `https://t.me/<bot>?start=…`. */
 export async function getBotUsername(): Promise<string | null> {
   if (cachedUsername !== null) return cachedUsername;
 
@@ -81,8 +81,7 @@ export async function getBotUsername(): Promise<string | null> {
 }
 
 /**
- * Send a message. `silent` — no sound or vibration, for secondary categories
- * (spec § 6.10.1).
+ * Send a message. `silent` — no sound or vibration, for secondary categories.
  */
 export async function sendMessage(
   chatId: number,

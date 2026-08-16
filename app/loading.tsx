@@ -4,7 +4,7 @@ import { m } from '@/lib/i18n';
 
 /**
  * Route-level loading: the walk screen's game-style loading screen, fullscreen.
- * Tips come from the static hint catalog (spec § 6.6.6), unshuffled so server
+ * Tips come from the static hint catalog, unshuffled so server
  * render matches hydration.
  */
 export default function Loading() {

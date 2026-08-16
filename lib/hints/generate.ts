@@ -17,7 +17,7 @@ import type { SnapshotResult } from './snapshot';
 import { buildSnapshot } from './snapshot';
 
 /**
- * Pool generation orchestration (spec § 6.6.4–6.6.7):
+ * Pool generation orchestration:
  * snapshot → LLM → Zod → post-filter → selection rules → name substitution → write.
  *
  * Called only from the background (`waitUntil`), never in the hot path.
@@ -26,7 +26,7 @@ import { buildSnapshot } from './snapshot';
 const PLACEHOLDER = /\{\{(u\d+)\}\}/g;
 
 /**
- * Real names are substituted on our side (spec § 6.6.2). A slot missing from
+ * Real names are substituted on our side. A slot missing from
  * the snapshot drops the phrase: nothing to substitute, and "{{u9}}" on the
  * shared screen is worse than one joke fewer.
  */
@@ -48,7 +48,7 @@ interface FilterStats {
   rejected: number;
 }
 
-/** LLM phrases → pool rows. Everything rejected is logged with a reason (spec § 8). */
+/** LLM phrases → pool rows. Everything rejected is logged with a reason. */
 function toPoolRows(hints: readonly LlmHint[], snapshot: SnapshotResult, stats: FilterStats): PoolRow[] {
   const teasedSubjects = new Set<string>();
   const rows: PoolRow[] = [];
@@ -64,7 +64,7 @@ function toPoolRows(hints: readonly LlmHint[], snapshot: SnapshotResult, stats: 
     const subject = hint.subject ?? null;
 
     // Newcomers are never teased, and at most one tease per person per day:
-    // the pool lives an hour, so in-pool dedup is the daily dedup (spec § 6.6.7).
+    // the pool lives an hour, so in-pool dedup is the daily dedup.
     if (hint.tone === 'tease' && subject) {
       if (snapshot.newcomerSlots.has(subject)) {
         stats.rejected += 1;
@@ -107,7 +107,7 @@ function toPoolRows(hints: readonly LlmHint[], snapshot: SnapshotResult, stats: 
 }
 
 /**
- * Static top-up to the minimum, deduplicated by text (spec § 6.6.4).
+ * Static top-up to the minimum, deduplicated by text.
  *
  * The catalog is shuffled: the pool is cut to `HINTS_POOL_MAX`, so without a
  * shuffle only the first array entries would ever reach the cache and the
@@ -139,7 +139,7 @@ async function writePool(rows: readonly PoolRow[]): Promise<void> {
 
 /**
  * Full pool regeneration. Returns the number of rows written; `0` means the
- * cache was left as is — an empty pool is never written (spec § 6.6.5).
+ * cache was left as is — an empty pool is never written.
  */
 export async function regenerateHints(): Promise<number> {
   const snapshot = await buildSnapshot();
@@ -148,7 +148,7 @@ export async function regenerateHints(): Promise<number> {
   let rows: PoolRow[] = [];
 
   // HINTS_ENABLED=false kill switch: no LLM call at all, the pool is built
-  // from the static catalog (acceptance criterion, spec § 12).
+  // from the static catalog (acceptance criterion).
   const useLlm = HINTS_ENABLED && snapshot.snapshot.participants.length > 0;
 
   if (useLlm) {

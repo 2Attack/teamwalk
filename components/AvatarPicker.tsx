@@ -1,7 +1,7 @@
 'use client';
 
 /**
- * Character picker (spec § 6.5): 6×4 grid of 24 presets.
+ * Character picker: 6×4 grid of 24 presets.
  *
  * Taken presets are dimmed and labeled but still selectable — a hard block
  * would dead-end once there are more than 24 members.
@@ -123,7 +123,7 @@ export function AvatarPicker({
               )}
 
               {isTaken && (
-                // Caption is the data layer — regular sans (spec § 6.7.1).
+                // Caption is the data layer — regular sans.
                 <span className="absolute inset-x-0 bottom-0 bg-bg-deep/85 text-center text-[10px] leading-tight text-text-dim">
                   {m.avatarPicker.takenBadge}
                 </span>

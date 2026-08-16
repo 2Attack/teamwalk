@@ -16,12 +16,12 @@ interface TeamProgressProps {
   className?: string;
 }
 
-/** Distance left to a city — whole km: route distances are approximate (spec § 6.6.8). */
+/** Distance left to a city — whole km: route distances are approximate. */
 function routeKm(km: number): string {
   return Math.round(Math.max(0, km)).toLocaleString(INTL_LOCALE);
 }
 
-/** Hard four-way outline — pixel stroke without blur (spec § 6.7.6). */
+/** Hard four-way outline — pixel stroke without blur. */
 const PERCENT_OUTLINE = {
   textShadow:
     '1px 1px 0 var(--background), -1px -1px 0 var(--background), ' +
@@ -34,8 +34,7 @@ function ProgressBar({ ratio, label }: { ratio: number; label: string }) {
   return (
     /*
       8bitcn `variant="retro"`: the bar is built from twenty squares, one
-      lighting up per ~5% of the route. No animation at all — spec § 6.7.6
-      requires an instant state change. The percentage sits on top of the bar:
+      lighting up per ~5% of the route. No animation at all — an instant state change by design. The percentage sits on top of the bar:
       the outlined digit reads on both lime and empty segments.
     */
     <div className="relative">
@@ -61,7 +60,7 @@ function ProgressBar({ ratio, label }: { ratio: number; label: string }) {
 function ProgressBody({ data }: { data: TeamProgressDto }) {
   const { totalKm, passed, next, kmLeft, progressRatio, route } = data;
 
-  // "No route selected" is a normal state of an empty table (spec § 6.12.6):
+  // "No route selected" is a normal state of an empty table:
   // team kilometers are still shown; the bar is replaced by an invitation.
   if (!passed || route.length < 2) {
     return (
@@ -86,7 +85,7 @@ function ProgressBody({ data }: { data: TeamProgressDto }) {
 
   return (
     <>
-      {/* City names are data — regular sans (spec § 6.7.1). */}
+      {/* City names are data — regular sans. */}
       <div className="flex items-baseline justify-between gap-3 text-sm">
         <span className="min-w-0 truncate font-medium text-citrus" title={passed.city}>
           {passed.city}
@@ -102,9 +101,9 @@ function ProgressBody({ data }: { data: TeamProgressDto }) {
 
       <p className="mt-3 text-sm text-text-dim">{caption}</p>
 
-      {/* Full route chain (spec § 6.12): the header shows the current segment's
+      {/* Full route chain: the header shows the current segment's
           ends, this line answers "what's next" — passed cities dimmed, the
-          next one highlighted. Names are data, sans (spec § 6.7.1). */}
+          next one highlighted. Names are data, sans. */}
       {route.length >= 2 && (
         <p className="mt-2 flex flex-wrap items-center gap-x-1.5 gap-y-1 text-xs text-text-dim">
           {route.map((point, index) => (
@@ -128,12 +127,12 @@ function ProgressBody({ data }: { data: TeamProgressDto }) {
 }
 
 /**
- * Team route goal (spec § 6.6.8, 6.8.2): the one mechanic where a strong walker
+ * Team route goal: the one mechanic where a strong walker
  * adds to a weak one instead of taking from them.
  *
  * Panel is an 8bitcn `Card` — same double pixel frame as the hint feed, keeping
  * the home blocks in one rhythm. `font="normal"`: only city names and a caption
- * inside, i.e. the data layer (spec § 6.7.1); the title is exempt and set in
+ * inside, i.e. the data layer; the title is exempt and set in
  * pixel font, like the start block's.
  */
 export function TeamProgress({ className }: TeamProgressProps) {
@@ -147,7 +146,7 @@ export function TeamProgress({ className }: TeamProgressProps) {
       <Card font="normal">
         <CardHeader>
           {/* text-sm on mobile: the pixel font is wide and hits the edge of a
-              360 px screen at 16px (spec § 6.7.2).
+              360 px screen at 16px.
               `retro` in the class is mandatory — className in 8bitcn overrides it. */}
           <CardTitle
             id={titleId}

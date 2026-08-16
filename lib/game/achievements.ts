@@ -10,10 +10,10 @@ import type { AchievementDto } from '../types';
 import { getStreak } from './streak';
 
 /**
- * Achievements (spec § 6.8.3) reward character, not volume: mileage-based ones
+ * Achievements reward character, not volume: mileage-based ones
  * would always go to the leader, so almost all conditions are reachable by anyone.
  *
- * Achievements are deliberately never revoked (spec § 7.7): taking back an
+ * Achievements are deliberately never revoked: taking back an
  * already-shown badge on walk deletion is the worst possible behavior.
  */
 
@@ -72,7 +72,7 @@ const CATALOG = new Map(ACHIEVEMENTS.map((item) => [item.code, item]));
 
 /**
  * Walk start hour in the office timezone: "before 9:00" means Moscow 9:00,
- * not UTC (spec § 6.8.5).
+ * not UTC.
  */
 const hourFormatter = new Intl.DateTimeFormat('en-GB', {
   timeZone: TZ,

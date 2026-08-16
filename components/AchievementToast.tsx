@@ -19,7 +19,7 @@ interface AchievementToastProps {
 const TOAST_MS = 4_500;
 
 /**
- * Game-style achievement toast (spec § 6.7.5, 6.8.3). Multiple achievements
+ * Game-style achievement toast. Multiple achievements
  * are queued and shown one at a time — stacked panels are unreadable.
  *
  * Deliberately uses `.pixel-panel` instead of 8bitcn `Card`: Card applies the
@@ -49,7 +49,7 @@ export function AchievementToast({ achievements, onDismiss }: AchievementToastPr
     return () => window.clearTimeout(timer);
   }, [queue]);
 
-  // Fanfare per shown award (spec § 6.8.3). A user gesture already happened
+  // Fanfare per shown award. A user gesture already happened
   // (finish was clicked), so autoplay is allowed.
   const headCode = queue[0]?.code;
   useEffect(() => {
@@ -74,17 +74,17 @@ export function AchievementToast({ achievements, onDismiss }: AchievementToastPr
             key={current.code}
             role="status"
             className="pixel-panel pixel-panel-accent pointer-events-auto flex w-full max-w-md items-start gap-3 p-3"
-            // transform/opacity only (spec § 6.7.6).
+            // transform/opacity only.
             initial={reduced ? { opacity: 0 } : { opacity: 0, y: 24, scale: 0.96 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={reduced ? { opacity: 0 } : { opacity: 0, y: 12, scale: 0.98 }}
             transition={{ duration: reduced ? 0 : 0.28, ease: 'easeOut' }}
           >
-            {/* Each achievement has its own pixel icon (spec § 6.8.3). */}
+            {/* Each achievement has its own pixel icon. */}
             <Icon name={achievementIcon(current.code)} size={24} className="mt-0.5" />
 
             <div className="min-w-0 flex-1">
-              {/* Label belongs to the identity layer — pixel badge font (spec § 6.7.1). */}
+              {/* Label belongs to the identity layer — pixel badge font. */}
               <Badge variant="default" className="mx-1.5 min-h-6 text-[16px]">
                 {m.achievementsUi.toastBadge}
               </Badge>

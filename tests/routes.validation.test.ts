@@ -9,7 +9,7 @@ import {
   routePointsSchema,
 } from '@/lib/validation';
 
-/** Route management rules (spec § 6.12.2) — shared by the UI and the API. */
+/** Route management rules — shared by the UI and the API. */
 
 const POINTS = [
   { city: 'Ярославль', km: 0 },
@@ -91,7 +91,7 @@ describe('create/patch/activate schemas', () => {
   });
 });
 
-describe('positionOnRoute (points as an argument since spec § 6.12.2)', () => {
+describe('positionOnRoute (points as an argument)', () => {
   it('projects km onto the given points', () => {
     const position = positionOnRoute(POINTS, 300);
     expect(position.passed.city).toBe('Москва');

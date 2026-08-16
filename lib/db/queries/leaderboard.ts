@@ -9,9 +9,9 @@ import type { LeaderboardDto, LeaderboardRowDto } from '@/lib/types';
 import type { Period, PeriodSelection } from '@/lib/validation';
 
 /**
- * Leaderboard aggregations (spec § 5.3). The whole table is built in one
+ * Leaderboard aggregations. The whole table is built in one
  * `left join` query: a participant with no walks still appears — with zeros,
- * at the bottom (spec § 6.2).
+ * at the bottom.
  */
 
 /** Round to hundredths — DTO km and speed are emitted this way. */
@@ -59,7 +59,7 @@ function selectionBounds(selection: PeriodSelection): { since: Date; until: Date
 }
 
 /**
- * Leaderboard rows already in final order (spec § 7.8):
+ * Leaderboard rows already in final order:
  * distance desc → total time asc → name asc.
  */
 async function aggregate(selection: PeriodSelection): Promise<AggregateRow[]> {
@@ -90,7 +90,7 @@ async function aggregate(selection: PeriodSelection): Promise<AggregateRow[]> {
 }
 
 /**
- * Streaks are period-independent (spec § 5.3), hence a separate call.
+ * Streaks are period-independent, hence a separate call.
  * If the streak module fails, the leaderboard matters more — show zeros.
  */
 async function safeStreaks(userIds: string[]): Promise<Map<string, number>> {
@@ -107,7 +107,7 @@ export async function getLeaderboard(selection: PeriodSelection): Promise<Leader
   const aggregated = await aggregate(selection);
   const [streaks, teamTotalKm] = await Promise.all([
     safeStreaks(aggregated.map((row) => row.id)),
-    // Always all-time: otherwise the route bar would roll back weekly (spec § 5.3).
+    // Always all-time: otherwise the route bar would roll back weekly.
     getTeamTotalKm(),
   ]);
 
@@ -122,7 +122,7 @@ export async function getLeaderboard(selection: PeriodSelection): Promise<Leader
       totalKm,
       walksCount: num(row.walksCount),
       totalDurationSec,
-      // From actual data, not the speed declared at start (spec § 6.2).
+      // From actual data, not the speed declared at start.
       avgSpeedKmh: avgSpeedKmh(totalKm, totalDurationSec),
       streakDays: streaks.get(row.id) ?? 0,
       lastWalkAt: row.lastWalkAt,

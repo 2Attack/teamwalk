@@ -27,10 +27,10 @@ interface UserSelectProps {
 }
 
 /**
- * Combobox with search-as-you-type (spec § 6.2): avatar + name, substring
+ * Combobox with search-as-you-type: avatar + name, substring
  * filtering, keyboard navigation. The field takes the card's full width —
  * "+ Add participant" lives in the card header. Clicking the selected
- * participant's avatar opens the character change dialog (spec § 6.5).
+ * participant's avatar opens the character change dialog.
  *
  * Assembled from 8bitcn `Popover` + `Command` — the combobox recipe from their
  * docs: there is no ready-made component, the "Combo Box" page shows exactly
@@ -40,9 +40,9 @@ interface UserSelectProps {
  * roles, `aria-activedescendant` and arrow traversal come from cmdk, and
  * outside-click closing plus focus return come from the popover.
  *
- * Deliberate deviations from the docs example: pixel icons instead of lucide
- * (spec § 6.7.4), sans for the names — they are data, people read them
- * (spec § 6.7.1) — and the panel width follows the trigger, not a fixed 320px.
+ * Deliberate deviations from the docs example: pixel icons instead of lucide,
+ * sans for the names — they are data, people read them —
+ * and the panel width follows the trigger, not a fixed 320px.
  *
  * Font: the 8bitcn `Command` root is hard-tagged with `.retro`, so list names
  * would render in the pixel font. `font-sans` is set on the rows themselves:
@@ -65,7 +65,7 @@ export function UserSelect({ users, value, onChange }: UserSelectProps) {
   return (
     <div className="space-y-4">
       <div className="space-y-2">
-        {/* `font="normal"`: the label is sans, like the field below (spec § 6.7.1). */}
+        {/* `font="normal"`: the label is sans, like the field below. */}
         <Label htmlFor={triggerId} font="normal" className="block text-sm text-text-dim">
           {m.userSelect.label}
         </Label>
@@ -169,7 +169,7 @@ export function UserSelect({ users, value, onChange }: UserSelectProps) {
                           className={user.id === value ? 'opacity-100' : 'opacity-0'}
                         />
                         <Avatar avatarId={user.avatarId} name={user.name} size={28} />
-                        {/* The name is plain sans: data, not a label (spec § 6.7.1). */}
+                        {/* The name is plain sans: data, not a label. */}
                         <span className="truncate text-base text-text-main">{user.name}</span>
                       </CommandItem>
                     ))}
@@ -191,7 +191,7 @@ export function UserSelect({ users, value, onChange }: UserSelectProps) {
             /*
               A button without its own frame: the avatar is its visible part.
               min-h/min-w-11 stay — the touch target is at least 44px
-              (spec § 6.7.7), and hover is signalled by the portrait itself,
+, and hover is signalled by the portrait itself,
               not a box around it. Keyboard focus is drawn by the global
               `:focus-visible` in globals.css.
             */

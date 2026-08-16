@@ -9,7 +9,7 @@ import type { TelegramLink } from '@/lib/db/schema';
 import type { TelegramStatusDto } from '@/lib/types';
 
 /**
- * Telegram links and notification preferences (spec § 6.10.3, 6.10.6).
+ * Telegram links and notification preferences.
  *
  * All concurrency is held by the DB: token one-shot use via atomic
  * `UPDATE … RETURNING`, "one chat — one user" via a unique index on `chat_id`.
@@ -33,7 +33,7 @@ export async function getLinkByChat(chatId: number): Promise<TelegramLink | null
   return rows[0] ?? null;
 }
 
-/** One-time deep-link token: 32 hex chars, 15-minute TTL (spec § 6.10.3). */
+/** One-time deep-link token: 32 hex chars, 15-minute TTL. */
 export async function createLinkToken(userId: string): Promise<{ token: string; expiresAt: Date }> {
   const token = randomBytes(16).toString('hex');
   const expiresAt = new Date(Date.now() + TG_LINK_TOKEN_TTL_MINUTES * 60_000);
@@ -62,7 +62,7 @@ export async function consumeLinkToken(token: string): Promise<string | null> {
 }
 
 /**
- * Link a chat to a user with relinking (spec § 6.10.3): old links are removed
+ * Link a chat to a user with relinking: old links are removed
  * both by `chat_id` (the chat belonged to another user) and by `user_id` (the
  * user was linked to another chat). `displacedChatId` — the foreign chat that
  * lost this user's card; the relink notification goes there.
@@ -83,7 +83,7 @@ export async function upsertLink(
 }
 
 /**
- * Unlinking restores the invite panel (spec § 6.10.2): "Don't show again" is
+ * Unlinking restores the invite panel: "Don't show again" is
  * reset, otherwise a deliberately unlinked user could not relink from the panel.
  */
 async function resetNudgeDismissed(userId: string): Promise<void> {
@@ -112,7 +112,7 @@ export async function unlinkByChat(chatId: number): Promise<boolean> {
   return true;
 }
 
-/** "Don't show again" for the invite panel (spec § 6.10.2). */
+/** "Don't show again" for the invite panel. */
 export async function dismissNudge(userId: string): Promise<void> {
   await db.update(users).set({ tgNudgeDismissed: true }).where(eq(users.id, userId));
 }
@@ -153,7 +153,7 @@ export async function togglePref(chatId: number, key: PrefKey): Promise<Telegram
   return rows[0] ?? null;
 }
 
-/** `/mute`: `null` unmutes, a future date mutes until then (spec § 6.10.3). */
+/** `/mute`: `null` unmutes, a future date mutes until then. */
 export async function setMutedUntil(chatId: number, until: Date | null): Promise<void> {
   await db
     .update(telegramLinks)
@@ -162,7 +162,7 @@ export async function setMutedUntil(chatId: number, until: Date | null): Promise
 }
 
 /**
- * Status for the invite panel and linking modal (spec § 6.10.2): the panel is
+ * Status for the invite panel and linking modal: the panel is
  * shown until the user links or hits "Don't show again" — no counters or
  * cooldowns. `null` — user not found.
  */

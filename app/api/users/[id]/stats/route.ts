@@ -16,7 +16,7 @@ export const dynamic = 'force-dynamic';
 
 type RouteContext = { params: Promise<{ id: string }> };
 
-/** GET /api/users/:id/stats — streak, record, achievements, leaderboard rank (spec § 6.8.6). */
+/** GET /api/users/:id/stats — streak, record, achievements, leaderboard rank. */
 export function GET(_request: Request, context: RouteContext) {
   return handle<UserStatsDto | ApiErrorBody>(async () => {
     // Validate uuid before querying: Postgres would fail on a malformed value with 500 instead of 400.
@@ -25,12 +25,12 @@ export function GET(_request: Request, context: RouteContext) {
     const user = await getUser(id);
     if (!user) return apiError(404, 'NOT_FOUND', m.apiMessages.userNotFound);
 
-    // Independent blocks — computed in parallel to fit the response budget (spec § 8).
+    // Independent blocks — computed in parallel to fit the response budget.
     const [streak, personalRecord, totals, rank, achievements] = await Promise.all([
       getStreak(id),
       getPersonalRecord(id),
       getUserTotals(id),
-      // Rank uses the weekly leaderboard: the default view (spec § 6.8.2).
+      // Rank uses the weekly leaderboard: the default view.
       getUserRank(id, 'week'),
       listUserAchievements(id),
     ]);

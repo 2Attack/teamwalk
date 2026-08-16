@@ -9,11 +9,11 @@ import {
 import { diffOfficeDays, isWeekend, workdaysSince } from '@/lib/time';
 
 /**
- * Reminder frequency and backoff rules (spec § 6.10.4).
+ * Reminder frequency and backoff rules.
  *
  * Pure module, no DB: facts arrive as office days `YYYY-MM-DD`, so the logic
  * is unit-testable without `DATABASE_URL`. The send-window check (workday,
- * 11–17 MSK) is shared with the digest and lives in the sweep (spec § 6.10.5).
+ * 11–17 MSK) is shared with the digest and lives in the sweep.
  */
 
 export interface ReminderFacts {
@@ -30,7 +30,7 @@ export interface ReminderFacts {
 }
 
 export function reminderDecision(facts: ReminderFacts): boolean {
-  // Newcomers get no reminders (spec § 6.10.4): they have not "dropped" anything yet.
+  // Newcomers get no reminders: they have not "dropped" anything yet.
   if (diffOfficeDays(facts.today, facts.userCreatedDay) < HINTS_NEWCOMER_DAYS) return false;
 
   // Idle time counts only fully missed workdays: today is still in progress

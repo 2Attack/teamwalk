@@ -19,7 +19,7 @@ interface AchievementIconsProps {
 }
 
 /**
- * Row of earned achievements as pixel icons (spec § 6.8.3), shown on the player card.
+ * Row of earned achievements as pixel icons, shown on the player card.
  * Hover/focus opens an 8bitcn `Tooltip`; the same text lives in the trigger's
  * aria-label, so screen readers don't need the tooltip. Trigger is a >=44 px
  * button: on tablets the tooltip opens by tap, and a 16 px icon is too small a target.
@@ -46,7 +46,7 @@ export function AchievementIcons({ achievements, className }: AchievementIconsPr
               >
                 <Icon name={achievementIcon(item.code)} size={16} />
               </TooltipTrigger>
-              {/* Title is a label (pixel font); description is body text (sans, spec § 6.7.1).
+              {/* Title is a label (pixel font); description is body text (sans).
                   flex-col needed: the base Popup lays children out horizontally. */}
               <TooltipContent font="normal" className="max-w-64 flex-col items-start">
                 <p className="font-pixel text-[10px] leading-relaxed">{item.title}</p>

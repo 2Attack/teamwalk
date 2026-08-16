@@ -10,10 +10,10 @@ import { positionOnRoute } from '@/lib/hints/route';
 import { diffOfficeDays, periodStart, toOfficeDay } from '@/lib/time';
 
 /**
- * Anonymized snapshot for the LLM (spec § 6.6.2).
+ * Anonymized snapshot for the LLM.
  *
  * The model sees slots `u1…uN`, not employee names. This keeps personal data
- * inside the perimeter (free tiers train on prompts, spec § 6.6.1), lets
+ * inside the perimeter (free tiers train on prompts), lets
  * `hints_opt_out` users simply not appear, keeps old hints valid after a
  * rename, and makes it impossible for the model to garble a name it never sees.
  */
@@ -40,7 +40,7 @@ export interface HintSnapshot {
   team_total_km: number;
   team_km_week: number;
   /** Route arithmetic is ours — numbers are where the LLM slips most.
-   * Absent when no route is selected (spec § 6.12.6): geo phrases simply never appear. */
+   * Absent when no route is selected: geo phrases simply never appear. */
   route_position?: { passed: string; next: string | null; km_left: number };
   /** Nearest round team milestone — a ready-made "who finishes it" storyline. */
   next_milestone: MilestoneInfo;
@@ -57,7 +57,7 @@ export interface SnapshotResult {
   slotToUserId: Map<string, string>;
   /** Slot → name: `{{uN}}` substitution happens on our side. */
   slotToName: Map<string, string>;
-  /** Newcomers are never teased (spec § 6.6.7); the flag never reaches the model. */
+  /** Newcomers are never teased; the flag never reaches the model. */
   newcomerSlots: Set<string>;
 }
 
@@ -233,7 +233,7 @@ export async function buildSnapshot(): Promise<SnapshotResult> {
 
   const teamTotalKm = Math.round(all.reduce((sum, u) => sum + u.totalKm, 0) * 100) / 100;
   const teamKmWeek = Math.round(all.reduce((sum, u) => sum + u.kmWeek, 0) * 100) / 100;
-  // The route lives in the DB since spec § 6.12; the position is projected
+  // The route lives in the DB; the position is projected
   // from the km walked on the active route, not the raw all-time total.
   // No route selected → the geo position is simply omitted from the snapshot.
   const activeRoute = await getActiveRoute();

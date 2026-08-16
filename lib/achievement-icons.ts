@@ -1,7 +1,7 @@
 import type { IconName } from '@/lib/icons.generated';
 
 /**
- * Achievement icon by code (spec § 6.8.3). Kept separate from
+ * Achievement icon by code. Kept separate from
  * `lib/game/achievements.ts`: that catalog pulls in the DB and is never
  * imported on the client, while the icon is purely presentational.
  */

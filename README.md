@@ -13,7 +13,7 @@
   <img src="https://img.shields.io/badge/license-MIT-a3e635" alt="MIT license">
 </p>
 
-Who walked, when and how far — with a leaderboard, streaks, achievements, a shared team route across real cities and a ticker of joke hints generated from live data. Built to the spec in [`TeamWalk_TZ.md`](TeamWalk_TZ.md) (referenced in code as "spec § N"). **No authentication by design**: you pick yourself from a list, and starting a walk takes one tap.
+Who walked, when and how far — with a leaderboard, streaks, achievements, a shared team route across real cities and a ticker of joke hints generated from live data. **No authentication by design**: you pick yourself from a list, and starting a walk takes one tap.
 
 ## Features
 

@@ -24,7 +24,7 @@ interface RouteFormDialogProps {
   open: boolean;
   /** `null` — create mode; a row — edit mode. */
   route: RouteAdminDto | null;
-  /** LLM credentials are configured — show the AI drafting row (spec § 6.12.4). */
+  /** LLM credentials are configured — show the AI drafting row. */
   llmEnabled: boolean;
   onClose: () => void;
 }
@@ -40,7 +40,7 @@ const EMPTY_POINTS: PointDraft[] = [
 ];
 
 /**
- * Route editor (spec § 6.12.3): name + point rows, one dialog for create and
+ * Route editor: name + point rows, one dialog for create and
  * edit. The first row is the start pinned to km 0. Points are sorted by km on
  * save and sent wholesale — the API replaces the array atomically.
  */
@@ -51,7 +51,7 @@ export function RouteFormDialog({ open, route, llmEnabled, onClose }: RouteFormD
   const [name, setName] = useState('');
   const [points, setPoints] = useState<PointDraft[]>(EMPTY_POINTS);
   const [nameError, setNameError] = useState<string | null>(null);
-  /** Per-row error, aligned with `points` by index (spec § 6.12.3). */
+  /** Per-row error, aligned with `points` by index. */
   const [rowErrors, setRowErrors] = useState<Array<string | null>>([]);
   const [listError, setListError] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
@@ -155,7 +155,7 @@ export function RouteFormDialog({ open, route, llmEnabled, onClose }: RouteFormD
     }
   }
 
-  /** AI draft (spec § 6.12.4): fills the editor, never writes to the DB. */
+  /** AI draft: fills the editor, never writes to the DB. */
   async function handleGenerate() {
     if (aiBusy || aiPrompt.trim().length < 3) return;
     setAiBusy(true);
@@ -349,7 +349,7 @@ function PointRow({ index, point, error, removable, onChange, onRemove }: PointR
           value={isStart ? '0' : point.km}
           onChange={(e) => onChange({ km: e.target.value })}
           aria-label={fmt(m.routes.kmToPointAria, { index: index + 1 })}
-          // The start is pinned to 0 km (spec § 6.12.3).
+          // The start is pinned to 0 km.
           disabled={isStart}
           className="min-h-11 w-24 shrink-0 text-base"
         />

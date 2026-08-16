@@ -10,7 +10,7 @@ import { fmt, m } from '@/lib/i18n';
 import type { WalkSpeedSegmentDto } from '@/lib/types';
 
 /**
- * Active walk timer (spec § 6.3).
+ * Active walk timer.
  *
  * The single source of truth is the server's `startedAt`: the value is always
  * `Date.now() − startedAt`, and `setInterval` only repaints it. Page reloads,
@@ -54,7 +54,7 @@ interface WalkTimerProps {
   startedAt: string;
   /**
    * Speed segments from the server. Distance grows by segments, not one speed:
-   * changing pace mid-walk doesn't rewrite what's already covered (spec § 6.3).
+   * changing pace mid-walk doesn't rewrite what's already covered.
    */
   speedSegments: WalkSpeedSegmentDto[];
   /** Personal best day, km. `null` — no record yet. */
@@ -81,7 +81,7 @@ export function WalkTimer({
 
   return (
     <section className={cn('flex flex-col items-center gap-4 text-center', className)}>
-      {/* Pixel font only on numbers and short labels (spec § 6.7.1). */}
+      {/* Pixel font only on numbers and short labels. */}
       <p
         className="font-pixel text-[32px] leading-none tabular-nums text-text-main sm:text-[48px]"
         aria-label={fmt(m.walkTimer.elapsedAria, { duration: formatDuration(seconds) })}

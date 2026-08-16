@@ -12,7 +12,7 @@ export const dynamic = 'force-dynamic';
 type RouteContext = { params: Promise<{ id: string }> };
 
 /**
- * POST /api/routes/:id/activate — route selection (spec § 6.12.2). A separate
+ * POST /api/routes/:id/activate — route selection. A separate
  * action rather than PATCH { isActive }: it has the base_km side effect and a
  * mandatory confirmation in the UI. `resetProgress: true` moves base_km to the
  * current all-time total, so the route starts from zero.

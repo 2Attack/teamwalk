@@ -30,7 +30,7 @@ import { fmt, INTL_LOCALE, m } from '@/lib/i18n';
 import type { RouteAdminDto } from '@/lib/types';
 
 /**
- * "Team route" settings section (spec § 6.12.3): the catalog table with icon
+ * "Team route" settings section: the catalog table with icon
  * actions. Any route can be deleted, the active one included — the dialog
  * warns that home will switch to the "no route selected" state.
  */
@@ -183,7 +183,7 @@ function RouteRow({ route, onEdit, onActivate, onDelete }: RouteRowProps) {
               <Icon name="play" size={16} />
             </Button>
           )}
-          {/* Deletion is allowed for the active route too (spec § 6.12.2):
+          {/* Deletion is allowed for the active route too:
               routes are optional, the dialog carries the extra warning. */}
           <Button
             type="button"
@@ -208,7 +208,7 @@ interface ActivateRouteDialogProps {
 }
 
 /**
- * Route selection confirmation (spec § 6.12.3): the reset choice defaults to
+ * Route selection confirmation: the reset choice defaults to
  * "start from zero" — a fresh route with a full progress bar reads wrong.
  */
 function ActivateRouteDialog({ route, onClose }: ActivateRouteDialogProps) {

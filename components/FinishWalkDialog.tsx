@@ -32,17 +32,17 @@ import { fmt, m } from '@/lib/i18n';
 import type { FinishWalkResultDto } from '@/lib/types';
 
 /**
- * Finish-walk dialog (spec § 6.4). Frame and button labels are pixel; the input
+ * Finish-walk dialog. Frame and button labels are pixel; the input
  * itself is deliberately plain — it's the only required field in the app, and
- * styling would only get in the way (spec § 6.7.7). Hence `font="normal"` on
- * the input and all captions (spec § 6.7.1).
+ * styling would only get in the way. Hence `font="normal"` on
+ * the input and all captions.
  */
 
 interface FinishWalkDialogProps {
   open: boolean;
   walkId: string;
   /**
-   * Walk speeds in order; a single one if never changed (spec § 6.3).
+   * Walk speeds in order; a single one if never changed.
    * Shown but not editable — users correct the final distance instead.
    */
   speedTrail: number[];
@@ -131,7 +131,7 @@ export function FinishWalkDialog({
     setSubmitting(true);
     setFailure(null);
     try {
-      // Retry is safe: the server responds 200 with current state (spec § 8).
+      // Retry is safe: the server responds 200 with current state.
       const result = await apiSend<FinishWalkResultDto>('POST', `/api/walks/${walkId}/finish`, {
         distanceKm: rounded,
       });
@@ -168,7 +168,7 @@ export function FinishWalkDialog({
         </DialogHeader>
 
         <DialogBody className="space-y-3">
-          {/* `font="normal"`: label is sans, same as the field below (spec § 6.7.1). */}
+          {/* `font="normal"`: label is sans, same as the field below. */}
           <Label htmlFor={fieldId} font="normal" className="block font-sans text-sm text-text-main">
             {m.finishDialog.distanceLabel}
           </Label>
@@ -185,7 +185,7 @@ export function FinishWalkDialog({
             aria-invalid={inputError !== undefined}
             aria-describedby={describedBy}
             /* Select the whole value on first focus so typing replaces it;
-               on later manual focus the cursor no longer jumps (spec § 6.4). */
+               on later manual focus the cursor no longer jumps. */
             onFocus={(event) => {
               if (selectedOnce.current) return;
               selectedOnce.current = true;

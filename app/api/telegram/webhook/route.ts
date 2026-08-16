@@ -9,7 +9,7 @@ export const dynamic = 'force-dynamic';
 
 /**
  * The `X-Telegram-Bot-Api-Secret-Token` header must match `TELEGRAM_WEBHOOK_SECRET`
- * byte for byte (registered via `setWebhook` with `secret_token`, spec § 6.10.3).
+ * byte for byte (registered via `setWebhook` with `secret_token`).
  * A missing secret also denies: never expose the endpoint unprotected.
  */
 function isAuthorized(request: Request): boolean {
@@ -26,7 +26,7 @@ function isAuthorized(request: Request): boolean {
 }
 
 /**
- * POST /api/telegram/webhook — Telegram entry point (spec § 6.10.3).
+ * POST /api/telegram/webhook — Telegram entry point.
  * The only endpoint facing the outside world, and the only one checking a
  * secret. Always answers a fast 200; idempotency comes from the `update_id`
  * journal inside the handler.

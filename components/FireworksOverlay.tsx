@@ -4,7 +4,7 @@ import { useEffect, useRef } from 'react';
 
 /**
  * One-shot pixel fireworks over the whole viewport
- * (specs/001-first-place-fireworks, TZ § 6.8 "Layer 3").
+ * (specs/001-first-place-fireworks, "Layer 3").
  *
  * Purely decorative: pointer-transparent, aria-hidden, silent. The component
  * is mounted only for the duration of a burst; the rAF loop stops on its own

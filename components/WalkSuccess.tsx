@@ -25,14 +25,14 @@ import { fmt, m, plural } from '@/lib/i18n';
 import type { FinishWalkResultDto } from '@/lib/types';
 
 /**
- * Success screen (spec § 6.4) — the "award notification" (spec § 6.7.5): gain,
+ * Success screen — the "award notification": gain,
  * rank, streak, new achievements. All rendered from the `POST /finish`
  * response — by construction there is no second request for achievements,
  * streak, or rank.
  *
  * Pixel font on the gain, rank number, and block titles. Achievement titles,
  * descriptions, and the hint are regular sans: long Russian strings in a
- * bitmap font don't fit 360px (spec § 6.7.1).
+ * bitmap font don't fit 360px.
  */
 
 const RECORD_ANIMATION_MS = 700;
@@ -123,7 +123,7 @@ export function WalkSuccess({ result }: { result: FinishWalkResultDto }) {
 
   return (
     <main className="mx-auto flex min-h-dvh w-full max-w-md flex-col justify-center gap-5 px-4 py-8">
-      {/* Only opacity and scale animate — transform, no reflow (spec § 6.7.6). */}
+      {/* Only opacity and scale animate — transform, no reflow. */}
       <motion.div
         initial={{ opacity: 0, scale: 0.92 }}
         animate={{ opacity: 1, scale: 1 }}
@@ -196,7 +196,7 @@ export function WalkSuccess({ result }: { result: FinishWalkResultDto }) {
                   <li key={achievement.code} className="space-y-2">
                     <div className="px-1.5">
                       <Badge font="normal" className="h-7">
-                        {/* Each achievement has its own pixel icon (spec § 6.8.3). */}
+                        {/* Each achievement has its own pixel icon. */}
                         <Icon name={achievementIcon(achievement.code)} size={16} />
                         {achievement.title}
                       </Badge>

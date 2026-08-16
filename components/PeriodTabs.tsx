@@ -76,7 +76,7 @@ function formatRangeLabel(range: DayRange): string {
 }
 
 /**
- * Leaderboard period switcher (spec § 6.2, 6.8.2) on 8bitcn `Tabs`.
+ * Leaderboard period switcher on 8bitcn `Tabs`.
  * The tablist pattern is fully delegated to Base UI (`role="tablist"`, roving
  * tabindex, arrow/Home/End navigation) — no custom handlers.
  *
@@ -141,7 +141,7 @@ export function PeriodTabs({ value, onChange, className }: PeriodTabsProps) {
             value={tab.value}
             aria-label={tab.label}
             className={cn(
-              // min-h-11: touch target at least 44 px (spec § 6.7.7).
+              // min-h-11: touch target at least 44 px.
               'min-h-11 px-3 text-[16px] leading-none',
               // Active tab: citrus fill. Selector must be data-active — base
               // Tabs is built on Base UI, not Radix's data-[state=active].
@@ -150,7 +150,7 @@ export function PeriodTabs({ value, onChange, className }: PeriodTabsProps) {
               // would override a lone selector.
               'data-active:bg-primary data-active:text-primary-foreground',
               'dark:data-active:bg-primary dark:data-active:text-primary-foreground',
-              // Instant state change instead of a color transition (spec § 6.7.6).
+              // Instant state change instead of a color transition.
               'transition-none',
             )}
           >
@@ -173,7 +173,7 @@ export function PeriodTabs({ value, onChange, className }: PeriodTabsProps) {
                 variant="outline"
                 // Dates are digits and month abbreviations: sans, because
                 // Cyrillic like «авг.» falls apart in the pixel font, which
-                // has no Cyrillic glyphs (spec § 6.7.1).
+                // has no Cyrillic glyphs.
                 font="normal"
                 aria-label={m.periodTabs.changeDatesAria}
                 className="mt-3 min-h-11 gap-2 px-3 text-sm tabular-nums"

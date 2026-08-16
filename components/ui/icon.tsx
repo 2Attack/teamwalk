@@ -1,5 +1,5 @@
 /**
- * Pixel icon from the pixelarticons set (spec § 6.7.4: one set, no icon fonts —
+ * Pixel icon from the pixelarticons set (one set, no icon fonts —
  * mismatched stroke widths show immediately). Path data lives in
  * `lib/icons.generated.ts`, refreshed via `npm run gen:icons`.
  *

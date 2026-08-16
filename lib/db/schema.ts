@@ -15,7 +15,7 @@ import {
   uuid,
 } from 'drizzle-orm/pg-core';
 
-/** Walk statuses (spec § 4.1). */
+/** Walk statuses. */
 export const walkStatus = pgEnum('walk_status', ['active', 'finished', 'cancelled']);
 
 export const users = pgTable(
@@ -26,7 +26,7 @@ export const users = pgTable(
     avatarId: text('avatar_id').notNull(),
     hintsOptOut: boolean('hints_opt_out').notNull().default(false),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-    /** "Don't show again" for the Telegram-link panel (spec § 6.10.2). Stored in
+    /** "Don't show again" for the Telegram-link panel. Stored in
      * the DB, not localStorage, so the opt-out holds on any device; unlinking
      * resets it. tg_nudge_count/tg_nudge_last_at still exist in the DB but are retired. */
     tgNudgeDismissed: boolean('tg_nudge_dismissed').notNull().default(false),
@@ -38,20 +38,20 @@ export const users = pgTable(
   ],
 );
 
-/** Team route catalog (spec § 6.12): several routes, exactly one active. */
+/** Team route catalog: several routes, exactly one active. */
 export const routes = pgTable(
   'routes',
   {
     id: uuid('id').primaryKey().defaultRandom(),
     name: text('name').notNull(),
-    /** Start mark: position on the route = teamTotalKm − base_km (spec § 6.12.1). */
+    /** Start mark: position on the route = teamTotalKm − base_km. */
     baseKm: numeric('base_km', { precision: 8, scale: 2 }).notNull().default('0'),
     isActive: boolean('is_active').notNull().default(false),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [
     uniqueIndex('routes_name_uniq').on(sql`lower(btrim(${t.name}))`),
-    // Exactly one active route — same technique as one active walk (spec § 7.1).
+    // Exactly one active route — same technique as one active walk.
     uniqueIndex('routes_one_active').on(t.isActive).where(sql`${t.isActive}`),
   ],
 );
@@ -101,7 +101,7 @@ export const walks = pgTable(
     speedKmh: smallint('speed_kmh').notNull(),
     endedAt: timestamp('ended_at', { withTimezone: true }),
     durationSec: integer('duration_sec'),
-    /** numeric(5,2) — money-like precision, not float (spec § 4.2). */
+    /** numeric(5,2) — money-like precision, not float. */
     distanceKm: numeric('distance_km', { precision: 5, scale: 2 }),
     status: walkStatus('status').notNull().default('active'),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
@@ -119,7 +119,7 @@ export const walks = pgTable(
 );
 
 /**
- * Speed segments within a walk (spec § 6.3): speed can change mid-walk.
+ * Speed segments within a walk: speed can change mid-walk.
  * The first segment is not stored here — `walks.speedKmh` + `walks.startedAt`
  * serve as it, so a walk with no speed changes produces zero rows and
  * `walks.speedKmh` stays the starting speed forever.
@@ -180,13 +180,13 @@ export const hintsCache = pgTable(
   (t) => [index('hints_cache_generated_idx').on(t.generatedAt.desc())],
 );
 
-/** Single-row mutex against concurrent pool regeneration (spec § 6.6.5). */
+/** Single-row mutex against concurrent pool regeneration. */
 export const hintsMeta = pgTable('hints_meta', {
   id: boolean('id').primaryKey().default(true),
   lockedUntil: timestamp('locked_until', { withTimezone: true }).notNull().defaultNow(),
 });
 
-/** Telegram link and notification preferences (spec § 6.10.6). */
+/** Telegram link and notification preferences. */
 export const telegramLinks = pgTable('telegram_links', {
   userId: uuid('user_id')
     .primaryKey()
@@ -200,12 +200,12 @@ export const telegramLinks = pgTable('telegram_links', {
   notifyFinish: boolean('notify_finish').notNull().default(true),
   notifyRemind: boolean('notify_remind').notNull().default(true),
   notifyDigest: boolean('notify_digest').notNull().default(true),
-  /** "Treadmill freed" — only on the "all busy → free" transition (spec § 6.10.4). */
+  /** "Treadmill freed" — only on the "all busy → free" transition. */
   notifyFree: boolean('notify_free').notNull().default(true),
   attachHints: boolean('attach_hints').notNull().default(true),
 });
 
-/** One-time tokens for the link deep link (spec § 6.10.3). */
+/** One-time tokens for the link deep link. */
 export const telegramLinkTokens = pgTable('telegram_link_tokens', {
   token: text('token').primaryKey(),
   userId: uuid('user_id')
@@ -221,7 +221,7 @@ export const telegramUpdates = pgTable('telegram_updates', {
   receivedAt: timestamp('received_at', { withTimezone: true }).notNull().defaultNow(),
 });
 
-/** Send log: dedup and all reminder-cadence logic (spec § 6.10.5). */
+/** Send log: dedup and all reminder-cadence logic. */
 export const notificationLog = pgTable(
   'notification_log',
   {
@@ -239,7 +239,7 @@ export const notificationLog = pgTable(
   ],
 );
 
-/** Mutex for the lazy notification fallback — a copy of `hints_meta` (spec § 6.10.5). */
+/** Mutex for the lazy notification fallback — a copy of `hints_meta`. */
 export const notifyMeta = pgTable('notify_meta', {
   id: boolean('id').primaryKey().default(true),
   lockedUntil: timestamp('locked_until', { withTimezone: true }).notNull().defaultNow(),

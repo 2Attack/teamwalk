@@ -16,12 +16,12 @@ interface TreadmillPickerProps {
 }
 
 /**
- * Treadmill picker (spec § 6.9.3). Renders **only with two or more active
+ * Treadmill picker. Renders **only with two or more active
  * treadmills** — no feature flags: add a DB row and the picker appears.
  *
  * Buttons use `font="normal"`: name and busy line are data, and
  * «занята: Константин Верещагин, идёт 14:32» in pixel font doesn't fit
- * the column (spec § 6.7.1).
+ * the column.
  */
 export function TreadmillPicker({ treadmills, value, onChange }: TreadmillPickerProps) {
   const labelId = useId();
@@ -51,14 +51,14 @@ export function TreadmillPicker({ treadmills, value, onChange }: TreadmillPicker
               role="radio"
               aria-checked={selected}
               font="normal"
-              // A busy treadmill can't be selected: someone is physically on it (spec § 6.9.3).
+              // A busy treadmill can't be selected: someone is physically on it.
               disabled={busy !== null}
               variant={selected && !busy ? 'default' : 'outline'}
               onClick={() => onChange(treadmill.id)}
               className={cn(
                 'h-auto min-h-11 w-full flex-col items-start gap-1 px-3 py-2.5 text-left whitespace-normal',
                 // Stock `disabled:opacity-50` would push the name and timer
-                // below 4.5:1 contrast, and those must stay readable (spec § 8).
+                // below 4.5:1 contrast, and those must stay readable.
                 // Dim only the pixel frame instead.
                 busy && 'disabled:opacity-100 [&_[data-slot=button-decorations]>span]:opacity-40',
               )}
@@ -81,7 +81,7 @@ export function TreadmillPicker({ treadmills, value, onChange }: TreadmillPicker
   );
 }
 
-/** «занята: Егор, идёт 14:32» — answers "how long is the wait" (spec § 6.9.3). */
+/** «занята: Егор, идёт 14:32» — answers "how long is the wait". */
 export function busyLabel(busy: TreadmillBusyDto, now: number): string {
   return fmt(m.treadmillPicker.busyLabel, {
     name: busy.user.name,
@@ -98,7 +98,7 @@ export function elapsedSec(startedAtIso: string, now: number): number {
 
 /**
  * One-second tick for live busy timers. The interval runs only when actually
- * needed — the treadmill tablet stays open for hours (spec § 8).
+ * needed — the treadmill tablet stays open for hours.
  */
 export function useNowTick(active: boolean): number {
   const [now, setNow] = useState(() => Date.now());

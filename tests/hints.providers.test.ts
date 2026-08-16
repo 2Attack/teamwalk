@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { HintSnapshot } from '@/lib/hints/snapshot';
 
 /**
- * Hint provider — Vercel AI Gateway via the AI SDK (spec § 8): Gateway → null.
+ * Hint provider — Vercel AI Gateway via the AI SDK: Gateway → null.
  * `generateObject` itself is mocked: transport and schema validation belong to
  * the AI SDK; our part is degradation (`null` = "don't update the pool", never
  * an exception).
@@ -115,7 +115,7 @@ describe('requestHints: Gateway via the AI SDK', () => {
     await expect(requestHints(SNAPSHOT)).resolves.toBeNull();
   });
 
-  it('an empty array from the model → null: never write an empty pool (spec § 6.6.5)', async () => {
+  it('an empty array from the model → null: never write an empty pool', async () => {
     const { requestHints, generateObject } = await load();
     generateObject.mockResolvedValueOnce({ object: [] } as never);
 

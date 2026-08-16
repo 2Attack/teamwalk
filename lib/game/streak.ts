@@ -6,15 +6,15 @@ import { isWeekend, prevWorkday, toOfficeDay } from '../time';
 import type { StreakDto } from '../types';
 
 /**
- * Streaks (spec § 6.8.2). The streak itself is never stored: denormalization
- * would drift on walk deletion (spec § 7.7). The only persisted state is used
+ * Streaks. The streak itself is never stored: denormalization
+ * would drift on walk deletion. The only persisted state is used
  * freezes — "how many misses were forgiven this month" cannot be recovered
  * from `walks`.
  */
 
 /**
  * The walk's office day is computed in SQL: day boundaries follow `Europe/Moscow`,
- * or a 23:30 walk would land in the next day (spec § 6.8.5). `TZ` is a config
+ * or a 23:30 walk would land in the next day. `TZ` is a config
  * constant, not user input, so `sql.raw` is safe.
  */
 const officeDayExpr = sql<string>`to_char(${walks.startedAt} AT TIME ZONE ${sql.raw(

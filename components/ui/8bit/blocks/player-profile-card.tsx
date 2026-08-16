@@ -100,7 +100,7 @@ export default function PlayerProfileCard({
     customStats.length > 0;
 
   return (
-    // Adapted per spec § 6.7.1: font="normal" on the card — the "class" caption
+    // Adapted: font="normal" on the card — the "class" caption
     // is read in regular sans; pixel goes to the name heading and level badge.
     <Card font="normal" className={cn("w-full max-w-md", className)} {...props}>
       {/* Adaptation: the header's bottom padding is only needed before the bars. */}
@@ -116,7 +116,7 @@ export default function PlayerProfileCard({
           <div className="flex-1 min-w-0">
             <div className="space-y-1">
               <div className="flex flex-col gap-1 md:flex-row md:items-center md:gap-2 justify-between">
-                {/* Name is the card heading, pixel is allowed (spec § 6.7.1);
+                {/* Name is the card heading, pixel is allowed;
                     font-pixel is loaded with a Cyrillic subset. */}
                 <h3 className="font-pixel text-sm leading-relaxed truncate">{playerName}</h3>
                 {showLevel && (

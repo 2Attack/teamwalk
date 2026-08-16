@@ -29,10 +29,9 @@ import { fmt, m } from '@/lib/i18n';
 import type { TreadmillAdminDto } from '@/lib/types';
 
 /**
- * "Treadmills" settings section (spec § 6.11.2): the full list — inactive
+ * "Treadmills" settings section: the full list — inactive
  * included — with per-row actions. The second action depends on walksCount:
- * "delete" for a treadmill nothing references, "toggle active" otherwise
- * (spec § 6.11.4).
+ * "delete" for a treadmill nothing references, "toggle active" otherwise.
  */
 export function TreadmillSettings() {
   const { data: treadmills, error, isLoading, mutate: reload } = useTreadmillsAdmin();
@@ -168,7 +167,7 @@ interface TreadmillRowProps {
   onToggleActive: () => void;
 }
 
-/** One table row (spec § 6.11.2): data cells are sans, actions sit in the last cell. */
+/** One table row: data cells are sans, actions sit in the last cell. */
 function TreadmillRow({ treadmill, toggling, onEdit, onDelete, onToggleActive }: TreadmillRowProps) {
   return (
     <TableRow>
@@ -252,7 +251,7 @@ interface DeleteTreadmillDialogProps {
   onClose: () => void;
 }
 
-/** Deletion confirmation (spec § 6.11.4): only reachable for walk-free treadmills. */
+/** Deletion confirmation: only reachable for walk-free treadmills. */
 function DeleteTreadmillDialog({ treadmill, treadmills, onClose }: DeleteTreadmillDialogProps) {
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -260,7 +259,7 @@ function DeleteTreadmillDialog({ treadmill, treadmills, onClose }: DeleteTreadmi
   if (!treadmill) return null;
 
   // Warn when this is the last active treadmill: home will show the
-  // "no treadmills right now" empty state after deletion (spec § 6.9.6).
+  // "no treadmills right now" empty state after deletion.
   const lastActive =
     treadmill.isActive && treadmills.filter((t) => t.isActive).length === 1;
 

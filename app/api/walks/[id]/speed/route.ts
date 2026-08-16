@@ -12,7 +12,7 @@ export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 /**
- * POST /api/walks/:id/speed — change speed mid-walk (spec § 6.3).
+ * POST /api/walks/:id/speed — change speed mid-walk.
  *
  * Inserts a segment rather than updating the walk: the new speed applies from
  * `now()`, while distance already covered keeps its old speed. Rewriting
@@ -53,7 +53,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     }
 
     // Same speed is a no-op: a zero-length segment would only clutter history.
-    // A retry after a lost connection lands here too and gets 200 (spec § 8).
+    // A retry after a lost connection lands here too and gets 200.
     if (speedKmh === walk.speedKmh) return NextResponse.json(walk);
 
     await db.insert(walkSpeedSegments).values({ walkId, speedKmh });

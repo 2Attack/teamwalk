@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * TeamWalk icon set generator (spec § 6.7.4: a single set, no icon fonts).
+ * TeamWalk icon set generator (a single set, no icon fonts).
  *
  * Source — pixelarticons (https://pixelarticons.com, MIT, `pixelarticons`
  * package): ready-made 24×24 pixel icons on a 1×1 grid. The set used to be
@@ -58,25 +58,25 @@ const MAP = {
   chevronDown: 'chevron-down',
   /** Custom leaderboard period — on the date-range picker button. */
   calendar: 'calendar-range',
-  /** "Gearbox" achievement: a cog (spec § 6.8.3). */
+  /** "Gearbox" achievement: a cog. */
   gear: 'settings-cog-2',
   /** "In touch" achievement: paper plane — Telegram link. */
   send: 'send',
   /** "Long haul" achievement: 5+ km in one walk. */
   car: 'car',
-  /** Edit a treadmill in settings (spec § 6.11.2). */
+  /** Edit a treadmill in settings. */
   edit: 'pencil',
-  /** Delete a treadmill that has no walks (spec § 6.11.4). */
+  /** Delete a treadmill that has no walks. */
   trash: 'trash',
-  /** Re-enable a treadmill (spec § 6.11.4). */
+  /** Re-enable a treadmill. */
   power: 'power',
-  /** Disable a treadmill — deactivation instead of deletion (spec § 6.11.4). */
+  /** Disable a treadmill — deactivation instead of deletion. */
   powerOff: 'power-off',
 };
 
 /**
  * Hand-drawn icons — `scripts/icons/*.svg`: same 24×24 grid and blocky style
- * as pixelarticons, drawn for specific roles (achievements, spec § 6.8.3).
+ * as pixelarticons, drawn for specific roles (achievements).
  * Code name is the camelCased file name. Sources live next to the script;
  * only the generated file is consumed.
  */

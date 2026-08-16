@@ -9,17 +9,17 @@ import { fmt, m } from '@/lib/i18n';
 interface SpeedPickerProps {
   /** Selected speed; `null` — not chosen yet. */
   value: number | null;
-  /** Treadmill cap: the row runs from `MIN_SPEED_KMH` up to it (spec § 6.9.3). */
+  /** Treadmill cap: the row runs from `MIN_SPEED_KMH` up to it. */
   max: number;
   onChange: (speedKmh: number) => void;
   disabled?: boolean;
 }
 
 /**
- * Button row instead of a dropdown (spec § 6.2): one tap instead of three on
+ * Button row instead of a dropdown: one tap instead of three on
  * the treadmill tablet. Wraps into two rows of five on narrow screens.
  *
- * Numbers are identity layer, so the font stays pixel (spec § 6.7.1).
+ * Numbers are identity layer, so the font stays pixel.
  */
 export function SpeedPicker({ value, max, onChange, disabled = false }: SpeedPickerProps) {
   const labelId = useId();

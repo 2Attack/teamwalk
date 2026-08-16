@@ -1,4 +1,4 @@
--- Telegram notifications (spec § 6.10). The script is idempotent.
+-- Telegram notifications. The script is idempotent.
 
 -- Link and settings: a separate table, not columns on users — most members
 -- have no link, and settings without a link are meaningless.
@@ -42,7 +42,7 @@ create unique index if not exists notification_log_dedup_uniq
 create index if not exists notification_log_user_kind_idx
   on notification_log (user_id, kind, sent_at desc);
 
--- Mutex for the lazy notification fallback — a copy of hints_meta (spec § 6.6.5)
+-- Mutex for the lazy notification fallback — a copy of hints_meta
 create table if not exists notify_meta (
   id           boolean primary key default true check (id),
   locked_until timestamptz not null default now()

@@ -42,7 +42,7 @@ function periodLabel(selection: PeriodSelection): string {
 
 /**
  * Mobile layout: `tr` becomes a flex card instead of a horizontally scrolling
- * page (spec § 6.2, "collapses into cards"). Roles are explicit: changing a
+ * page ("collapses into cards"). Roles are explicit: changing a
  * table's `display` otherwise breaks its semantics for screen readers.
  *
  * All mobile classes use the `max-sm:` modifier — 8bitcn appends its borders
@@ -52,14 +52,14 @@ const CARD_ROW =
   'max-sm:mb-2 max-sm:flex max-sm:flex-wrap max-sm:items-center max-sm:gap-x-3 max-sm:gap-y-2 ' +
   'max-sm:border-3 max-sm:border-solid max-sm:bg-bg-panel max-sm:p-3';
 
-/** `tabular-nums` keeps the number column from shifting as digits change (spec § 6.7.2). */
+/** `tabular-nums` keeps the number column from shifting as digits change. */
 const STAT_CELL =
   'px-2 py-2 text-right align-middle tabular-nums ' +
   'max-sm:basis-[calc(50%-0.375rem)] max-sm:px-0 max-sm:py-0 max-sm:text-left';
 
 /**
  * Headers are short but regular sans: pixel font on «ПРОГУЛОК» is 128 px in an
- * 80 px column, and shrinking it to 8 px kills readability (spec § 6.7.1).
+ * 80 px column, and shrinking it to 8 px kills readability.
  */
 const HEAD_CELL =
   'h-auto px-2 py-2 text-left text-[10px] leading-tight tracking-wide whitespace-normal ' +
@@ -88,7 +88,7 @@ function LeaderboardRow({
       role="row"
       aria-current={isCurrent ? 'true' : undefined}
       className={cn(
-        // Instant state change instead of a color transition (spec § 6.7.6).
+        // Instant state change instead of a color transition.
         'transition-none',
         CARD_ROW,
         isIdle && 'text-text-dim',
@@ -111,7 +111,7 @@ function LeaderboardRow({
       >
         <div className="flex min-w-0 items-center gap-2">
           <Avatar avatarId={row.user.avatarId} name={row.user.name} size={32} />
-          {/* Name in regular sans (spec § 6.7.1); long names truncate with ellipsis. */}
+          {/* Name in regular sans; long names truncate with ellipsis. */}
           <span className="min-w-0 truncate" title={row.user.name}>
             {row.user.name}
           </span>
@@ -159,17 +159,17 @@ function EmptyState() {
 }
 
 /**
- * Arcade high-score table (spec § 6.2, 6.7.5) on 8bitcn `Table`.
+ * Arcade high-score table on 8bitcn `Table`.
  *
  * `font="normal"` on the whole table: member names must be regular sans
- * («Константин Верещагин» in pixel font blows up the row, spec § 6.7.1).
+ * («Константин Верещагин» in pixel font blows up the row).
  * Pixel font returns selectively via `font-pixel` — only on the rank,
  * i.e. the identity layer.
  */
 export function Leaderboard({ period, currentUserId }: LeaderboardProps) {
   const { data, isLoading } = useLeaderboard(period);
 
-  // Members with zero distance sink to the bottom, grayed out (spec § 6.2).
+  // Members with zero distance sink to the bottom, grayed out.
   const ordered = useMemo<LeaderboardRowDto[]>(() => {
     const rows = data?.rows ?? [];
     return [...rows.filter((r) => r.totalKm > 0), ...rows.filter((r) => r.totalKm <= 0)];

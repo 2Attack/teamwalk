@@ -7,8 +7,8 @@ import { m } from '@/lib/i18n';
 import { playCountGo, playCountTick } from '@/lib/client/sound';
 
 /**
- * Full-screen "3 → 2 → 1 → GO!" countdown shown after pressing «Start walk»
- * (§ 6.2). The walk is NOT created until "GO!": `onGo` fires exactly once at
+ * Full-screen "3 → 2 → 1 → GO!" countdown shown after pressing «Start walk».
+ * The walk is NOT created until "GO!": `onGo` fires exactly once at
  * that moment, so `started_at` matches the second the person actually starts
  * walking, and cancelling mid-countdown costs nothing — the server has seen
  * nothing yet. The overlay stays mounted through "GO!" (covering the network

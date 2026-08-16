@@ -13,18 +13,17 @@ import { getLink } from './links';
 import { autocloseText, finishText, freeText, startText, uiText } from './texts';
 
 /**
- * Event notifications: start, finish, autoclose (spec § 6.10.4, 6.10.5).
+ * Event notifications: start, finish, autoclose.
  *
  * Self-contained background tasks: called from handlers via `waitUntil()`
  * after the client response; they read the link and preferences themselves.
- * Never throw — Telegram being down must not affect any app function
- * (spec § 6.10.1).
+ * Never throw — Telegram being down must not affect any app function.
  *
  * Idempotency via `notification_log`: dedup-key insert against a unique
  * index; an empty `returning` means another instance already sent.
  */
 
-/** Muted via `/mute`: a future date — stay silent (spec § 6.10.3). */
+/** Muted via `/mute`: a future date — stay silent. */
 function isMuted(link: TelegramLink): boolean {
   return link.mutedUntil !== null && link.mutedUntil.getTime() > Date.now();
 }
@@ -40,7 +39,7 @@ async function tryDedup(userId: string, kind: string, dedupKey: string): Promise
 }
 
 /**
- * Postscript hint for the finish message (spec § 6.10.4): a line from the
+ * Postscript hint for the finish message: a line from the
  * ready `hints_cache` with two extra sieves — `tone ∈ {praise, neutral, tip}`
  * and the subject is the recipient or nobody. `tease` never goes to DMs: on
  * the shared screen it is a game, one-on-one it is a jab. On any error — no hint.
@@ -66,7 +65,7 @@ async function pickHint(userId: string): Promise<string | null> {
   }
 }
 
-/** Walk start: silent, with an "It's not me" button — prank protection (spec § 6.10). */
+/** Walk start: silent, with an "It's not me" button — prank protection. */
 export async function notifyWalkStarted(walk: ActiveWalkDto): Promise<void> {
   try {
     if (!telegramEnabled()) return;
@@ -124,7 +123,7 @@ export async function notifyWalkFinished(result: FinishWalkResultDto): Promise<v
  * "Are all treadmills busy?" — call **before** freeing one (finish/cancel/
  * autoclose): after the update the "all busy → free" transition is gone.
  * Error or Telegram off — false: the nudge is not worth an extra hot-path
- * query (spec § 6.10.4).
+ * query.
  */
 export async function wereAllTreadmillsBusy(): Promise<boolean> {
   if (!telegramEnabled()) return false;
@@ -152,7 +151,7 @@ export async function wereAllTreadmillsBusy(): Promise<boolean> {
 }
 
 /**
- * "Treadmill freed up" (spec § 6.10.4) — the only broadcast category. The
+ * "Treadmill freed up" — the only broadcast category. The
  * caller must check `wereAllTreadmillsBusy()` before freeing: the event is
  * the "all busy → one free" transition, not every finish.
  *
@@ -169,7 +168,7 @@ export async function notifyTreadmillFreed(input: {
   try {
     if (!telegramEnabled()) return;
 
-    // Wider window than reminders (spec § 6.10.4): send while people are in the office.
+    // Wider window than reminders: send while people are in the office.
     const now = new Date();
     if (isWeekend(toOfficeDay(now))) return;
     const hour = officeHour(now);
@@ -208,7 +207,7 @@ export async function notifyTreadmillFreed(input: {
 }
 
 /**
- * Autoclose (spec § 7.6): silent, behind the finish toggle — otherwise the
+ * Autoclose: silent, behind the finish toggle — otherwise the
  * user learns about the lost distance a week later from the leaderboard.
  * A failure for one user does not block notifying the rest.
  */

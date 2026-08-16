@@ -13,7 +13,7 @@ import type {
 
 /**
  * WALKS-zone queries. None of them assume a single active walk system-wide:
- * there are exactly as many active walks as busy treadmills (spec § 7.2).
+ * there are exactly as many active walks as busy treadmills.
  */
 
 interface ActiveRow {
@@ -69,7 +69,7 @@ const walkColumns = {
 };
 
 /**
- * Speed changes for the given walks (spec § 6.3). The starting segment is not
+ * Speed changes for the given walks. The starting segment is not
  * stored — it is assembled from `walks`, so a walk with no changes yields no
  * rows here and old records work without a backfill.
  */
@@ -122,7 +122,7 @@ function toActiveWalk(row: ActiveRow, changes: WalkSpeedSegmentDto[] = []): Acti
   };
 }
 
-/** Deletion window (spec § 7.7): 15 minutes from `ended_at`. */
+/** Deletion window: 15 minutes from `ended_at`. */
 export function canDeleteWalk(endedAt: Date | null): boolean {
   if (!endedAt) return false;
   return Date.now() - endedAt.getTime() <= DELETE_WINDOW_MINUTES * 60_000;
@@ -145,7 +145,7 @@ function toWalk(row: WalkRow): WalkDto {
   };
 }
 
-/** Participant's active walk (spec § 7.1 — at most one). */
+/** Participant's active walk (at most one). */
 export async function getActiveWalk(userId: string): Promise<ActiveWalkDto | null> {
   const rows = await db
     .select(activeColumns)
@@ -173,7 +173,7 @@ export async function getActiveWalkById(walkId: string): Promise<ActiveWalkDto |
   return toActiveWalk(rows[0], (await loadSpeedChanges([walkId])).get(walkId));
 }
 
-/** All active walks: one per busy treadmill (spec § 7.2). */
+/** All active walks: one per busy treadmill. */
 export async function listActiveWalks(): Promise<ActiveWalkDto[]> {
   const rows = await db
     .select(activeColumns)

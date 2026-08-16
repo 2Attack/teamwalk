@@ -5,7 +5,7 @@ import type { UserDto } from '@/lib/types';
 import { db } from '../index';
 import { users } from '../schema';
 
-/** Participant queries (spec § 5.1). */
+/** Participant queries. */
 
 type UserRow = typeof users.$inferSelect;
 
@@ -64,7 +64,7 @@ export async function updateUser(
   return row ? toDto(row) : null;
 }
 
-/** Avatars already picked by someone: marked as taken in the UI (spec § 6.5). */
+/** Avatars already picked by someone: marked as taken in the UI. */
 export async function takenAvatarIds(): Promise<string[]> {
   const rows = await db.selectDistinct({ avatarId: users.avatarId }).from(users);
   return rows.map((r) => r.avatarId);

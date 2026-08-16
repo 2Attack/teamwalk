@@ -11,12 +11,12 @@ export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 /**
- * `GET /api/leaderboard?period=week|month|all` — aggregated ranking (spec § 5.3).
+ * `GET /api/leaderboard?period=week|month|all` — aggregated ranking.
  * Custom period: `?period=custom&from=YYYY-MM-DD&to=YYYY-MM-DD` (both inclusive).
  */
 export async function GET(request: Request) {
   return handle<LeaderboardDto | ApiErrorBody>(async () => {
-    // Lazy fallback for the cron sweep (spec § 6.10.5): if Vercel Cron didn't
+    // Lazy fallback for the cron sweep: if Vercel Cron didn't
     // fire, run on API access — at most hourly, under the `notify_meta` mutex,
     // in waitUntil so the response isn't delayed.
     ensureNotifySweep();
@@ -29,7 +29,7 @@ export async function GET(request: Request) {
     });
     if (!parsed.success) return validationError(parsed.error);
 
-    // Close stale walks before ranking (spec § 7.6): otherwise they stay
+    // Close stale walks before ranking: otherwise they stay
     // "active" and are excluded from totals.
     try {
       await closeStaleWalks();

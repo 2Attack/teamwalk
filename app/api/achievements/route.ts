@@ -10,7 +10,7 @@ export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 /**
- * GET /api/achievements?userId= — achievement catalog with earned marks (spec § 6.8.6).
+ * GET /api/achievements?userId= — achievement catalog with earned marks.
  * Without `userId` returns the same catalog with all `earnedAt: null`: the
  * catalog must be viewable before a member is selected.
  */

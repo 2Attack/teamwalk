@@ -14,12 +14,12 @@ interface TelegramNudgeProps {
 }
 
 /**
- * "Link Telegram" panel on the active-walk screen (spec § 6.10.2).
+ * "Link Telegram" panel on the active-walk screen.
  *
  * Visible while the member is unlinked (and the subsystem is enabled) — no
  * counters or cooldowns. Two events remove it: linking, and "don't show again"
  * (the dismissal is stored in the DB per member, works from any device, and is
- * reset by unlinking). "Connect" opens the QR/link dialog (spec § 6.10.3).
+ * reset by unlinking). "Connect" opens the QR/link dialog.
  */
 export function TelegramNudge({ userId }: TelegramNudgeProps) {
   const { data: status, mutate: mutateStatus } = useTelegramStatus(userId);
@@ -45,10 +45,10 @@ export function TelegramNudge({ userId }: TelegramNudgeProps) {
       className="px-1.5"
     >
       {/* 8bitcn Alert draws its own pixel frame; font="normal" — pixel font goes
-          only on the title, body text is regular sans (spec § 6.7.1). */}
+          only on the title, body text is regular sans. */}
       <Alert font="normal" className="flex flex-col gap-2 bg-bg-panel p-3">
         <AlertTitle className="flex items-center gap-2 font-pixel text-[12px] leading-none text-citrus">
-          {/* Speech bubble from the shared pixel set — it's the bot talking (spec § 6.7.4). */}
+          {/* Speech bubble from the shared pixel set — it's the bot talking. */}
           <Icon name="hint" size={16} />
           {m.telegram.nudgeTitle}
         </AlertTitle>

@@ -52,7 +52,7 @@ function playNotes(notes: readonly Note[], wave: OscillatorType = 'square'): voi
 }
 
 /**
- * Achievement fanfare (§ 6.8.3): "ta-da-da…DA" — quick ascent, a breath-pause
+ * Achievement fanfare: "ta-da-da…DA" — quick ascent, a breath-pause
  * and a long high finale. Triangle wave (the NES melody channel).
  */
 export function playFanfare(): void {
@@ -69,7 +69,7 @@ export function playFanfare(): void {
 }
 
 /**
- * Start-countdown tick (§ 6.2): one short flat beep per digit, racing-lights
+ * Start-countdown tick: one short flat beep per digit, racing-lights
  * style. Square wave — the interface channel, distinct from the fanfare.
  */
 export function playCountTick(): void {

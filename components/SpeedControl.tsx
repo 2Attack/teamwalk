@@ -10,7 +10,7 @@ import { m } from '@/lib/i18n';
 import type { ActiveWalkDto } from '@/lib/types';
 
 /**
- * Mid-walk speed change (spec § 6.3): «− 4 km/h +».
+ * Mid-walk speed change: «− 4 km/h +».
  *
  * Step of exactly 1 km/h and two big buttons instead of the full speed row:
  * on a treadmill tablet this is one blind tap, and pace usually changes by one.
@@ -27,7 +27,7 @@ interface SpeedControlProps {
   walkId: string;
   /** Current speed as known by the server. */
   speedKmh: number;
-  /** Treadmill speed cap (spec § 6.9.3). */
+  /** Treadmill speed cap. */
   maxSpeedKmh: number;
   /** Walk with the new segment; the screen recomputes distance from it. */
   onChanged: (walk: ActiveWalkDto) => void;
@@ -108,7 +108,7 @@ export function SpeedControl({
           )}
         </Button>
 
-        {/* Number is identity layer — pixel font (spec § 6.7.1).
+        {/* Number is identity layer — pixel font.
             aria-live: the value changes without a screen reload. */}
         <p
           aria-live="polite"
@@ -134,7 +134,7 @@ export function SpeedControl({
         </Button>
       </div>
 
-      {/* Caption is read — regular sans (spec § 6.7.1). */}
+      {/* Caption is read — regular sans. */}
       <p className="text-sm text-text-dim">{m.speedControl.caption}</p>
 
       {error !== null ? (

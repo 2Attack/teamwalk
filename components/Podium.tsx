@@ -22,7 +22,7 @@ interface PodiumProps {
 interface PlaceConfig {
   place: 1 | 2 | 3;
   avatarSize: number;
-  /** Pedestal height — 1st place is always taller (spec § 6.2). */
+  /** Pedestal height — 1st place is always taller. */
   block: string;
   /** Multiple of 8 — otherwise the icon's pixel grid drifts off whole pixels. */
   iconSize: number;
@@ -58,7 +58,7 @@ const PLACES: readonly PlaceConfig[] = [
   },
 ];
 
-/** Leader change animates as a reorder, not a jump (spec § 6.7.6). */
+/** Leader change animates as a reorder, not a jump. */
 const SPRING = { type: 'spring', stiffness: 500, damping: 30 } as const;
 
 function PodiumSlot({
@@ -154,7 +154,7 @@ function PodiumSkeleton() {
 }
 
 /**
- * Top-3 podium styled as a match results screen (spec § 6.2, 6.7.5).
+ * Top-3 podium styled as a match results screen.
  * Follows the selected period together with the table — two contradicting
  * top-3s on screen are unacceptable. Only members with finished walks count.
  *

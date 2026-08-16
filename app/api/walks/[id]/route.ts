@@ -13,7 +13,7 @@ export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 /**
- * DELETE /api/walks/:id — delete a mistaken entry within the 15-minute window (spec § 7.7).
+ * DELETE /api/walks/:id — delete a mistaken entry within the 15-minute window.
  * The window is enforced server-side, right in the WHERE: a hidden UI button is not enough.
  * Achievements are not revoked — `achievements.walk_id` nulls via `on delete set null`.
  */

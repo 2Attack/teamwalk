@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Static pixel asset generator for TeamWalk (ASSETS zone, spec § 6.5 and 6.7).
+ * Static pixel asset generator for TeamWalk (ASSETS zone).
  *
  * Produces:
  *   1. `public/avatars/pixel-01..24.svg` — 24 DiceBear portraits, `pixel-art` style.
@@ -100,7 +100,7 @@ function gridToSvgRuns(g, palette, { size, viewBox }) {
 }
 
 /* ------------------------------------------------------------------ */
-/* Palette (aligned with app/globals.css, spec § 6.7.3)                */
+/* Palette (aligned with app/globals.css)                */
 /* ------------------------------------------------------------------ */
 
 const OUTLINE = '#17130F';
@@ -690,7 +690,7 @@ function buildAvatars() {
   for (const spec of AVATARS) {
     const svg = createAvatar(pixelArt, {
       seed: spec.id,
-      // Citrus backdrop — the same one the avatar wrapper used to provide (spec § 6.7.3).
+      // Citrus backdrop — the same one the avatar wrapper used to provide.
       backgroundColor: ['ff8a00'],
       // The avatar component applies the round mask itself, so no corner clipping here.
       radius: 0,

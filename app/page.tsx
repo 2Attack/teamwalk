@@ -17,11 +17,11 @@ import { m } from '@/lib/i18n';
 import type { PeriodSelection } from '@/lib/types';
 
 /**
- * Home (§ 6.1): header → team progress → start block → podium → period +
+ * Home: header → team progress → start block → podium → period +
  * leaderboard.
  *
  * The period lives here and is shared by the podium and the table: otherwise
- * two contradicting top-3s would hang on screen at once (§ 6.2).
+ * two contradicting top-3s would hang on screen at once.
  */
 export default function HomePage() {
   const router = useRouter();
@@ -59,7 +59,7 @@ export default function HomePage() {
     if (!users.some((u) => u.id === userId)) setUserId(null);
   }, [restored, users, userId]);
 
-  // If the selected participant already has a walk in progress — straight to its screen (§ 6.3).
+  // If the selected participant already has a walk in progress — straight to its screen.
   const { data: activeWalk } = useActiveWalk(restored && !startFlowActive ? userId : null);
   useEffect(() => {
     if (activeWalk) router.replace(`/walk/${activeWalk.id}`);
@@ -69,7 +69,7 @@ export default function HomePage() {
     <main className="mx-auto w-full max-w-3xl space-y-6 px-4 py-6 sm:space-y-8 sm:px-6 sm:py-8">
       <AppHeader />
       {/* The hint ticker is removed from home: it stays on the walk screen,
-          where a person actually watches the screen for minutes (§ 6.6). */}
+          where a person actually watches the screen for minutes. */}
       <TeamProgress />
 
       {error ? (

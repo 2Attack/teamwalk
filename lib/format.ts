@@ -3,7 +3,7 @@ import { INTL_LOCALE, m } from './i18n';
 
 /** Number, time and name formatting. Shared by the client and the server. */
 
-/** `00:14:32`, or `14:32` when under an hour (spec § 6.3). */
+/** `00:14:32`, or `14:32` when under an hour. */
 export function formatDuration(totalSec: number): string {
   const safe = Math.max(0, Math.floor(totalSec));
   const h = Math.floor(safe / 3600);
@@ -54,7 +54,7 @@ export function formatDate(iso: string | Date): string {
 }
 
 /**
- * Name normalization before saving (spec § 6.2):
+ * Name normalization before saving:
  * trim → collapse whitespace → capitalize each word.
  * `егор  иванов` → `Егор Иванов`.
  */
@@ -78,7 +78,7 @@ export function nameKey(raw: string): string {
   return raw.trim().replace(/\s+/g, ' ').toLocaleLowerCase(INTL_LOCALE);
 }
 
-/** Distance from speed and duration, rounded to 0.01 (spec § 6.4). */
+/** Distance from speed and duration, rounded to 0.01. */
 export function calcDistanceKm(speedKmh: number, durationSec: number): number {
   return Math.round(((speedKmh * durationSec) / 3600) * 100) / 100;
 }
@@ -90,7 +90,7 @@ interface SpeedSegmentLike {
 }
 
 /**
- * Distance over speed segments (spec § 6.3): each segment runs until the next
+ * Distance over speed segments: each segment runs until the next
  * one starts, the last until `endMs`. A speed change never rewrites distance
  * already walked. Rounding happens once at the end — per-segment rounding
  * would accumulate hundredths of error across many changes.
@@ -131,7 +131,7 @@ export function avgSpeedKmh(totalKm: number, totalDurationSec: number): number {
   return Math.round((totalKm / (totalDurationSec / 3600)) * 100) / 100;
 }
 
-/** Accepts `1.25` and `1,25`, returns a number or null (spec § 6.4). */
+/** Accepts `1.25` and `1,25`, returns a number or null. */
 export function parseDecimalInput(raw: string): number | null {
   const normalized = raw.trim().replace(',', '.');
   if (!/^\d*\.?\d*$/.test(normalized) || normalized === '' || normalized === '.') return null;

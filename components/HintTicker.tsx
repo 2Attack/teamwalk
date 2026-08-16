@@ -15,7 +15,7 @@ interface HintTickerProps {
   className?: string;
 }
 
-/** Rotation intervals (spec § 6.6.10): home 7 s, walk 10 s, reduced-motion 12 s. */
+/** Rotation intervals: home 7 s, walk 10 s, reduced-motion 12 s. */
 const INTERVAL_MS = { home: 7_000, walk: 10_000, reduced: 12_000 } as const;
 /** Typing must not eat into reading time: 20 ms per char, capped at 2.4 s total. */
 const TYPE_CHAR_MS = 20;
@@ -96,7 +96,7 @@ function useReducedMotionPreference(): boolean {
 }
 
 /**
- * NPC dialog box (spec § 6.7.5) on 8bitcn `Alert`; phrase text is pixel font
+ * NPC dialog box on 8bitcn `Alert`; phrase text is pixel font
  * (`font="retro"`), like an NPC line in a console game.
  *
  * The cost is block height: Press Start 2P glyph width equals the font size,
@@ -154,7 +154,7 @@ export function HintTicker({ userId = null, variant = 'home', className }: HintT
   }, [paused, order.length, intervalMs, advance]);
 
   const text = current?.text ?? '';
-  // `prefers-reduced-motion` disables typing entirely — the phrase appears at once (spec § 6.8.4).
+  // `prefers-reduced-motion` disables typing entirely — the phrase appears at once.
   const typed = useTypedCount(text, !reduced);
   const isWalk = variant === 'walk';
 
@@ -173,7 +173,7 @@ export function HintTicker({ userId = null, variant = 'home', className }: HintT
           `Alert` ships with `role="alert"` (implicit `aria-live="assertive"`);
           for a feed that rotates every 7 s the screen reader would interrupt
           on every phrase. Explicit `aria-live="off"` overrides the role's
-          implicit value (spec § 6.8.4).
+          implicit value.
         */
         aria-live="off"
         aria-atomic="false"
@@ -182,7 +182,7 @@ export function HintTicker({ userId = null, variant = 'home', className }: HintT
         // icon + text grid explicitly.
         className="grid-cols-[auto_1fr] items-start gap-x-3 px-4 py-4"
       >
-        {/* NPC dialog icon from the shared pixel set (spec § 6.7.4). */}
+        {/* NPC dialog icon from the shared pixel set. */}
         <Icon name="hint" size={isWalk ? 24 : 16} className="mt-0.5" />
 
         <AlertDescription
@@ -195,8 +195,7 @@ export function HintTicker({ userId = null, variant = 'home', className }: HintT
 
               Font size trades readability for box height: phone gets the
               minimum at which Press Start 2P is still legible; wider screens
-              get larger (on the treadmill the phrase is read from ~1.5 m,
-              spec § 6.6.10). Line count fits the worst 140-char phrase, so
+              get larger (on the treadmill the phrase is read from ~1.5 m). Line count fits the worst 140-char phrase, so
               hint changes don't shift layout.
             */
             'block min-w-0 overflow-hidden text-text-main leading-[1.7]!',
@@ -220,7 +219,7 @@ export function HintTicker({ userId = null, variant = 'home', className }: HintT
             {/*
               The untyped tail stays in flow, invisible: line wrapping is
               computed for the whole phrase, so it doesn't reflow on every
-              character (spec § 6.7.6).
+              character.
             */}
             <span aria-hidden="true" className="invisible">
               {text.slice(typed)}

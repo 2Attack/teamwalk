@@ -24,7 +24,7 @@ interface TelegramLinkDialogProps {
 }
 
 /**
- * Telegram linking dialog (spec § 6.10.3): deep-link QR code plus a link below.
+ * Telegram linking dialog: deep-link QR code plus a link below.
  *
  * Typical case: the user is on the treadmill with a laptop while Telegram is
  * on their phone — the QR moves the link across devices without typing. The

@@ -1,4 +1,4 @@
--- Mid-walk speed changes (spec § 6.3).
+-- Mid-walk speed changes.
 -- The script is idempotent: rerunning breaks nothing.
 
 -- Speed is no longer a single number for the whole walk: pace can change right

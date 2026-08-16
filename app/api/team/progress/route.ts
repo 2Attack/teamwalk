@@ -8,7 +8,7 @@ import type { TeamProgressDto } from '@/lib/types';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-/** GET /api/team/progress — team kilometers projected onto the route (spec § 6.8.6). */
+/** GET /api/team/progress — team kilometers projected onto the route. */
 export function GET() {
   return handle<TeamProgressDto | ApiErrorBody>(async () => {
     const progress = await getTeamProgress();

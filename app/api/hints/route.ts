@@ -10,7 +10,7 @@ export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 /**
- * GET /api/hints?userId= — pool of ready phrases from `hints_cache` (spec § 6.6.9).
+ * GET /api/hints?userId= — pool of ready phrases from `hints_cache`.
  * Never calls the LLM synchronously: the pool comes from the DB, regeneration
  * goes to the background via `waitUntil` after the response is built.
  */

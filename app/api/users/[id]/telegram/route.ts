@@ -12,7 +12,7 @@ export const dynamic = 'force-dynamic';
 
 type RouteContext = { params: Promise<{ id: string }> };
 
-/** GET /api/users/:id/telegram — link status for the card and panel (spec § 6.10.2). */
+/** GET /api/users/:id/telegram — link status for the card and panel. */
 export function GET(_request: Request, context: RouteContext) {
   return handle<TelegramStatusDto | ApiErrorBody>(async () => {
     const id = uuidSchema.parse((await context.params).id);
@@ -22,7 +22,7 @@ export function GET(_request: Request, context: RouteContext) {
   });
 }
 
-/** DELETE /api/users/:id/telegram — unlink, equivalent to the bot's `/stop` (spec § 6.10.7). */
+/** DELETE /api/users/:id/telegram — unlink, equivalent to the bot's `/stop`. */
 export function DELETE(_request: Request, context: RouteContext) {
   return handle<TelegramStatusDto | ApiErrorBody>(async () => {
     const id = uuidSchema.parse((await context.params).id);

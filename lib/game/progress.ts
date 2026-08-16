@@ -8,8 +8,8 @@ import { positionOnRoute } from '../hints/route';
 import type { TeamProgressDto } from '../types';
 
 /**
- * Team goal and personal records (spec § 6.8.2). None of it is stored:
- * deleting a walk (spec § 7.7) would require recomputing saved values, and
+ * Team goal and personal records. None of it is stored:
+ * deleting a walk would require recomputing saved values, and
  * everyone would notice a mismatch.
  */
 
@@ -27,7 +27,7 @@ const sumKm = sql<number>`coalesce(sum(${walks.distanceKm}), 0)`.mapWith(Number)
  * Team position on the virtual route. The sum is all-time across everyone:
  * the only mechanic where a strong walker adds to a weak one, not competes.
  *
- * Since spec § 6.12 the route comes from the DB (with the static fallback) and
+ * The route comes from the DB (with the static fallback) and
  * the position is projected from `teamTotalKm − base_km` — a freshly activated
  * route starts from zero without touching walk history.
  */
@@ -37,7 +37,7 @@ export async function getTeamProgress(): Promise<TeamProgressDto> {
     getActiveRoute(),
   ]);
 
-  // No route selected (spec § 6.12.6): a legitimate state, not an error —
+  // No route selected: a legitimate state, not an error —
   // the team total is still worth showing.
   if (activeRoute.points.length < 2) {
     return {
@@ -65,7 +65,7 @@ export async function getTeamProgress(): Promise<TeamProgressDto> {
 
 /**
  * Personal record. `excludeWalkId` yields the value **before** the given walk —
- * that's how the success screen knows the record was beaten just now (spec § 6.8.2).
+ * that's how the success screen knows the record was beaten just now.
  */
 export async function getPersonalRecord(
   userId: string,
@@ -101,7 +101,7 @@ export async function getPersonalRecord(
 export interface UserTotals {
   totalKm: number;
   walksCount: number;
-  /** Speed and treadmill of the last walk — preselected on the next start (spec § 6.2). */
+  /** Speed and treadmill of the last walk — preselected on the next start. */
   lastSpeedKmh: number | null;
   lastTreadmillId: string | null;
 }

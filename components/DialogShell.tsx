@@ -1,7 +1,7 @@
 'use client';
 
 /**
- * Shared dialog shell (spec § 6.8.3).
+ * Shared dialog shell.
  *
  * The four project dialogs used to configure `DialogContent` each in their own
  * way: two showed the stock close cross, two hid it; one went without
@@ -22,7 +22,7 @@ export function DialogShell({ className, children, ...props }: DialogShellProps)
       /*
         `font="normal"`: only the title (it has its own `font-heading`) and
         button labels stay pixel inside a dialog — everything else is read
-        (spec § 6.7.1).
+.
       */
       font="normal"
       className={cn(
@@ -40,7 +40,7 @@ export function DialogShell({ className, children, ...props }: DialogShellProps)
         'flex max-h-[calc(100dvh-2rem)] flex-col',
         /*
           The stock shadcn close cross is drawn with a lucide icon, while the
-          project uses pixel icons only (spec § 6.7.4). Hidden in all dialogs at
+          project uses pixel icons only. Hidden in all dialogs at
           once: closing works via Esc, a click outside, and the explicit cancel
           button every dialog has.
         */

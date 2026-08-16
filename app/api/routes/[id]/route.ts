@@ -11,7 +11,7 @@ export const dynamic = 'force-dynamic';
 
 type RouteContext = { params: Promise<{ id: string }> };
 
-/** PATCH /api/routes/:id — name and/or the whole points array (spec § 6.12.2). */
+/** PATCH /api/routes/:id — name and/or the whole points array. */
 export function PATCH(request: Request, context: RouteContext) {
   return handle<RouteAdminDto | ApiErrorBody>(async () => {
     const id = uuidSchema.parse((await context.params).id);
@@ -33,8 +33,8 @@ export function PATCH(request: Request, context: RouteContext) {
 }
 
 /**
- * DELETE /api/routes/:id — any route, the active one included (spec § 6.12.2):
- * routes are optional (spec § 6.12.6), deleting the active route just yields
+ * DELETE /api/routes/:id — any route, the active one included:
+ * routes are optional, deleting the active route just yields
  * the "no route selected" state. The confirmation lives in the UI.
  */
 export function DELETE(_request: Request, context: RouteContext) {

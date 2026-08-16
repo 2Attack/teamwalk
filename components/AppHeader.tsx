@@ -10,9 +10,9 @@ import { formatKm } from '@/lib/format';
 import { m } from '@/lib/i18n';
 
 /**
- * Home header: pixel-font logo + team total kilometers (spec § 6.1) + the gear
- * link to the settings screen (spec § 6.11.1). Logo and the number are
- * "identity", hence pixel; the caption is sans (spec § 6.7.1).
+ * Home header: pixel-font logo + team total kilometers + the gear
+ * link to the settings screen. Logo and the number are
+ * "identity", hence pixel; the caption is sans.
  *
  * Number and caption sit on one line: stacked in two lines the right block
  * outweighed the logo in height and pulled the whole header along.
@@ -46,7 +46,7 @@ export function AppHeader() {
           )}
         </div>
 
-        {/* Settings entry (spec § 6.11.1): 44 px touch target, icon-only with an
+        {/* Settings entry: 44 px touch target, icon-only with an
             aria-label — the gear is a universally readable symbol here.
             Negative vertical margins cancel the target's extra height so the
             icon centers on the km line instead of stretching the header. */}

@@ -14,7 +14,7 @@ export interface UserDto {
   hintsOptOut: boolean;
 }
 
-/** Telegram status for the participant card and the invite panel (spec § 6.10.2). */
+/** Telegram status for the participant card and the invite panel. */
 export interface TelegramStatusDto {
   /** The subsystem is enabled on the server (bot token present, kill switch up). */
   enabled: boolean;
@@ -23,7 +23,7 @@ export interface TelegramStatusDto {
   dismissed: boolean;
 }
 
-/** Response of `POST /api/users/:id/telegram/link-token` (spec § 6.10.3). */
+/** Response of `POST /api/users/:id/telegram/link-token`. */
 export interface TelegramLinkTokenDto {
   /** `https://t.me/<bot>?start=<token>` */
   url: string;
@@ -47,9 +47,9 @@ export interface TreadmillDto {
 }
 
 /**
- * A treadmill row on the settings screen (spec § 6.11.2): unlike `TreadmillDto`
+ * A treadmill row on the settings screen: unlike `TreadmillDto`
  * it includes inactive treadmills and the data the admin actions depend on —
- * `walksCount` decides between "delete" and "deactivate" (spec § 6.11.4).
+ * `walksCount` decides between "delete" and "deactivate".
  */
 export interface TreadmillAdminDto {
   id: string;
@@ -62,7 +62,7 @@ export interface TreadmillAdminDto {
   busy: TreadmillBusyDto | null;
 }
 
-/** A constant-speed segment inside a walk (spec § 6.3). */
+/** A constant-speed segment inside a walk. */
 export interface WalkSpeedSegmentDto {
   speedKmh: number;
   /** ISO — the moment this speed takes effect. */
@@ -78,7 +78,7 @@ export interface ActiveWalkDto {
   startedAt: string;
   /** Current speed — the last segment of `speedSegments`. */
   speedKmh: number;
-  /** Treadmill ceiling: "+" on the walk screen never goes above it (spec § 6.9.3). */
+  /** Treadmill ceiling: "+" on the walk screen never goes above it. */
   treadmillMaxSpeedKmh: number;
   /**
    * All speed segments in chronological order; the first starts at `startedAt`.
@@ -103,7 +103,7 @@ export interface WalkDto {
   /** Start speed: even if changed mid-walk, this number is never rewritten. */
   speedKmh: number;
   status: WalkStatus;
-  /** Whether the record can still be deleted (15-minute window, spec § 7.7). */
+  /** Whether the record can still be deleted (15-minute window). */
   canDelete: boolean;
 }
 
@@ -156,7 +156,7 @@ export interface LeaderboardRowDto {
 export interface LeaderboardDto {
   period: Period | 'custom';
   rows: LeaderboardRowDto[];
-  /** Always all-time, regardless of the period (spec § 5.3). */
+  /** Always all-time, regardless of the period. */
   teamTotalKm: number;
 }
 
@@ -164,7 +164,7 @@ export interface StatsDto {
   teamTotalKm: number;
   walksCount: number;
   usersCount: number;
-  /** A list: there are as many active walks as busy treadmills (spec § 7.2). */
+  /** A list: there are as many active walks as busy treadmills. */
   activeWalks: ActiveWalkDto[];
 }
 
@@ -185,7 +185,7 @@ export interface RouteCityDto {
   km: number;
 }
 
-/** A route row on the settings screen (spec § 6.12.3). */
+/** A route row on the settings screen. */
 export interface RouteAdminDto {
   id: string;
   name: string;
@@ -196,10 +196,10 @@ export interface RouteAdminDto {
   progress: { walkedKm: number; nextCity: string | null; kmLeft: number } | null;
 }
 
-/** Response of `GET /api/routes` (spec § 5.6). */
+/** Response of `GET /api/routes`. */
 export interface RoutesAdminResponseDto {
   routes: RouteAdminDto[];
-  /** LLM credentials are configured — the AI generation UI is shown (spec § 6.12.4). */
+  /** LLM credentials are configured — the AI generation UI is shown. */
   llmEnabled: boolean;
 }
 
@@ -211,7 +211,7 @@ export interface RouteDraftDto {
 
 export interface TeamProgressDto {
   /**
-   * Km walked on the active route: `teamTotalKm − base_km` (spec § 6.12.1);
+   * Km walked on the active route: `teamTotalKm − base_km`;
    * the raw all-time total when no route is selected.
    */
   totalKm: number;
@@ -234,7 +234,7 @@ export interface UserStatsDto {
   /** Position in the weekly leaderboard. */
   rank: number | null;
   achievements: AchievementDto[];
-  /** Speed of the last walk — for preselection (spec § 6.2). */
+  /** Speed of the last walk — for preselection. */
   lastSpeedKmh: number | null;
   lastTreadmillId: string | null;
 }

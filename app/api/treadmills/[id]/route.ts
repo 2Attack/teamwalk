@@ -18,7 +18,7 @@ export const dynamic = 'force-dynamic';
 
 type RouteContext = { params: Promise<{ id: string }> };
 
-/** PATCH /api/treadmills/:id — name, speed ceiling, order or `isActive` (spec § 6.11.3). */
+/** PATCH /api/treadmills/:id — name, speed ceiling, order or `isActive`. */
 export function PATCH(request: Request, context: RouteContext) {
   return handle<TreadmillAdminDto | ApiErrorBody>(async () => {
     // Validate the uuid before querying: Postgres would 500 on a malformed value.
@@ -43,7 +43,7 @@ export function PATCH(request: Request, context: RouteContext) {
 /**
  * DELETE /api/treadmills/:id — only for a treadmill no walk references.
  * The FK (`on delete restrict`) is the guard: its violation becomes a 409
- * suggesting deactivation instead (spec § 6.11.4).
+ * suggesting deactivation instead.
  */
 export function DELETE(_request: Request, context: RouteContext) {
   return handle<{ ok: boolean } | ApiErrorBody>(async () => {

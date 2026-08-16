@@ -13,7 +13,7 @@
   <img src="https://img.shields.io/badge/license-MIT-a3e635" alt="MIT license">
 </p>
 
-Quién caminó, cuándo y cuánto — con tabla de clasificación, rachas, logros, una ruta de equipo compartida por ciudades reales y un ticker de pistas humorísticas generadas a partir de datos reales. Construido según la especificación de [`TeamWalk_TZ.md`](TeamWalk_TZ.md) (referida en el código como «spec § N»). **Sin autenticación por diseño**: te eliges de una lista y empezar una caminata es un solo toque.
+Quién caminó, cuándo y cuánto — con tabla de clasificación, rachas, logros, una ruta de equipo compartida por ciudades reales y un ticker de pistas humorísticas generadas a partir de datos reales. **Sin autenticación por diseño**: te eliges de una lista y empezar una caminata es un solo toque.
 
 ## Características
 

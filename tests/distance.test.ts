@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { calcDistanceKm, calcSegmentedDistanceKm, formatSpeedTrail } from '@/lib/format';
 
-/** Distance with mid-walk speed changes (spec § 6.3). */
+/** Distance with mid-walk speed changes. */
 
 const START = Date.parse('2026-08-12T09:00:00.000Z');
 const min = (n: number) => START + n * 60_000;

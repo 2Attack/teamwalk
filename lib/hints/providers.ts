@@ -20,8 +20,8 @@ import type { HintSnapshot } from './snapshot';
  * backstopped by the post-filter (`filter.ts`), as always.
  *
  * The model is env-configurable: providers retire models without notice, and
- * a failed call must degrade to the previous pool and static catalog
- * (spec § 8), not break the page.
+ * a failed call must degrade to the previous pool and static catalog,
+ * not break the page.
  */
 export const GATEWAY_MODEL = process.env.AI_GATEWAY_MODEL ?? 'xai/grok-4.1-fast-non-reasoning';
 
@@ -48,7 +48,7 @@ function gatewayEnabled(): boolean {
 }
 
 /**
- * Shared LLM availability check: route generation (spec § 6.12.4) degrades the
+ * Shared LLM availability check: route generation degrades the
  * same way hints do, so it must ask the same question.
  */
 export function llmEnabled(): boolean {
@@ -71,7 +71,7 @@ export async function requestHints(snapshot: HintSnapshot): Promise<LlmResult | 
       model: GATEWAY_MODEL,
       output: 'array',
       // Same Zod schema previously used for manual validation: a response
-      // failing it is discarded whole, JSON repair is forbidden (spec § 6.6.3).
+      // failing it is discarded whole, JSON repair is forbidden.
       schema: llmHintSchema,
       system: SYSTEM_PROMPT,
       prompt: buildUserPrompt(snapshot),
@@ -83,7 +83,7 @@ export async function requestHints(snapshot: HintSnapshot): Promise<LlmResult | 
         keep headroom for any catalog entry.
       */
       maxOutputTokens: 8192,
-      // One retry (spec § 8), then the previous pool and static catalog.
+      // One retry, then the previous pool and static catalog.
       maxRetries: 1,
       abortSignal: AbortSignal.timeout(HINTS_LLM_TIMEOUT_MS),
     });

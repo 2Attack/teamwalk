@@ -30,12 +30,12 @@ interface TreadmillFormDialogProps {
   onClose: () => void;
 }
 
-/** Default ceiling for a new treadmill — matches the seed record (spec § 6.9.2). */
+/** Default ceiling for a new treadmill — matches the seed record. */
 const DEFAULT_MAX_SPEED_KMH = 10;
 
 /**
- * One dialog for both create and edit (spec § 6.11.3). Number fields are plain
- * inputs, not button rows: the button-row rule (spec § 6.2) optimizes the
+ * One dialog for both create and edit. Number fields are plain
+ * inputs, not button rows: the button-row rule optimizes the
  * frequent start flow, not a setting touched once a year.
  */
 export function TreadmillFormDialog({ open, treadmill, onClose }: TreadmillFormDialogProps) {
@@ -75,7 +75,7 @@ export function TreadmillFormDialog({ open, treadmill, onClose }: TreadmillFormD
     event.preventDefault();
     if (saving) return;
 
-    // The same Zod schemas as on the server (spec § 3). Number inputs are
+    // The same Zod schemas as on the server. Number inputs are
     // parsed first: an empty or non-numeric string must fail in Russian here,
     // not with a generic type error.
     const errors: typeof fieldErrors = {};
@@ -212,7 +212,7 @@ export function TreadmillFormDialog({ open, treadmill, onClose }: TreadmillFormD
             </FormField>
 
             {/* The active toggle exists only in edit mode: a new treadmill is
-                always created active (spec § 6.11.3). */}
+                always created active. */}
             {treadmill && (
               <Button
                 type="button"

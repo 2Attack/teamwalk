@@ -10,7 +10,7 @@ export const dynamic = 'force-dynamic';
 export const maxDuration = 60;
 
 /**
- * Constant-time secret comparison, same as the webhook (spec § 6.10.3).
+ * Constant-time secret comparison, same as the webhook.
  * A missing CRON_SECRET also denies: never expose the endpoint unprotected.
  */
 function isAuthorized(request: Request): boolean {
@@ -27,7 +27,7 @@ function isAuthorized(request: Request): boolean {
 }
 
 /**
- * GET /api/cron/notify — Vercel Cron entry (spec § 6.10.5): stretch reminders
+ * GET /api/cron/notify — Vercel Cron entry: stretch reminders
  * and the Monday weekly digest. Dedup via `notification_log` ensures the cron
  * and the lazy fallback never send twice.
  */

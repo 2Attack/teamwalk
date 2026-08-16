@@ -5,7 +5,7 @@ import { treadmills, users, walks } from '@/lib/db/schema';
 import type { TreadmillAdminDto } from '@/lib/types';
 
 /**
- * SETTINGS-zone queries: treadmill CRUD for the settings screen (spec § 6.11).
+ * SETTINGS-zone queries: treadmill CRUD for the settings screen.
  * The start flow keeps using `listActiveTreadmills` from `walks.ts` — that list
  * is filtered to active treadmills and shaped for the picker, not for admin.
  */
@@ -17,8 +17,8 @@ const adminColumns = {
   sortOrder: treadmills.sortOrder,
   isActive: treadmills.isActive,
   /**
-   * Walks of any status referencing the treadmill: > 0 forbids deletion
-   * (spec § 6.11.4). A correlated subquery — one row per treadmill, and the
+   * Walks of any status referencing the treadmill: > 0 forbids deletion.
+   * A correlated subquery — one row per treadmill, and the
    * count join would otherwise fight the busy-walk left join.
    */
   walksCount: sql<number>`(
@@ -32,7 +32,7 @@ const adminColumns = {
   userAvatarId: users.avatarId,
 };
 
-/** All treadmills, inactive included, sorted like the start picker (spec § 6.11.2). */
+/** All treadmills, inactive included, sorted like the start picker. */
 export async function listAllTreadmills(): Promise<TreadmillAdminDto[]> {
   const rows = await db
     .select(adminColumns)
@@ -115,8 +115,8 @@ export async function updateTreadmill(
 
 /**
  * Deletes a treadmill. Walks referencing it make the FK (`on delete restrict`)
- * throw SQLSTATE 23503 — the route translates it into 409 TREADMILL_HAS_WALKS
- * (spec § 6.11.4). Returns false when the treadmill does not exist.
+ * throw SQLSTATE 23503 — the route translates it into 409 TREADMILL_HAS_WALKS.
+ * Returns false when the treadmill does not exist.
  */
 export async function deleteTreadmill(id: string): Promise<boolean> {
   const rows = await db

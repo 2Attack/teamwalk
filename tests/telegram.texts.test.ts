@@ -16,11 +16,11 @@ import {
 } from '../lib/telegram/texts';
 
 /**
- * Telegram notification texts (spec § 6.10.4). Generators pick templates at
+ * Telegram notification texts. Generators pick templates at
  * random, so each property is checked over a series of calls: one "lucky"
  * run guarantees nothing.
  *
- * Key invariant — the same post-filter as hints (spec § 6.6.4): body, weight,
+ * Key invariant — the same post-filter as hints: body, weight,
  * food, and health topics must not reach DMs in any template variant.
  * `isSafe` also rejects lines over 160 chars, while a message can be
  * multi-line (finish with achievements) — so the filter runs per line and
@@ -160,7 +160,7 @@ describe('remindText', () => {
     }
   });
 
-  it('with a live streak gives a concrete reason — mentions the streak (spec § 6.10.4)', () => {
+  it('with a live streak gives a concrete reason — mentions the streak', () => {
     // Templates are random; it suffices that the streak is mentioned in at
     // least one of 30 runs — otherwise the "streak at risk" angle is lost entirely.
     const texts = Array.from({ length: 30 }, () =>

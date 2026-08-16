@@ -81,7 +81,7 @@
   --accent-foreground: oklch(0.98 0 0);
   /*
     Straight from the theme. On `--card` that is 3.5:1 — below the 4.5:1 the
-    spec requires for text (spec § 6.7.7): enough for a border and fill, not
+    spec requires for text: enough for a border and fill, not
     for a small-type error message. Lightening to ~oklch(0.68 0.16 25) gives 4.5:1.
   */
   --destructive: oklch(0.55 0.2 25);
@@ -114,7 +114,7 @@
   /*
     Radius from the theme. It barely affects visible geometry: both 8bitcn
     components and our panels cancel it with `rounded-none` /
-    `border-radius: 0` — a pixel frame is incompatible with rounding (spec § 6.7.1).
+    `border-radius: 0` — a pixel frame is incompatible with rounding.
   */
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
@@ -151,7 +151,7 @@ body {
 }
 
 /*
-  Pixel font only on numbers, labels and headings (spec § 6.7.1). The `.retro`
+  Pixel font only on numbers, labels and headings. The `.retro`
   class comes from 8bitcn — overridden to our font loaded via next/font with
   the Cyrillic subset: their variant pulls Press Start 2P from the Google CDN
   without Cyrillic.
@@ -198,7 +198,7 @@ body {
   cursor: not-allowed;
 }
 
-/* Focus is always visible: touch and keyboard are equal citizens (spec § 8). */
+/* Focus is always visible: touch and keyboard are equal citizens. */
 :where(a, button, input, select, textarea, [tabindex]):focus-visible {
   outline: 3px solid var(--color-citrus);
   outline-offset: 2px;
@@ -209,7 +209,7 @@ img.pixel,
   image-rendering: pixelated;
 }
 
-/* ── Animations: transform/opacity only, stepped, no interpolation (spec § 6.7.6) ── */
+/* ── Animations: transform/opacity only, stepped, no interpolation ── */
 @keyframes walk-cycle {
   from {
     background-position-x: 0;
@@ -249,7 +249,7 @@ img.pixel,
 }
 
 /*
-  Start countdown (§ 6.2). Both animations end on a visible/neutral frame on
+  Start countdown. Both animations end on a visible/neutral frame on
   purpose: under prefers-reduced-motion durations collapse to 0.01ms and the
   element jumps straight to 100% — the digit must stay readable there.
 */
@@ -304,7 +304,7 @@ img.pixel,
   scrollbar-color: var(--color-border-dim) transparent;
 }
 
-/* prefers-reduced-motion silences everything, sprite and typewriter output included (spec § 6.7.7). */
+/* prefers-reduced-motion silences everything, sprite and typewriter output included. */
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

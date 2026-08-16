@@ -13,7 +13,7 @@ import { regenerateHints } from './generate';
 import { staticHintDtos } from './registry';
 
 /**
- * Pool serving and lazy regeneration (spec § 6.6.5, 6.6.7).
+ * Pool serving and lazy regeneration.
  *
  * Key property: no LLM call in the hot path, by construction. The cache is
  * served immediately even when stale; the refresh runs in the background

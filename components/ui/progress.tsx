@@ -1,9 +1,9 @@
 /**
  * Progress bar of discrete segments — an arcade "energy gauge"
- * (custom layer in the 8bitcn/ui + SNES.css style, spec § 6.7.4).
+ * (custom layer in the 8bitcn/ui + SNES.css style).
  *
  * Segments instead of a smooth fill: block widths are never animated, so
- * there is no reflow — spec § 6.7.6 holds by construction.
+ * there is no reflow by construction.
  */
 import type * as React from 'react';
 

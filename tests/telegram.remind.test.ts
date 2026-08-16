@@ -4,7 +4,7 @@ import { reminderDecision, type ReminderFacts } from '../lib/telegram/remind-rul
 import { workdaysSince } from '../lib/time';
 
 /**
- * "Time to stretch" reminder rules (spec § 6.10.4). Only the send / don't-send
+ * "Time to stretch" reminder rules. Only the send / don't-send
  * decision by facts is tested here; the delivery window (weekday, hour) is the
  * scheduler's job and deliberately outside `reminderDecision`.
  *

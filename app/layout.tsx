@@ -11,7 +11,7 @@ import './globals.css';
 
 /*
   Both fonts ship the 'cyrillic' subset — names would fall apart on «Ё», «Й»,
-  «Щ» otherwise (spec § 6.7.2) — plus 'latin-ext' for Spanish diacritics.
+  «Щ» otherwise — plus 'latin-ext' for Spanish diacritics.
   Geist, the shadcn default, is not used: it has no Cyrillic.
 */
 const pixel = Press_Start_2P({
@@ -61,7 +61,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         {children}
         {/* Vercel Analytics: page views and visitors. */}
         <Analytics />
-        {/* Vercel Speed Insights: Web Vitals from prod (our budget — spec § 8). */}
+        {/* Vercel Speed Insights: Web Vitals from prod (our budget). */}
         <SpeedInsights />
       </body>
     </html>

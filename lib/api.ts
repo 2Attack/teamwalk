@@ -3,7 +3,7 @@ import { ZodError } from 'zod';
 
 import { m } from './i18n';
 
-/** Unified API error format (spec § 5). */
+/** Unified API error format. */
 export type ApiErrorCode =
   | 'VALIDATION_ERROR'
   | 'NOT_FOUND'
@@ -73,7 +73,7 @@ export function isUniqueViolation(error: unknown, constraint?: string): boolean 
 
 /**
  * Postgres foreign-key violation (SQLSTATE 23503) — e.g. deleting a treadmill
- * that walks still reference (`on delete restrict`, spec § 6.11.4).
+ * that walks still reference (`on delete restrict`).
  */
 export function isForeignKeyViolation(error: unknown, constraint?: string): boolean {
   return isPgViolation(error, '23503', constraint);

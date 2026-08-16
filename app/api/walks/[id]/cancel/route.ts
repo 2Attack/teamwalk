@@ -15,7 +15,7 @@ export const dynamic = 'force-dynamic';
 
 /**
  * POST /api/walks/:id/cancel — cancel without saving a result.
- * Distance is never set: there was none (spec § 7.6).
+ * Distance is never set: there was none.
  * A repeat on an already-cancelled walk is 200, not an error.
  */
 export async function POST(_request: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -26,7 +26,7 @@ export async function POST(_request: Request, { params }: { params: Promise<{ id
 
   return handle<{ ok: boolean } | ApiErrorBody>(async () => {
     // Before the update: cancelling while all treadmills are busy also frees
-    // one (spec § 6.10.4). With Telegram disabled returns false without a DB query.
+    // one. With Telegram disabled returns false without a DB query.
     const wasFullHouse = await wereAllTreadmillsBusy();
 
     const cancelled = await db
@@ -48,7 +48,7 @@ export async function POST(_request: Request, { params }: { params: Promise<{ id
     }
 
     // A fresh cancel freed a treadmill during a full house — notify those
-    // waiting (spec § 6.10.4). The read is only for the treadmill name and duration.
+    // waiting. The read is only for the treadmill name and duration.
     if (wasFullHouse) {
       const walk = await getWalkById(walkId);
       if (walk) {

@@ -24,15 +24,15 @@ import { nameSchema } from '@/lib/validation';
 interface AddUserDialogProps {
   open: boolean;
   onClose: () => void;
-  /** Full user list — used to derive taken avatars (spec § 6.5). */
+  /** Full user list — used to derive taken avatars. */
   users: UserDto[];
-  /** The created user is immediately selected in the picker (spec § 6.2). */
+  /** The created user is immediately selected in the picker. */
   onCreated: (user: UserDto) => void;
 }
 
 /**
- * Create-user dialog: name + pixel character (spec § 6.2).
- * `font="normal"` on all content — only the title and button labels stay pixel (spec § 6.7.1).
+ * Create-user dialog: name + pixel character.
+ * `font="normal"` on all content — only the title and button labels stay pixel.
  */
 export function AddUserDialog({ open, onClose, users, onCreated }: AddUserDialogProps) {
   const fieldId = useId();
@@ -108,7 +108,7 @@ export function AddUserDialog({ open, onClose, users, onCreated }: AddUserDialog
         <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col gap-5">
           <DialogBody className="space-y-5">
             <div className="space-y-2">
-              {/* `font="normal"`: label is sans, same as the field below (spec § 6.7.1). */}
+              {/* `font="normal"`: label is sans, same as the field below. */}
               <Label htmlFor={nameId} font="normal" className="block text-sm text-text-dim">
                 {m.addUser.nameLabel}
               </Label>
@@ -164,7 +164,7 @@ interface ChangeAvatarDialogProps {
   users: UserDto[];
 }
 
-/** Change character by clicking your avatar — same grid (spec § 6.5). */
+/** Change character by clicking your avatar — same grid. */
 export function ChangeAvatarDialog({ open, onClose, user, users }: ChangeAvatarDialogProps) {
   const [avatarId, setAvatarId] = useState<string>(user?.avatarId ?? '');
   const [error, setError] = useState<string | null>(null);
@@ -247,7 +247,7 @@ interface DialogActionsProps {
 }
 
 /**
- * Dialog action row: pixel button labels, 44 px touch targets (spec § 6.7.1, § 8).
+ * Dialog action row: pixel button labels, 44 px touch targets.
  * Built on 8bitcn `DialogFooter` to keep all project dialogs visually consistent.
  */
 function DialogActions({

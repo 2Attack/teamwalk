@@ -11,7 +11,7 @@ export const dynamic = 'force-dynamic';
 
 /**
  * GET /api/walks/active?userId= — the member's active walk or `null`.
- * `startedAt` is the source of truth for the client timer (spec § 5.2).
+ * `startedAt` is the source of truth for the client timer.
  */
 export async function GET(request: Request) {
   const parsed = uuidSchema.safeParse(new URL(request.url).searchParams.get('userId') ?? '');
@@ -19,7 +19,7 @@ export async function GET(request: Request) {
   const userId = parsed.data;
 
   return handle<ActiveWalkDto | null | ApiErrorBody>(async () => {
-    // Lazy autoclose: a forgotten walk must not show as active (spec § 7.6).
+    // Lazy autoclose: a forgotten walk must not show as active.
     await closeStaleWalks();
 
     const walk: ActiveWalkDto | null = await getActiveWalk(userId);

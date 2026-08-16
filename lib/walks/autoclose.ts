@@ -12,7 +12,7 @@ import {
 import { uiText } from '@/lib/telegram/texts';
 
 /**
- * Auto-close stale walks (spec § 7.6): someone forgot to press "End walk".
+ * Auto-close stale walks: someone forgot to press "End walk".
  * Invoked lazily from API handlers — cheaper and more reliable than cron on
  * the Hobby plan. The status change releases the record from the partial
  * unique indexes, unblocking both the participant and the treadmill.
@@ -26,7 +26,7 @@ export async function closeStaleWalks(): Promise<number> {
   const staleInterval = sql.raw(`interval '${Number(STALE_WALK_HOURS)} hours'`);
 
   // Check before closing: auto-close during a full house also frees a
-  // treadmill (spec § 6.10.4). Returns false without a DB query when Telegram is off.
+  // treadmill. Returns false without a DB query when Telegram is off.
   const wasFullHouse = await wereAllTreadmillsBusy();
 
   const closed = await db
@@ -47,7 +47,7 @@ export async function closeStaleWalks(): Promise<number> {
   if (closed.length > 0) {
     console.warn('[walks] autoclosed stale walks', { count: closed.length });
 
-    // Telegram notification (spec § 6.10.4): otherwise the user learns about the
+    // Telegram notification: otherwise the user learns about the
     // auto-close a week later from the leaderboard. Off the hot path; dedup lives in notify.
     waitUntil(notifyAutoClosed(closed.map((r) => ({ walkId: r.id, userId: r.userId }))));
 

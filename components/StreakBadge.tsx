@@ -10,11 +10,11 @@ interface StreakBadgeProps {
   className?: string;
 }
 
-/** "Hot" streak threshold (spec § 6.8.2): 5+ consecutive work days get their own highlight. */
+/** "Hot" streak threshold: 5+ consecutive work days get their own highlight. */
 const HOT_STREAK_DAYS = 5;
 
 /**
- * Streak badge next to the name (spec § 6.8.2) — 8bitcn `Badge`.
+ * Streak badge next to the name — 8bitcn `Badge`.
  *
  * State maps to library variants, not custom colors: `default` — citrus fill
  * for a "hot" streak, `secondary` — normal, `outline` — zero. A zero streak
@@ -22,7 +22,7 @@ const HOT_STREAK_DAYS = 5;
  * zero reads as a fact.
  *
  * `font` stays pixel (library default): only an icon and a number inside —
- * identity layer, not data (spec § 6.7.1).
+ * identity layer, not data.
  */
 export function StreakBadge({ days, className }: StreakBadgeProps) {
   const safeDays = Number.isFinite(days) ? Math.max(0, Math.floor(days)) : 0;
@@ -44,7 +44,7 @@ export function StreakBadge({ days, className }: StreakBadgeProps) {
       */
       className={cn('mx-1.5 min-h-7 align-middle', 'text-[16px]', className)}
     >
-      {/* Icon from the shared pixel set (spec § 6.7.4); meaning is carried by aria-label. */}
+      {/* Icon from the shared pixel set; meaning is carried by aria-label. */}
       <Icon name="flame" size={16} />
       <span className="tabular-nums">{safeDays}</span>
     </Badge>

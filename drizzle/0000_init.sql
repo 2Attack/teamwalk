@@ -1,4 +1,4 @@
--- TeamWalk — initial schema (spec § 4.1, 6.6.5, 6.8.5).
+-- TeamWalk — initial schema.
 -- The script is idempotent: rerunning breaks nothing.
 
 create extension if not exists "pgcrypto";
@@ -61,7 +61,7 @@ create table if not exists walks (
   constraint walk_speed_range check (speed_kmh between 1 and 25)
 );
 
--- At most one active walk per member and per treadmill (spec § 7.1, 7.2).
+-- At most one active walk per member and per treadmill.
 create unique index if not exists walks_one_active_per_user
   on walks (user_id) where status = 'active';
 create unique index if not exists walks_one_active_per_treadmill
@@ -110,7 +110,7 @@ insert into hints_meta (id, locked_until)
 values (true, now())
 on conflict (id) do nothing;
 
--- Seed: without a treadmills row no walk can be started (spec § 9.1).
+-- Seed: without a treadmills row no walk can be started.
 insert into treadmills (name, max_speed_kmh, is_active, sort_order)
 select 'Treadmill one', 10, true, 0
 where not exists (select 1 from treadmills);

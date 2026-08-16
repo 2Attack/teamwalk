@@ -8,7 +8,7 @@ import type { RouteCityDto, RouteDraftDto } from '@/lib/types';
 import { routePointsSchema, treadmillNameSchema } from '@/lib/validation';
 
 /**
- * LLM helper of the route feature (spec § 6.12.4). Returns null on any
+ * LLM helper of the route feature. Returns null on any
  * failure — the caller degrades and the editor stays manual. The model's
  * output never reaches the DB or the UI without passing the same Zod
  * validation as manual input.
@@ -78,7 +78,7 @@ const DRAFT_USER_PROMPTS = {
 const DRAFT_USER_PROMPT = DRAFT_USER_PROMPTS[LOCALE];
 
 /**
- * Route draft by description (spec § 6.12.4). The result is normalized (sort,
+ * Route draft by description. The result is normalized (sort,
  * dedupe, clamp count) and must pass `routePointsSchema` — otherwise null.
  */
 export async function generateRouteDraft(

@@ -6,7 +6,7 @@ import { positionOnRoute } from '@/lib/hints/route';
 import type { RouteAdminDto, RouteCityDto } from '@/lib/types';
 
 /**
- * SETTINGS-zone queries: team route catalog (spec § 6.12).
+ * SETTINGS-zone queries: team route catalog.
  *
  * The Neon HTTP driver has no transactions, so every multi-row mutation here
  * is a single SQL statement (data-modifying CTEs) — the same guarantee a
@@ -53,7 +53,7 @@ async function teamTotalKm(): Promise<number> {
 /**
  * Active route; an empty table (or a route that lost its points, impossible
  * past validation) resolves to the "no route selected" state — a legitimate
- * one since spec § 6.12.6, not an error.
+ * one, not an error.
  */
 export async function getActiveRoute(): Promise<ActiveRoute> {
   const none: ActiveRoute = { id: null, points: [], baseKm: 0 };
@@ -140,8 +140,7 @@ export async function createRoute(input: {
 }
 
 /**
- * Partial update. Points are replaced wholesale in one statement (spec
- * § 6.12.2) — delete + insert inside a single CTE, atomic without a
+ * Partial update. Points are replaced wholesale in one statement — delete + insert inside a single CTE, atomic without a
  * transaction.
  */
 export async function updateRoute(
@@ -177,7 +176,7 @@ export async function updateRoute(
 }
 
 /**
- * Route selection (spec § 6.12.2). Two statements, deactivation first: a
+ * Route selection. Two statements, deactivation first: a
  * single whole-table UPDATE trips the `routes_one_active` partial unique
  * index — Postgres checks uniqueness row by row, and the new active row can
  * be flipped before the old one is cleared. The instant with no active route
@@ -201,7 +200,7 @@ export async function activateRoute(
     .where(and(eq(routes.isActive, true), ne(routes.id, id)));
 
   // `resetProgress` moves base_km to the current all-time total, so the
-  // freshly selected route starts from zero (spec § 6.12.1).
+  // freshly selected route starts from zero.
   const rows = await sqlClient.query(
     `update routes set
        is_active = true,
@@ -220,8 +219,8 @@ export async function activateRoute(
 }
 
 /**
- * Deletes a route, the active one included (spec § 6.12.2): routes are
- * optional (spec § 6.12.6), so deleting the active route just puts the home
+ * Deletes a route, the active one included: routes are
+ * optional, so deleting the active route just puts the home
  * screen into the "no route selected" state. The UI warns before doing it.
  * Returns false when the route does not exist.
  */

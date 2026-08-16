@@ -1,6 +1,6 @@
 /**
  * Leader-change detection for the podium fireworks
- * (specs/001-first-place-fireworks, spec § FR-001/FR-004).
+ * (specs/001-first-place-fireworks, FR-001/FR-004).
  *
  * Pure module by design: the consumer keeps the state in a ref and layers the
  * environment gates (reduced motion, document visibility) on top of `fire`.

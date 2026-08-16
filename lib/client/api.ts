@@ -21,7 +21,7 @@ import type {
   WalkDto,
 } from '@/lib/types';
 
-/** API error in the `{ error: { code, message, field } }` envelope (spec § 5). */
+/** API error in the `{ error: { code, message, field } }` envelope. */
 export class ApiError extends Error {
   constructor(
     readonly status: number,
@@ -83,12 +83,12 @@ export function useTreadmills() {
   return useSWR<TreadmillDto[]>('/api/treadmills', apiGet, { refreshInterval: 15_000 });
 }
 
-/** Route catalog for the settings screen (spec § 6.12.3). */
+/** Route catalog for the settings screen. */
 export function useRoutesAdmin() {
   return useSWR<RoutesAdminResponseDto>('/api/routes', apiGet, { revalidateOnFocus: true });
 }
 
-/** Full treadmill list for the settings screen (spec § 6.11.2), inactive included. */
+/** Full treadmill list for the settings screen, inactive included. */
 export function useTreadmillsAdmin() {
   return useSWR<TreadmillAdminDto[]>('/api/treadmills?scope=all', apiGet, {
     revalidateOnFocus: true,
@@ -133,7 +133,7 @@ export function useUserStats(userId: string | null) {
   return useSWR<UserStatsDto>(userId ? `/api/users/${userId}/stats` : null, apiGet);
 }
 
-/** Participant's Telegram status — for the card and the invite panel (§ 6.10.2). */
+/** Participant's Telegram status — for the card and the invite panel. */
 export function useTelegramStatus(userId: string | null) {
   return useSWR<TelegramStatusDto>(userId ? `/api/users/${userId}/telegram` : null, apiGet, {
     revalidateOnFocus: true,
@@ -159,7 +159,7 @@ export function useAchievements(userId: string | null) {
 }
 
 /**
- * Seed the active-walk cache with a freshly started walk (§ 6.2): the walk
+ * Seed the active-walk cache with a freshly started walk: the walk
  * screen then renders from cache instantly instead of refetching what the
  * start POST already returned. Home pauses its active-walk subscription for
  * the duration of the start flow, so seeding doesn't trigger its redirect.
@@ -169,7 +169,7 @@ export async function primeActiveWalk(walk: ActiveWalkDto): Promise<void> {
 }
 
 /**
- * Invalidate routes after settings CRUD (spec § 6.12.3): the admin list plus
+ * Invalidate routes after settings CRUD: the admin list plus
  * everything derived from the active route — team progress and hints.
  */
 export async function revalidateRoutes(): Promise<void> {
@@ -185,7 +185,7 @@ export async function revalidateRoutes(): Promise<void> {
 }
 
 /**
- * Invalidate both treadmill lists after settings CRUD (spec § 6.11.3): the
+ * Invalidate both treadmill lists after settings CRUD: the
  * admin list on the settings screen and the picker in the start block.
  */
 export async function revalidateTreadmills(): Promise<void> {

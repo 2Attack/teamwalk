@@ -14,14 +14,14 @@ export const dynamic = 'force-dynamic';
 type RouteContext = { params: Promise<{ id: string }> };
 
 /**
- * POST /api/users/:id/telegram/link-token — one-time link token (spec § 6.10.3):
+ * POST /api/users/:id/telegram/link-token — one-time link token:
  * 15-minute TTL plus deep link `https://t.me/<bot>?start=<token>`.
  */
 export function POST(_request: Request, context: RouteContext) {
   return handle<TelegramLinkTokenDto | ApiErrorBody>(async () => {
     const id = uuidSchema.parse((await context.params).id);
 
-    // No bot token or kill switch off — the whole subsystem is disabled (spec § 6.10.7).
+    // No bot token or kill switch off — the whole subsystem is disabled.
     if (!telegramEnabled()) {
       return apiError(409, 'TELEGRAM_DISABLED', m.apiMessages.telegramNotConfigured);
     }
