@@ -95,10 +95,6 @@ docker run -p 3000:3000 -e DATABASE_URL=postgres://…neon.tech/… teamwalk
 | `NEXT_PUBLIC_APP_NAME` | no | Name in the header, default `TeamWalk` |
 | `NEXT_PUBLIC_LOCALE` | no | Product language: `en` (default), `ru`, `es` |
 
-## Localization
-
-One language per deployment, set by `NEXT_PUBLIC_LOCALE`: UI, API errors, hint catalog, LLM prompts and bot texts. The variable is **inlined into the client bundle at build time** — changing the locale means a redeploy. Dictionaries live in `lib/i18n/messages/{ru,en,es}.ts`; `ru` is the reference and the `Messages` type enforces full key parity.
-
 ## Credits
 
 UI kit — [8bitcn/ui](https://8bitcn.com) on top of [shadcn/ui](https://ui.shadcn.com) · icons — [pixelarticons](https://pixelarticons.com) (MIT) · avatars — [DiceBear](https://dicebear.com) `pixel-art` · fonts and sprites generated in-repo.

@@ -95,10 +95,6 @@ docker run -p 3000:3000 -e DATABASE_URL=postgres://…neon.tech/… teamwalk
 | `NEXT_PUBLIC_APP_NAME` | нет | Имя в шапке, по умолчанию `TeamWalk` |
 | `NEXT_PUBLIC_LOCALE` | нет | Язык продукта: `en` (по умолчанию), `ru`, `es` |
 
-## Локализация
-
-Один язык на деплой, задаётся `NEXT_PUBLIC_LOCALE`: UI, ошибки API, каталог подсказок, LLM-промпты и тексты бота. Переменная **инлайнится в клиентский бандл на этапе сборки** — смена локали означает редеплой. Словари в `lib/i18n/messages/{ru,en,es}.ts`; `ru` — эталон, тип `Messages` гарантирует полный паритет ключей.
-
 ## Благодарности
 
 UI-кит — [8bitcn/ui](https://8bitcn.com) поверх [shadcn/ui](https://ui.shadcn.com) · иконки — [pixelarticons](https://pixelarticons.com) (MIT) · аватары — [DiceBear](https://dicebear.com) `pixel-art` · шрифты и спрайты генерируются в репозитории.
