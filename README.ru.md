@@ -95,18 +95,11 @@ DATABASE_URL=postgres://postgres:postgres@db.localtest.me:4444/teamwalk?sslmode=
 
 Хост `localtest.me` — единственный сигнал, переключающий драйвер на локальный эндпоинт; в продакшене эта ветка не срабатывает. Дальше как обычно: `npm run db:migrate` и `npm run dev`.
 
-## Telegram-бот в разработке
-
-Telegram не достучится до localhost, поэтому в разработке вместо вебхука — long polling: `npm run dev:tg` (рядом с запущенным `npm run dev`) поднимает grammY-мост, который забирает апдейты и пересылает их в обычный `/api/telegram/webhook` с тем же секретным заголовком. Продакшен-код проходит целиком.
-
-Нужны `TELEGRAM_BOT_TOKEN` и `TELEGRAM_WEBHOOK_SECRET` в `.env.development.local`. Важно: polling **снимает зарегистрированный вебхук бота** — запускайте мост только с отдельным dev-ботом из @BotFather, никогда с продакшен-токеном.
-
 ## Скрипты
 
 | Команда | Что делает |
 |---|---|
 | `npm run dev` | Dev-сервер |
-| `npm run dev:tg` | Мост Telegram → localhost: long polling вместо вебхука (только dev-бот) |
 | `npm run build` | Продакшен-сборка |
 | `npm run typecheck` | `tsc --noEmit` — основная проверка |
 | `npm test` | Юнит-тесты (Vitest) |
@@ -122,7 +115,7 @@ Telegram не достучится до localhost, поэтому в разра�
 | `AI_GATEWAY_MODEL` | нет | Модель Gateway, по умолчанию `xai/grok-4.1-fast-non-reasoning` |
 | `HINTS_ENABLED` | нет | `false` → только статический каталог фраз, без LLM |
 | `TELEGRAM_BOT_TOKEN` | нет | Бот из @BotFather; без него вся Telegram-подсистема выключена |
-| `TELEGRAM_WEBHOOK_SECRET` | нет | Секрет вебхука (`setWebhook … secret_token`) и локального моста |
+| `TELEGRAM_WEBHOOK_SECRET` | нет | Секрет вебхука (`setWebhook … secret_token`) |
 | `TELEGRAM_ENABLED` | нет | `false` → бот молчит, панель привязки скрыта |
 | `CRON_SECRET` | нет | Защищает `/api/cron/notify` (Vercel Cron шлёт его сам) |
 | `NOTIFY_WINDOW_START_HOUR` / `NOTIFY_WINDOW_END_HOUR` | нет | Дневное окно напоминаний и дайджеста, по умолчанию 11–17 МСК |

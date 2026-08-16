@@ -31,7 +31,7 @@ Requires `DATABASE_URL` (Neon) in `.env.local`. A cloud-free local DB is the "Po
 3. Never run migrations by hand: `buildCommand` runs `db:migrate` before every deploy build — a preview migrates its own branch, prod migrates its own.
 4. Verify on the preview → merge into `main` → push: prod deploys and migrates itself.
 
-Environment quirks: cron (`/api/cron/notify`) runs only in production — previews use the lazy fallback instead; Telegram is off on previews (no bot variables), the production bot lives only on prod, `@teamwalk_staging_bot` is for local `npm run dev:tg`.
+Environment quirks: cron (`/api/cron/notify`) runs only in production — previews use the lazy fallback instead; Telegram is off on previews (no bot variables), the production bot lives only on prod.
 
 ## Architecture
 

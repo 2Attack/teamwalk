@@ -4,7 +4,6 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "dev:tg": "node --env-file-if-exists=.env.local --env-file-if-exists=.env.development.local scripts/tg-dev-bridge.mjs",
     "build": "next build",
     "start": "next start",
     "typecheck": "tsc --noEmit",
@@ -54,7 +53,6 @@
     "@types/react-dom": "^19",
     "dotenv": "^17.4.2",
     "drizzle-kit": "^0.31.10",
-    "grammy": "^1.45.1",
     "pixelarticons": "^2.2.0",
     "sharp": "0.35.3",
     "tailwindcss": "^4",

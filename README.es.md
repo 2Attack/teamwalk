@@ -95,18 +95,11 @@ DATABASE_URL=postgres://postgres:postgres@db.localtest.me:4444/teamwalk?sslmode=
 
 El host `localtest.me` es la única señal que cambia el driver al endpoint local; esa rama nunca se activa en producción. Después, lo habitual: `npm run db:migrate` y `npm run dev`.
 
-## Bot de Telegram en desarrollo
-
-Telegram no llega a localhost, así que en desarrollo se usa long polling en vez de webhook: `npm run dev:tg` (junto a `npm run dev`) levanta un puente grammY que recoge las actualizaciones y las reenvía al `/api/telegram/webhook` normal con la misma cabecera secreta. El código de producción se ejecuta completo.
-
-Requiere `TELEGRAM_BOT_TOKEN` y `TELEGRAM_WEBHOOK_SECRET` en `.env.development.local`. Importante: el polling **elimina el webhook registrado del bot** — usa el puente solo con un bot de desarrollo aparte de @BotFather, nunca con el token de producción.
-
 ## Scripts
 
 | Comando | Qué hace |
 |---|---|
 | `npm run dev` | Servidor de desarrollo |
-| `npm run dev:tg` | Puente Telegram → localhost: long polling en vez de webhook (solo bot dev) |
 | `npm run build` | Build de producción |
 | `npm run typecheck` | `tsc --noEmit` — la comprobación principal |
 | `npm test` | Tests unitarios (Vitest) |
@@ -122,7 +115,7 @@ Requiere `TELEGRAM_BOT_TOKEN` y `TELEGRAM_WEBHOOK_SECRET` en `.env.development.l
 | `AI_GATEWAY_MODEL` | no | Modelo del Gateway, por defecto `xai/grok-4.1-fast-non-reasoning` |
 | `HINTS_ENABLED` | no | `false` → solo catálogo estático de frases, sin LLM |
 | `TELEGRAM_BOT_TOKEN` | no | Bot de @BotFather; sin él todo el subsistema de Telegram está apagado |
-| `TELEGRAM_WEBHOOK_SECRET` | no | Secreto del webhook (`setWebhook … secret_token`) y del puente local |
+| `TELEGRAM_WEBHOOK_SECRET` | no | Secreto del webhook (`setWebhook … secret_token`) |
 | `TELEGRAM_ENABLED` | no | `false` → el bot calla, el panel de vinculación se oculta |
 | `CRON_SECRET` | no | Protege `/api/cron/notify` (Vercel Cron lo envía él mismo) |
 | `NOTIFY_WINDOW_START_HOUR` / `NOTIFY_WINDOW_END_HOUR` | no | Ventana diurna de recordatorios y resumen, por defecto 11–17 MSK |

@@ -112,5 +112,5 @@ on conflict (id) do nothing;
 
 -- Seed: without a treadmills row no walk can be started (spec § 9.1).
 insert into treadmills (name, max_speed_kmh, is_active, sort_order)
-select 'Дорожка', 10, true, 0
+select 'Treadmill one', 10, true, 0
 where not exists (select 1 from treadmills);

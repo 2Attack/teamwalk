@@ -95,18 +95,11 @@ DATABASE_URL=postgres://postgres:postgres@db.localtest.me:4444/teamwalk?sslmode=
 
 The `localtest.me` host is the single signal that switches the driver to the local endpoint; that branch never fires in production. Then as usual: `npm run db:migrate` and `npm run dev`.
 
-## Telegram bot in development
-
-Telegram can't reach localhost, so development uses long polling instead of a webhook: `npm run dev:tg` (alongside a running `npm run dev`) starts a grammY bridge that polls updates and forwards them into the regular `/api/telegram/webhook` with the same secret header. The production code path runs in full.
-
-Requires `TELEGRAM_BOT_TOKEN` and `TELEGRAM_WEBHOOK_SECRET` in `.env.development.local`. Important: polling **removes the bot's registered webhook** — only ever run the bridge with a separate dev bot from @BotFather, never the production token.
-
 ## Scripts
 
 | Command | What it does |
 |---|---|
 | `npm run dev` | Dev server |
-| `npm run dev:tg` | Telegram → localhost bridge: long polling instead of a webhook (dev bot only) |
 | `npm run build` | Production build |
 | `npm run typecheck` | `tsc --noEmit` — the primary check |
 | `npm test` | Unit tests (Vitest) |
@@ -122,7 +115,7 @@ Requires `TELEGRAM_BOT_TOKEN` and `TELEGRAM_WEBHOOK_SECRET` in `.env.development
 | `AI_GATEWAY_MODEL` | no | Gateway model, default `xai/grok-4.1-fast-non-reasoning` |
 | `HINTS_ENABLED` | no | `false` → static phrase catalog only, no LLM calls |
 | `TELEGRAM_BOT_TOKEN` | no | Bot from @BotFather; without it the whole Telegram subsystem is off |
-| `TELEGRAM_WEBHOOK_SECRET` | no | Webhook secret (`setWebhook … secret_token`) and the local bridge |
+| `TELEGRAM_WEBHOOK_SECRET` | no | Webhook secret (`setWebhook … secret_token`) |
 | `TELEGRAM_ENABLED` | no | `false` → the bot stays silent, the link panel is hidden |
 | `CRON_SECRET` | no | Protects `/api/cron/notify` (Vercel Cron sends it itself) |
 | `NOTIFY_WINDOW_START_HOUR` / `NOTIFY_WINDOW_END_HOUR` | no | Daytime window for reminders and the digest, default 11–17 MSK |
