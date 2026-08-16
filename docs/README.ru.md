@@ -5,7 +5,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/attack-it/teamwalk/actions/workflows/pages.yml"><img src="https://github.com/attack-it/teamwalk/actions/workflows/pages.yml/badge.svg" alt="Landing deploy"></a>
+  <a href="https://github.com/attack-it/teamwalk/actions/workflows/ci.yml"><img src="https://github.com/attack-it/teamwalk/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
   <a href="https://attack-it.github.io/teamwalk/"><img src="https://img.shields.io/badge/landing-live-e8933a" alt="Landing"></a>
   <img src="https://img.shields.io/badge/Next.js_16-App_Router-black?logo=nextdotjs" alt="Next.js 16">
   <img src="https://img.shields.io/badge/TypeScript-strict-3178C6?logo=typescript&logoColor=white" alt="TypeScript strict">
@@ -13,7 +13,7 @@
   <a href="../LICENSE"><img src="https://img.shields.io/github/license/attack-it/teamwalk?color=a3e635" alt="License"></a>
 </p>
 
-Кто, когда и сколько прошёл — с лидербордом, стриками, ачивками, общим командным маршрутом по реальным городам и тикером шуточных подсказок, которые генерируются из живых данных. **Авторизации нет by design**: выбираешь себя из списка, прогулка стартует в один тап.
+Кто, когда и сколько прошёл — с лидербордом, стриками, ачивками, общим командным маршрутом по реальным городам и тикером шуточных подсказок, которые генерируются из живых данных. **Авторизации нет by design**: выбираешь себя из списка, прогулка стартует в один тап. Экскурсия — на [лендинге](https://attack-it.github.io/teamwalk/).
 
 ## Возможности
 
@@ -24,8 +24,6 @@
 - **Командный маршрут** — километры всех складываются и двигают команду по реальному маршруту («Ярославль → Лиссабон»).
 - **Тикер подсказок** — фразы в духе игровых загрузочных экранов, собранные LLM из анонимизированной статистики.
 - **Telegram-бот (опционально)** — итоги прогулок, напоминания, «дорожка освободилась», дайджест по понедельникам.
-- **Пиксельный UI** — 8bitcn поверх shadcn, всегда тёмный, PWA, mobile-first.
-- **Три языка** — en / ru / es, один на деплой.
 
 ## Быстрый старт
 
@@ -67,33 +65,21 @@ docker build -t teamwalk --build-arg NEXT_PUBLIC_LOCALE=ru .
 docker run -p 3000:3000 -e DATABASE_URL=postgres://…neon.tech/… teamwalk
 ```
 
-## Скрипты
-
-| Команда | Что делает |
-|---|---|
-| `npm run dev` | Dev-сервер |
-| `npm run build` | Продакшен-сборка |
-| `npm run typecheck` | `tsc --noEmit` — основная проверка |
-| `npm test` | Юнит-тесты (Vitest) |
-| `npm run db:migrate` | Применяет `drizzle/*.sql` по порядку, идемпотентно |
-| `npm run gen:assets` | Перегенерация статики: аватары, спрайт ходока, иконки |
-
 ## Переменные окружения
 
 | Переменная | Обязательна | Назначение |
 |---|---|---|
 | `DATABASE_URL` | да | Neon Postgres, pooled-подключение |
-| `AI_GATEWAY_API_KEY` | нет | Vercel AI Gateway (подсказки + черновики маршрутов); на деплоях Vercel AI SDK использует автоматический `VERCEL_OIDC_TOKEN` |
-| `AI_GATEWAY_MODEL` | нет | Модель Gateway, по умолчанию `xai/grok-4.1-fast-non-reasoning` |
-| `HINTS_ENABLED` | нет | `false` → только статический каталог фраз, без LLM |
+| `NEXT_PUBLIC_LOCALE` | нет | Язык продукта: `en` (по умолчанию), `ru`, `es`; инлайнится при сборке |
 | `TELEGRAM_BOT_TOKEN` | нет | Бот из @BotFather; без него вся Telegram-подсистема выключена |
 | `TELEGRAM_WEBHOOK_SECRET` | нет | Секрет вебхука (`setWebhook … secret_token`) |
-| `TELEGRAM_ENABLED` | нет | `false` → бот молчит, панель привязки скрыта |
 | `CRON_SECRET` | нет | Защищает `/api/cron/notify` (Vercel Cron шлёт его сам) |
-| `NOTIFY_WINDOW_START_HOUR` / `NOTIFY_WINDOW_END_HOUR` | нет | Дневное окно напоминаний и дайджеста, по умолчанию 11–17 МСК |
-| `FREE_WINDOW_START_HOUR` / `FREE_WINDOW_END_HOUR` | нет | Окно уведомлений «дорожка освободилась», по умолчанию 9–19 МСК |
-| `NEXT_PUBLIC_APP_NAME` | нет | Имя в шапке, по умолчанию `TeamWalk` |
-| `NEXT_PUBLIC_LOCALE` | нет | Язык продукта: `en` (по умолчанию), `ru`, `es` |
+
+Полный список с дефолтами (LLM-подсказки, окна уведомлений, имя приложения) задокументирован в [`.env.example`](../.env.example).
+
+## Как поучаствовать
+
+PR приветствуются. Ответвитесь от `main`, убедитесь, что `npm run typecheck` и `npm test` проходят, и откройте pull request — CI гоняет те же две проверки, а каждая ветка получает превью-деплой со своей copy-on-write веткой БД.
 
 ## Благодарности
 

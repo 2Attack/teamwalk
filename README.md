@@ -5,7 +5,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/attack-it/teamwalk/actions/workflows/pages.yml"><img src="https://github.com/attack-it/teamwalk/actions/workflows/pages.yml/badge.svg" alt="Landing deploy"></a>
+  <a href="https://github.com/attack-it/teamwalk/actions/workflows/ci.yml"><img src="https://github.com/attack-it/teamwalk/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
   <a href="https://attack-it.github.io/teamwalk/"><img src="https://img.shields.io/badge/landing-live-e8933a" alt="Landing"></a>
   <img src="https://img.shields.io/badge/Next.js_16-App_Router-black?logo=nextdotjs" alt="Next.js 16">
   <img src="https://img.shields.io/badge/TypeScript-strict-3178C6?logo=typescript&logoColor=white" alt="TypeScript strict">
@@ -13,7 +13,7 @@
   <a href="LICENSE"><img src="https://img.shields.io/github/license/attack-it/teamwalk?color=a3e635" alt="License"></a>
 </p>
 
-Who walked, when and how far — with a leaderboard, streaks, achievements, a shared team route across real cities and a ticker of joke hints generated from live data. **No authentication by design**: you pick yourself from a list, and starting a walk takes one tap.
+Who walked, when and how far — with a leaderboard, streaks, achievements, a shared team route across real cities and a ticker of joke hints generated from live data. **No authentication by design**: you pick yourself from a list, and starting a walk takes one tap. Take the tour on the [landing page](https://attack-it.github.io/teamwalk/).
 
 ## Features
 
@@ -24,8 +24,6 @@ Who walked, when and how far — with a leaderboard, streaks, achievements, a sh
 - **Team route** — everyone's kilometers move the team along a real route ("Yaroslavl → Lisbon").
 - **Hint ticker** — game-style phrases assembled by an LLM from anonymized live stats.
 - **Telegram bot (opt-in)** — summaries, reminders, "the treadmill is free", Monday digest.
-- **Pixel-art UI** — 8bitcn on top of shadcn, always dark, PWA, mobile-first.
-- **Three languages** — en / ru / es, one per deployment.
 
 ## Quick start
 
@@ -67,33 +65,21 @@ docker build -t teamwalk --build-arg NEXT_PUBLIC_LOCALE=en .
 docker run -p 3000:3000 -e DATABASE_URL=postgres://…neon.tech/… teamwalk
 ```
 
-## Scripts
-
-| Command | What it does |
-|---|---|
-| `npm run dev` | Dev server |
-| `npm run build` | Production build |
-| `npm run typecheck` | `tsc --noEmit` — the primary check |
-| `npm test` | Unit tests (Vitest) |
-| `npm run db:migrate` | Applies `drizzle/*.sql` in order, idempotent |
-| `npm run gen:assets` | Regenerates static assets: avatars, walker sprite, icons |
-
 ## Environment variables
 
 | Variable | Required | Purpose |
 |---|---|---|
 | `DATABASE_URL` | yes | Neon Postgres, pooled connection |
-| `AI_GATEWAY_API_KEY` | no | Vercel AI Gateway (hints + route drafts); on Vercel deploys the AI SDK falls back to the automatic `VERCEL_OIDC_TOKEN` |
-| `AI_GATEWAY_MODEL` | no | Gateway model, default `xai/grok-4.1-fast-non-reasoning` |
-| `HINTS_ENABLED` | no | `false` → static phrase catalog only, no LLM calls |
+| `NEXT_PUBLIC_LOCALE` | no | Product language: `en` (default), `ru`, `es`; inlined at build time |
 | `TELEGRAM_BOT_TOKEN` | no | Bot from @BotFather; without it the whole Telegram subsystem is off |
 | `TELEGRAM_WEBHOOK_SECRET` | no | Webhook secret (`setWebhook … secret_token`) |
-| `TELEGRAM_ENABLED` | no | `false` → the bot stays silent, the link panel is hidden |
 | `CRON_SECRET` | no | Protects `/api/cron/notify` (Vercel Cron sends it itself) |
-| `NOTIFY_WINDOW_START_HOUR` / `NOTIFY_WINDOW_END_HOUR` | no | Daytime window for reminders and the digest, default 11–17 MSK |
-| `FREE_WINDOW_START_HOUR` / `FREE_WINDOW_END_HOUR` | no | Window for "treadmill freed up" notifications, default 9–19 MSK |
-| `NEXT_PUBLIC_APP_NAME` | no | Name in the header, default `TeamWalk` |
-| `NEXT_PUBLIC_LOCALE` | no | Product language: `en` (default), `ru`, `es` |
+
+The full list with defaults (LLM hints, notification windows, app name) is documented in [`.env.example`](.env.example).
+
+## Contributing
+
+PRs are welcome. Branch off `main`, make sure `npm run typecheck` and `npm test` pass, and open a pull request — CI runs the same two checks, and every branch gets a preview deploy with its own copy-on-write DB branch.
 
 ## Credits
 

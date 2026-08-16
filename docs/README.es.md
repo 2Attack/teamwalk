@@ -5,7 +5,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/attack-it/teamwalk/actions/workflows/pages.yml"><img src="https://github.com/attack-it/teamwalk/actions/workflows/pages.yml/badge.svg" alt="Landing deploy"></a>
+  <a href="https://github.com/attack-it/teamwalk/actions/workflows/ci.yml"><img src="https://github.com/attack-it/teamwalk/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
   <a href="https://attack-it.github.io/teamwalk/"><img src="https://img.shields.io/badge/landing-live-e8933a" alt="Landing"></a>
   <img src="https://img.shields.io/badge/Next.js_16-App_Router-black?logo=nextdotjs" alt="Next.js 16">
   <img src="https://img.shields.io/badge/TypeScript-strict-3178C6?logo=typescript&logoColor=white" alt="TypeScript strict">
@@ -13,7 +13,7 @@
   <a href="../LICENSE"><img src="https://img.shields.io/github/license/attack-it/teamwalk?color=a3e635" alt="License"></a>
 </p>
 
-Quién caminó, cuándo y cuánto — con tabla de clasificación, rachas, logros, una ruta de equipo compartida por ciudades reales y un ticker de pistas humorísticas generadas a partir de datos reales. **Sin autenticación por diseño**: te eliges de una lista y empezar una caminata es un solo toque.
+Quién caminó, cuándo y cuánto — con tabla de clasificación, rachas, logros, una ruta de equipo compartida por ciudades reales y un ticker de pistas humorísticas generadas a partir de datos reales. **Sin autenticación por diseño**: te eliges de una lista y empezar una caminata es un solo toque. Haz el tour en la [landing](https://attack-it.github.io/teamwalk/).
 
 ## Características
 
@@ -24,8 +24,6 @@ Quién caminó, cuándo y cuánto — con tabla de clasificación, rachas, logro
 - **Ruta de equipo** — los kilómetros de todos mueven al equipo por una ruta real («Yaroslavl → Lisboa»).
 - **Ticker de pistas** — frases al estilo de pantallas de carga de videojuegos, montadas por un LLM a partir de estadísticas anonimizadas.
 - **Bot de Telegram (opcional)** — resúmenes, recordatorios, «la cinta está libre», resumen de los lunes.
-- **UI pixel-art** — 8bitcn sobre shadcn, siempre oscuro, PWA, mobile-first.
-- **Tres idiomas** — en / ru / es, uno por despliegue.
 
 ## Inicio rápido
 
@@ -67,33 +65,21 @@ docker build -t teamwalk --build-arg NEXT_PUBLIC_LOCALE=es .
 docker run -p 3000:3000 -e DATABASE_URL=postgres://…neon.tech/… teamwalk
 ```
 
-## Scripts
-
-| Comando | Qué hace |
-|---|---|
-| `npm run dev` | Servidor de desarrollo |
-| `npm run build` | Build de producción |
-| `npm run typecheck` | `tsc --noEmit` — la comprobación principal |
-| `npm test` | Tests unitarios (Vitest) |
-| `npm run db:migrate` | Aplica `drizzle/*.sql` en orden, idempotente |
-| `npm run gen:assets` | Regenera los estáticos: avatares, sprite del caminante, iconos |
-
 ## Variables de entorno
 
 | Variable | Obligatoria | Propósito |
 |---|---|---|
 | `DATABASE_URL` | sí | Neon Postgres, conexión pooled |
-| `AI_GATEWAY_API_KEY` | no | Vercel AI Gateway (pistas + borradores de rutas); en despliegues de Vercel el AI SDK usa el `VERCEL_OIDC_TOKEN` automático |
-| `AI_GATEWAY_MODEL` | no | Modelo del Gateway, por defecto `xai/grok-4.1-fast-non-reasoning` |
-| `HINTS_ENABLED` | no | `false` → solo catálogo estático de frases, sin LLM |
+| `NEXT_PUBLIC_LOCALE` | no | Idioma del producto: `en` (por defecto), `ru`, `es`; se inserta en build |
 | `TELEGRAM_BOT_TOKEN` | no | Bot de @BotFather; sin él todo el subsistema de Telegram está apagado |
 | `TELEGRAM_WEBHOOK_SECRET` | no | Secreto del webhook (`setWebhook … secret_token`) |
-| `TELEGRAM_ENABLED` | no | `false` → el bot calla, el panel de vinculación se oculta |
 | `CRON_SECRET` | no | Protege `/api/cron/notify` (Vercel Cron lo envía él mismo) |
-| `NOTIFY_WINDOW_START_HOUR` / `NOTIFY_WINDOW_END_HOUR` | no | Ventana diurna de recordatorios y resumen, por defecto 11–17 MSK |
-| `FREE_WINDOW_START_HOUR` / `FREE_WINDOW_END_HOUR` | no | Ventana de avisos «la cinta se ha liberado», por defecto 9–19 MSK |
-| `NEXT_PUBLIC_APP_NAME` | no | Nombre en la cabecera, por defecto `TeamWalk` |
-| `NEXT_PUBLIC_LOCALE` | no | Idioma del producto: `en` (por defecto), `ru`, `es` |
+
+La lista completa con valores por defecto (pistas LLM, ventanas de avisos, nombre de la app) está documentada en [`.env.example`](../.env.example).
+
+## Contribuir
+
+Los PR son bienvenidos. Crea una rama desde `main`, comprueba que `npm run typecheck` y `npm test` pasan, y abre un pull request — la CI ejecuta las mismas dos comprobaciones y cada rama recibe un preview deploy con su propia rama de BD copy-on-write.
 
 ## Créditos
 
