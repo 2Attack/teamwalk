@@ -80,7 +80,7 @@ export async function getPersonalRecord(userId: string, excludeWalkId?: string):
 export async function getHintsPool(userId?: string): Promise<HintsResponseDto>;
 export function ensureFreshPool(): void; // фоновая регенерация через waitUntil
 
-// lib/telegram/* — владелец: TELEGRAM (п. 6.10 ТЗ)
+// lib/telegram/* — владелец: TELEGRAM
 // notify-функции самодостаточны: сами читают привязку, дедупятся по notification_log,
 // никогда не бросают; вызывать через waitUntil(...) после ответа клиенту.
 export async function notifyWalkStarted(walk: ActiveWalkDto): Promise<void>;
@@ -92,10 +92,10 @@ export async function notifyTreadmillFreed(input: { walkId: string; treadmillNam
 export function ensureNotifySweep(): void; // ленивый фолбэк cron: лок notify_meta, не чаще раза в час
 export async function runNotifySweep(now?: Date): Promise<void>; // напоминания + дайджест (вызывает cron)
 export async function getTelegramStatus(userId: string): Promise<TelegramStatusDto | null>;
-export async function dismissNudge(userId: string): Promise<void>; // «Больше не показывать» панель (п. 6.10.2)
+export async function dismissNudge(userId: string): Promise<void>; // «Больше не показывать» панель
 export async function processTelegramUpdate(update: unknown): Promise<void>; // webhook, дедуп по update_id
 
-// lib/db/queries/routes.ts — владелец: SETTINGS (п. 6.12 ТЗ)
+// lib/db/queries/routes.ts — владелец: SETTINGS
 export async function getActiveRoute(): Promise<ActiveRoute>; // с фолбэком на ROUTE
 export async function listRoutesAdmin(): Promise<RouteAdminDto[]>;
 export async function createRoute(input: { name: string; points: RouteCityDto[] }): Promise<RouteAdminDto>;
@@ -103,10 +103,10 @@ export async function updateRoute(id: string, patch: { name?: string; points?: R
 export async function activateRoute(id: string, resetProgress: boolean): Promise<RouteAdminDto | null>;
 export async function deleteRoute(id: string): Promise<boolean>;
 
-// lib/routes/generate.ts — владелец: SETTINGS (п. 6.12.4 ТЗ)
+// lib/routes/generate.ts — владелец: SETTINGS
 export async function generateRouteDraft(prompt: string, cities?: string[]): Promise<RouteDraftDto | null>;
 
-// lib/db/queries/treadmills.ts — владелец: SETTINGS (п. 6.11 ТЗ)
+// lib/db/queries/treadmills.ts — владелец: SETTINGS
 export async function listAllTreadmills(): Promise<TreadmillAdminDto[]>;
 export async function getTreadmillAdmin(id: string): Promise<TreadmillAdminDto | null>;
 export async function createTreadmill(input: { name: string; maxSpeedKmh: number;
@@ -183,6 +183,6 @@ export function FireworksOverlay(props: { burstId: number; onDone: () => void })
 | **TELEGRAM** | `lib/telegram/*`, `app/api/telegram/**`, `app/api/users/[id]/telegram/**`, `app/api/cron/notify/route.ts`, `components/TelegramNudge.tsx`, `components/TelegramLinkDialog.tsx`, `tests/telegram.*.test.ts`, `vercel.json`, `drizzle/0002_telegram.sql` |
 | **UIKIT** | `components/ui/*`, `components/Avatar.tsx`, `components/AvatarPicker.tsx` |
 | **HOME** | `app/page.tsx`, `components/UserSelect.tsx`, `components/AddUserDialog.tsx`, `components/StartWalkCard.tsx`, `components/StartCountdown.tsx`, `components/TreadmillPicker.tsx` |
-| **SETTINGS** | `app/settings/page.tsx`, `app/api/treadmills/**`, `app/api/routes/**`, `lib/db/queries/treadmills.ts`, `lib/db/queries/routes.ts`, `lib/routes/generate.ts`, `components/TreadmillSettings.tsx`, `components/TreadmillFormDialog.tsx`, `components/RouteSettings.tsx`, `components/RouteFormDialog.tsx`, `tests/treadmills.validation.test.ts`, `tests/routes.validation.test.ts` (п. 6.11 ТЗ; `GET /api/treadmills` без `scope` по-прежнему отдаёт форму зоны WALKS — `listActiveTreadmills`) |
+| **SETTINGS** | `app/settings/page.tsx`, `app/api/treadmills/**`, `app/api/routes/**`, `lib/db/queries/treadmills.ts`, `lib/db/queries/routes.ts`, `lib/routes/generate.ts`, `components/TreadmillSettings.tsx`, `components/TreadmillFormDialog.tsx`, `components/RouteSettings.tsx`, `components/RouteFormDialog.tsx`, `tests/treadmills.validation.test.ts`, `tests/routes.validation.test.ts` (`GET /api/treadmills` без `scope` по-прежнему отдаёт форму зоны WALKS — `listActiveTreadmills`) |
 | **WALKSCREEN** | `app/walk/[id]/page.tsx`, `components/WalkTimer.tsx`, `components/FinishWalkDialog.tsx`, `components/WalkSuccess.tsx`, `components/WalkerSprite.tsx` |
 | **BOARDUI** | `components/Podium.tsx`, `components/Leaderboard.tsx`, `components/PeriodTabs.tsx`, `components/TeamProgress.tsx`, `components/StreakBadge.tsx`, `components/HintTicker.tsx`, `components/AchievementToast.tsx`, `components/FireworksOverlay.tsx`, `lib/client/leader-transition.ts`, `tests/leader-transition.test.ts` |

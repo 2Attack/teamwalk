@@ -15,8 +15,8 @@
 The team watches the leaderboard on the office tablet or their own devices. When the person
 in first place changes — someone's finished walk pushes them past the current leader — the
 podium reorders, and a short fireworks burst plays over the screen to mark the moment. The
-takeover of first place is the emotional peak of the product (spec § 6.7.6 treats the podium
-reshuffle as "the main moment"); today it is only a quiet reordering animation that is easy
+takeover of first place is the emotional peak of the product (the podium
+reshuffle is "the main moment" of the product); today it is only a quiet reordering animation that is easy
 to miss.
 
 **Why this priority**: This is the entire feature — a single celebratory moment attached to
@@ -44,7 +44,7 @@ podium plays the fireworks once as the podium reorders.
 
 ### User Story 2 - Respect viewers who opt out of motion (Priority: P2)
 
-A viewer whose system asks for reduced motion (spec § 6.8 hard constraint: reduced motion
+A viewer whose system asks for reduced motion (hard constraint: reduced motion
 silences all animation, including sprites and text effects) must never see the fireworks.
 
 **Why this priority**: An accessibility constraint the product has already committed to;
@@ -93,14 +93,14 @@ and observe that the podium updates without fireworks or any flashing.
 - **FR-002**: The effect MUST be purely decorative: it never blocks, delays, or intercepts
   any user interaction, and never shifts page layout.
 - **FR-003**: The effect MUST play at most once per observed leader change and MUST end on
-  its own within a few seconds (target ≈ 5 s, per spec § 6.8 "an effect of five seconds").
+  its own within a few seconds (target ≈ 5 s).
 - **FR-004**: The effect MUST NOT play on initial page load, on page reload, or when
   switching period tabs — only on a change observed while the standings are displayed.
 - **FR-005**: The effect MUST be fully suppressed when the viewer's system requests
   reduced motion.
 - **FR-006**: After the effect finishes, the feature MUST leave no ongoing visual or
   computational activity (relevant for the walk screen left open for tens of minutes on a
-  weak tablet — spec § 6.8 hard constraints).
+  weak tablet).
 - **FR-007**: The celebration MUST NOT play sound.
 - **FR-008**: The visual style of the effect MUST match the product's pixel-art identity
   (chunky particles on the existing palette, not smooth gradient sparks).
@@ -132,11 +132,11 @@ and observe that the podium updates without fireworks or any flashing.
 - Scope is the **home screen podium** for the currently selected period tab. A personal
   "you took first place!" celebration on the walk-success screen is out of scope for this
   feature and may become its own spec.
-- The parallax background mentioned alongside the fireworks in spec § 6.8 "Layer 3" is
+- The parallax background mentioned alongside the fireworks in "Layer 3" is
   **out of scope** — this feature covers the fireworks only.
 - The existing standings refresh cadence (periodic refresh while the page is open) is
   sufficient for detecting leader changes; this feature adds no new data or server
   behavior.
-- Per spec § 6.8, the celebration must not cost "hundreds of kilobytes" of download for a
+- The celebration must not cost "hundreds of kilobytes" of download for a
   five-second effect: the product accepts only a lightweight, self-contained
   implementation, with no heavyweight third-party effect packages.

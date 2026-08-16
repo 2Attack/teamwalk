@@ -7,7 +7,7 @@ All Technical Context unknowns resolved. Decisions below reference spec FRs.
 - **Decision**: a single `<canvas>` drawn with a ~150-line particle system: one burst =
   N square particles with velocity, gravity, and per-particle TTL; drawn via
   `requestAnimationFrame`, loop exits when every particle expires or a hard 6 s cap hits.
-- **Rationale**: TZ § 6.8 explicitly rejects "hundreds of kilobytes for a five-second
+- **Rationale**: The product explicitly rejects "hundreds of kilobytes for a five-second
   effect". Popular options (`canvas-confetti`, `tsparticles`, `react-confetti`) draw smooth
   rounded confetti that violates FR-008 (pixel aesthetic) and add a dependency for less
   code than the hand-rolled version.
@@ -72,7 +72,7 @@ All Technical Context unknowns resolved. Decisions below reference spec FRs.
   burst is active; unmounted (not display:none) when finished.
 - **Rationale**: FR-002 (never intercepts input, no layout shift) and FR-006 (nothing left
   behind) fall out of pointer-events + unmount. Viewport-wide matches "plays over the
-  page" (spec US1) rather than clipping to the podium card. TZ § 6.8 requires exactly
+  page" (spec US1) rather than clipping to the podium card. The product requires exactly
   this shape: absolute/isolated, never replacing markup.
 - **Alternatives considered**: portal into `document.body` (unnecessary — fixed positioning
   needs no portal here); absolute inside the podium card (clips the burst, weaker moment).

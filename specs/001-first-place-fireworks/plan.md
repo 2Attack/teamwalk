@@ -38,7 +38,7 @@ one `requestAnimationFrame` loop drawing ≤ ~120 square particles; loop self-te
 
 **Constraints**: pointer-events: none, no layout shift (FR-002); no sound (FR-007);
 suppressed under `prefers-reduced-motion` (FR-005); no heavyweight effect libraries
-(spec Assumptions / TZ § 6.8 bundle constraint); pixel aesthetic on existing palette
+(spec Assumptions bundle constraint); pixel aesthetic on existing palette
 tokens (FR-008).
 
 **Scale/Scope**: 1 new component, 1 new pure module + unit tests, 1 wiring change in
@@ -50,7 +50,7 @@ tokens (FR-008).
 
 | Principle | Gate | Status |
 |---|---|---|
-| I. Spec is source of truth | Feature is TZ § 6.8 "Layer 3" (canvas, backlog item "Салют при смене лидера"); no invented mechanics | PASS |
+| I. Spec is source of truth | Feature is "Layer 3" (canvas, backlog item "Салют при смене лидера"); no invented mechanics | PASS |
 | II. Stateless server, DB owns state | No server/DB involvement; "displayed leader" is ephemeral client state, never stored | PASS |
 | III. Typed contracts | No new endpoints or DTOs; consumes existing `LeaderboardDto` via `useLeaderboard` | PASS |
 | IV. Localization | No user-facing strings added; canvas is decorative and `aria-hidden` | PASS |
@@ -97,7 +97,7 @@ tests/
 
 **Structure Decision**: single-project web app layout already used by the repo. Detection
 logic goes to `lib/client/` (client-only concern, mirrors `lib/client/api.ts` placement);
-the overlay is a standalone component per TZ § 6.8 ("isolated component inside the DOM
+the overlay is a standalone component ("isolated component inside the DOM
 page, never a replacement for markup"). `Podium.tsx` is the only integration point because
 it already owns the leaderboard rows for the currently selected period.
 
