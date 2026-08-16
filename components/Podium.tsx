@@ -1,11 +1,14 @@
 'use client';
 
-import { motion } from 'motion/react';
+import { motion, useReducedMotion } from 'motion/react';
+import { useEffect, useRef, useState } from 'react';
 
 import { Avatar } from '@/components/Avatar';
+import { FireworksOverlay } from '@/components/FireworksOverlay';
 import { Icon } from '@/components/ui/icon';
 import { Skeleton } from '@/components/ui/8bit/skeleton';
-import { useLeaderboard } from '@/lib/client/api';
+import { leaderboardKey, useLeaderboard } from '@/lib/client/api';
+import { observe, type LeaderWatchState } from '@/lib/client/leader-transition';
 import { cn } from '@/lib/cn';
 import { formatKm } from '@/lib/format';
 import type { LeaderboardRowDto, PeriodSelection } from '@/lib/types';
@@ -161,27 +164,51 @@ function PodiumSkeleton() {
  */
 export function Podium({ period, currentUserId }: PodiumProps) {
   const { data, isLoading } = useLeaderboard(period);
+  const reduced = useReducedMotion();
+  /** Last displayed first place (specs/001): survives re-renders, never stored. */
+  const watchRef = useRef<LeaderWatchState | null>(null);
+  const [burstId, setBurstId] = useState(0);
+
+  const periodKey = leaderboardKey(period);
+  const top = (data?.rows ?? []).filter((row) => row.totalKm > 0).slice(0, 3);
+  const leaderId = top[0]?.user.id ?? null;
+  const hasData = Boolean(data);
+
+  // Fireworks on an observed leader change (specs/001-first-place-fireworks).
+  // The pure detector decides; reduced motion and a hidden tab only mute the
+  // fire signal — the baseline still advances (research D4/D5).
+  useEffect(() => {
+    if (!hasData) return;
+    const { fire, next } = observe(watchRef.current, periodKey, leaderId);
+    watchRef.current = next;
+    if (!fire || reduced || document.visibilityState === 'hidden') return;
+    setBurstId((id) => id + 1);
+  }, [hasData, periodKey, leaderId, reduced]);
 
   if (isLoading && !data) return <PodiumSkeleton />;
 
-  const top = (data?.rows ?? []).filter((row) => row.totalKm > 0).slice(0, 3);
-
   return (
-    <ul
-      aria-label="Пьедестал: топ-3 участников"
-      className="flex list-none items-end justify-center gap-2 sm:gap-4"
-    >
-      {PLACES.map((config) => {
-        const row = top[config.place - 1];
-        return (
-          <PodiumSlot
-            key={row ? row.user.id : `empty-${config.place}`}
-            config={config}
-            row={row}
-            isCurrent={Boolean(row && currentUserId && row.user.id === currentUserId)}
-          />
-        );
-      })}
-    </ul>
+    <>
+      <ul
+        aria-label="Пьедестал: топ-3 участников"
+        className="flex list-none items-end justify-center gap-2 sm:gap-4"
+      >
+        {PLACES.map((config) => {
+          const row = top[config.place - 1];
+          return (
+            <PodiumSlot
+              key={row ? row.user.id : `empty-${config.place}`}
+              config={config}
+              row={row}
+              isCurrent={Boolean(row && currentUserId && row.user.id === currentUserId)}
+            />
+          );
+        })}
+      </ul>
+      {/* Remount by key on a new fire: restart, never queue (FR-003). */}
+      {burstId > 0 ? (
+        <FireworksOverlay key={burstId} burstId={burstId} onDone={() => setBurstId(0)} />
+      ) : null}
+    </>
   );
 }

@@ -76,6 +76,9 @@ and observe that the podium updates without fireworks or any flashing.
 - The same person re-enters first place after a tie or a correction within one refresh:
   a leader change is "displayed first-place person differs from the previously displayed
   one", nothing else.
+- The podium empties (no first-place participant displayed): the emptying itself never
+  celebrates, and the next occupant of first place establishes a fresh baseline — no
+  celebration compares across the gap.
 - A viewer's device is a low-powered tablet that stays on this screen for 20–40 minutes:
   the effect must leave no residual work behind after it finishes (no ongoing drawing,
   timers, or battery drain).
