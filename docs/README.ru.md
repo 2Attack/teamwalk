@@ -74,6 +74,7 @@ docker run -p 3000:3000 -e DATABASE_URL=postgres://…neon.tech/… teamwalk
 | `TELEGRAM_BOT_TOKEN` | нет | Бот из @BotFather; без него вся Telegram-подсистема выключена |
 | `TELEGRAM_WEBHOOK_SECRET` | нет | Секрет вебхука (`setWebhook … secret_token`) |
 | `CRON_SECRET` | нет | Защищает `/api/cron/notify` (Vercel Cron шлёт его сам) |
+| `ACCESS_PIN` | нет | PIN-код доступа на весь деплой: если задан, страницы и API требуют разблокировки через `/pin` (cookie живёт ~год); пусто/не задан — открытый доступ; смена кода разлогинивает все устройства |
 
 Полный список с дефолтами (LLM-подсказки, окна уведомлений, имя приложения) задокументирован в [`.env.example`](../.env.example).
 

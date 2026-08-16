@@ -1,10 +1,11 @@
 <!--
 Sync Impact Report
-- Version change: (template) → 1.0.0
-- Modified principles: n/a (initial ratification)
-- Added sections: Core Principles (I–VII), Platform Constraints, Development Workflow, Governance
-- Removed sections: none
-- Follow-up TODOs: none
+- Version change: 1.0.0 → 1.1.0
+- Modified sections: Platform Constraints — trust model now permits an optional
+  deployment-wide access PIN (spec 003-pin-access-gate); per-user auth remains forbidden
+- Rationale: explicit product-owner request to keep strangers from reading/corrupting
+  team stats; the gate is opt-in (env unset = open) and identity-free (no accounts)
+- Previous change: (template) → 1.0.0 — initial ratification
 - Source of derived principles: CLAUDE.md, docs/8BITCN.md
 -->
 
@@ -76,8 +77,12 @@ no third-party requests at runtime; generated files are never edited by hand.
 - Stack: Next.js App Router, TypeScript strict, React 19, Tailwind 4, Drizzle + Neon
   Postgres (HTTP driver), Zod, SWR. Route Handlers declare `runtime = 'nodejs'` and
   `dynamic = 'force-dynamic'`; in Next 16 `params` is a `Promise`.
-- Trust model: no authorization by design — internal tool for "our own people". Feature
-  specs MUST NOT introduce auth flows.
+- Trust model: no per-user authorization by design — internal tool for "our own people",
+  no accounts, roles or identity. Feature specs MUST NOT introduce per-user auth flows.
+  The single permitted perimeter is the optional deployment-wide access PIN
+  (`ACCESS_PIN` + `proxy.ts` + `/pin`, spec 003): opt-in via env, one shared secret,
+  stateless HMAC cookie, machine endpoints (cron, Telegram webhook) exempt with their
+  own dedicated secrets.
 - Secrets and env: `DATABASE_URL` required; LLM credentials optional with graceful
   degradation (see Principle V). Cron exists only in production; previews rely on lazy
   fallbacks; Telegram bots are environment-specific.
@@ -108,4 +113,4 @@ PATCH for clarifications. `/speckit-plan` constitution checks MUST gate implemen
 against these principles; violations require an explicit, documented justification or a
 design change.
 
-**Version**: 1.0.0 | **Ratified**: 2026-08-16 | **Last Amended**: 2026-08-16
+**Version**: 1.1.0 | **Ratified**: 2026-08-16 | **Last Amended**: 2026-08-17

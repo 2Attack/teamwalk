@@ -24,6 +24,16 @@ export const en: Messages = {
     progress: 'Progress',
   },
 
+  pin: {
+    title: 'PIN access',
+    prompt: 'Enter the team PIN to open the tracker.',
+    placeholder: 'PIN code',
+    submit: 'Enter',
+    wrongPin: 'Wrong PIN. Try again.',
+    /** 401 envelope message from the proxy for gated API calls. */
+    required: 'A PIN is required for access.',
+  },
+
   units: {
     km: 'km',
     kmh: 'km/h',

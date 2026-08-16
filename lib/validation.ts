@@ -239,3 +239,12 @@ export const llmHintsSchema = z.array(llmHintSchema).min(1);
 
 export type LlmHint = z.infer<typeof llmHintSchema>;
 export type HintTone = z.infer<typeof hintToneSchema>;
+
+/**
+ * Access-gate unlock body. Deliberately loose (any non-empty string ≤ 128):
+ * the endpoint maps schema failures to the same generic PIN_INVALID as a
+ * wrong PIN — no format hints leave the server.
+ */
+export const pinVerifySchema = z.object({
+  pin: z.string().trim().min(1).max(128),
+});
