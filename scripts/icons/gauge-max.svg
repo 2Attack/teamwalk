@@ -1,4 +1,4 @@
-<!-- Полный газ: спидометр, стрелка лежит на правом упоре (зазор от обода). Сетка 24×24. -->
+<!-- Full Throttle: speedometer, needle at the right stop (gap from the rim). 24×24 grid. -->
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
   <path d="M8 4h8v2H8zM5 6h3v2H5zM16 6h3v2h-3zM4 8h2v6H4zM18 8h2v6h-2zM4 14h16v2H4zM12 10h5v2h-5zM10 12h4v2h-4z"/>
 </svg>

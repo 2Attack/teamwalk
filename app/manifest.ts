@@ -1,48 +1,43 @@
 import type { MetadataRoute } from 'next';
 
 import { APP_NAME } from '@/lib/config';
+import { LOCALE, m } from '@/lib/i18n';
 
 /**
- * Веб-манифест: без него планшет предлагает «добавить ярлык», а не установить
- * приложение, и открывается оно в обычной вкладке с адресной строкой.
- *
- * Next отдаёт этот файл как `/manifest.webmanifest` и сам проставляет
- * `<link rel="manifest">` — руками ссылку в layout добавлять не нужно.
+ * Web manifest: without it the tablet offers a bookmark instead of an app
+ * install. Next serves this as `/manifest.webmanifest` and injects
+ * `<link rel="manifest">` itself.
  */
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: `${APP_NAME} — трекер ходьбы`,
-    // На домашнем экране подпись обрезается примерно на 12 символах.
+    name: `${APP_NAME} — ${m.app.titleSuffix}`,
+    // Home-screen label truncates around 12 characters.
     short_name: APP_NAME,
-    description: 'Корпоративный трекер ходьбы на беговой дорожке',
+    description: m.app.description,
     start_url: '/',
     /*
-      `standalone`, а не `fullscreen`: приложение живёт на общем планшете, и
-      системная шторка с часами и уровнем заряда там нужнее, чем лишние 24 px
-      экрана. Адресную строку `standalone` убирает и так.
+      `standalone`, not `fullscreen`: on a shared tablet the system status bar
+      (clock, battery) matters more than 24 extra px; `standalone` already
+      hides the address bar.
     */
     display: 'standalone',
     /*
-      Совпадает с `--background` из globals.css и с `themeColor` в layout.tsx:
-      этим цветом система заливает экран на время запуска, и любое расхождение
-      дало бы вспышку другого цвета перед первым кадром.
+      Must match `--background` in globals.css and `themeColor` in layout.tsx:
+      the OS paints this color during launch, and any mismatch flashes before
+      the first frame.
     */
     background_color: '#17130F',
     theme_color: '#17130F',
-    /*
-      Ориентацию не фиксируем: планшет у дорожки может стоять и вертикально, и
-      горизонтально, а вёрстка резиновая.
-    */
-    lang: 'ru',
+    // Orientation not locked: the tablet may stand either way; layout is fluid.
+    lang: LOCALE,
     dir: 'ltr',
     icons: [
       { src: '/icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
       { src: '/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
       /*
-        Отдельная maskable-иконка обязательна для Android: систему интересует
-        своя форма (круг, squircle, капля), и она обрезает под неё. У обычной
-        иконки при этом срезало бы края дольки — в maskable-варианте рисунок
-        ужат в безопасную зону 60% от стороны.
+        Separate maskable icon is required for Android: the OS crops to its own
+        shape, which would clip the regular icon — the maskable variant keeps
+        the artwork inside the 60% safe zone.
       */
       {
         src: '/icon-maskable-512.png',

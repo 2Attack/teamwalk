@@ -1,19 +1,19 @@
 /**
- * Пиксельная иконка из набора pixelarticons (п. 6.7.4: один набор, без иконочных
- * шрифтов — разная толщина штриха видна сразу). Данные путей — в
- * `lib/icons.generated.ts`, обновляются через `npm run gen:icons`.
+ * Pixel icon from the pixelarticons set (spec § 6.7.4: one set, no icon fonts —
+ * mismatched stroke widths show immediately). Path data lives in
+ * `lib/icons.generated.ts`, refreshed via `npm run gen:icons`.
  *
- * Рендерится инлайновым <svg>, а не <img>: только так работает `currentColor`.
- * У <img> цвет разрешается в чёрный независимо от окружения, и на тёмном фоне
- * приложения иконки становились невидимыми, а на цитрусовой кнопке — грязными.
+ * Rendered as inline <svg>, not <img>: only inline SVG supports `currentColor`.
+ * With <img> the color resolves to black regardless of context — invisible on
+ * the app's dark background, muddy on the citrus button.
  *
- * Обёртка <span> не косметическая: базовые классы shadcn/8bitcn ловят прямых
- * потомков-<svg> (`[&>svg]:size-3!` у Badge, `*:[svg]:row-span-2` у Alert) и
- * переписали бы размер и раскладку. Через span иконка остаётся обычным
- * inline-block-боксом — ровно как раньше с <img>.
+ * The <span> wrapper is not cosmetic: shadcn/8bitcn base classes target direct
+ * <svg> children (`[&>svg]:size-3!` on Badge, `*:[svg]:row-span-2` on Alert)
+ * and would rewrite size and layout. Via span the icon stays a plain
+ * inline-block box.
  *
- * Всегда декоративна: `aria-hidden`. Смысл рядом стоящей кнопки или строки
- * должен читаться и без иконки, иначе её нужно дублировать текстом.
+ * Always decorative: `aria-hidden`. The adjacent button or row must make sense
+ * without the icon; otherwise duplicate it with text.
  */
 import type * as React from 'react';
 
@@ -24,7 +24,7 @@ export type { IconName };
 
 export interface IconProps {
   name: IconName;
-  /** Кратные 8 размеры сохраняют пиксельную сетку чёткой. */
+  /** Sizes in multiples of 8 keep the pixel grid crisp. */
   size?: number;
   className?: string;
 }
@@ -41,7 +41,7 @@ export function Icon({ name, size = 16, className }: IconProps): React.JSX.Eleme
         width={size}
         height={size}
         fill="currentColor"
-        /* Сетка 24×24 при 16 px даёт дробные границы — без этого края мылятся. */
+        /* A 24×24 grid at 16 px yields fractional edges — without this they blur. */
         shapeRendering="crispEdges"
         focusable="false"
         className="block h-full w-full"

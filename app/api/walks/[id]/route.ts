@@ -7,14 +7,15 @@ import { db } from '@/lib/db';
 import { getWalkById } from '@/lib/db/queries/walks';
 import { walks } from '@/lib/db/schema';
 import { uuidSchema } from '@/lib/validation';
+import { fmt, m } from '@/lib/i18n';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 /**
- * DELETE /api/walks/:id — удаление ошибочной записи в 15-минутном окне (п. 7.7).
- * Окно проверяется на сервере, прямо в WHERE: скрытой кнопки в UI недостаточно.
- * Достижения не отзываются — `achievements.walk_id` обнуляется по `on delete set null`.
+ * DELETE /api/walks/:id — delete a mistaken entry within the 15-minute window (spec § 7.7).
+ * The window is enforced server-side, right in the WHERE: a hidden UI button is not enough.
+ * Achievements are not revoked — `achievements.walk_id` nulls via `on delete set null`.
  */
 export async function DELETE(_request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -23,7 +24,7 @@ export async function DELETE(_request: Request, { params }: { params: Promise<{ 
   const walkId = idCheck.data;
 
   return handle<{ ok: boolean } | ApiErrorBody>(async () => {
-    // Константа из конфига, не пользовательский ввод.
+    // Config constant, not user input.
     const window = sql.raw(`interval '${Number(DELETE_WINDOW_MINUTES)} minutes'`);
 
     const deleted = await db
@@ -33,18 +34,18 @@ export async function DELETE(_request: Request, { params }: { params: Promise<{ 
 
     if (deleted.length === 0) {
       const current = await getWalkById(walkId);
-      if (!current) return apiError(404, 'NOT_FOUND', 'Запись не найдена');
+      if (!current) return apiError(404, 'NOT_FOUND', m.apiMessages.entryNotFound);
       if (current.status === 'active') {
         return apiError(
           403,
           'DELETE_WINDOW_EXPIRED',
-          'Прогулка ещё идёт — сначала завершите или отмените её',
+          m.apiMessages.walkStillActive,
         );
       }
       return apiError(
         403,
         'DELETE_WINDOW_EXPIRED',
-        `Удалить запись можно только в течение ${DELETE_WINDOW_MINUTES} минут после завершения`,
+        fmt(m.apiMessages.deleteWindowExpired, { minutes: DELETE_WINDOW_MINUTES }),
       );
     }
 

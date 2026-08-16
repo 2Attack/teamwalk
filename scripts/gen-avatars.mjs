@@ -1,16 +1,16 @@
 #!/usr/bin/env node
 /**
- * Генератор статических пиксельных ассетов TeamWalk (зона ASSETS, п. 6.5 и 6.7 ТЗ).
+ * Static pixel asset generator for TeamWalk (ASSETS zone, spec § 6.5 and 6.7).
  *
- * Что делает:
- *   1. `public/avatars/pixel-01..24.svg` — 24 портрета DiceBear, стиль `pixel-art`.
- *   2. `public/sprites/walk.svg` — спрайтшит 256×32: 8 кадров цикла ходьбы по 32×32.
+ * Produces:
+ *   1. `public/avatars/pixel-01..24.svg` — 24 DiceBear portraits, `pixel-art` style.
+ *   2. `public/sprites/walk.svg` — 256×32 spritesheet: 8 walk-cycle frames, 32×32 each.
  *
- * Сетевых запросов нет и в рантайме их тоже не появляется: DiceBear работает
- * локальным пакетом на этапе генерации, результат коммитится как статика.
- * Спрайт по-прежнему описан матрицами и палитрами прямо здесь.
- * Иконки живут отдельно — см. `scripts/gen-icons.mjs`.
- * Запуск: `npm run gen:assets`.
+ * No network requests at build or runtime: DiceBear runs as a local package at
+ * generation time and the result is committed as static assets.
+ * The sprite is still described by matrices and palettes right here.
+ * Icons live separately — see `scripts/gen-icons.mjs`.
+ * Run: `npm run gen:assets`.
  */
 
 import { mkdirSync, writeFileSync, rmSync, existsSync } from 'node:fs';
@@ -24,10 +24,10 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const PUBLIC = join(ROOT, 'public');
 
 /* ------------------------------------------------------------------ */
-/* Общие утилиты работы с пиксельной сеткой                            */
+/* Shared pixel-grid utilities                                         */
 /* ------------------------------------------------------------------ */
 
-/** Сетка — массив массивов символов; '.' означает прозрачный пиксель. */
+/** A grid is an array of char arrays; '.' means a transparent pixel. */
 const gridFromRows = (rows) => rows.map((r) => r.split(''));
 
 const emptyGrid = (w, h) =>
@@ -43,19 +43,19 @@ const fill = (g, x0, y0, x1, y1, ch) => {
 
 const pxs = (g, list, ch) => list.forEach(([x, y]) => set(g, x, y, ch));
 
-/** Проверка целостности сетки — ловит опечатки в ASCII-матрицах. */
+/** Grid integrity check — catches typos in the ASCII matrices. */
 function assertGrid(g, w, h, name) {
-  if (g.length !== h) throw new Error(`${name}: строк ${g.length}, ожидалось ${h}`);
+  if (g.length !== h) throw new Error(`${name}: ${g.length} rows, expected ${h}`);
   g.forEach((row, y) => {
-    if (row.length !== w) throw new Error(`${name}: строка ${y} длиной ${row.length}, ожидалось ${w}`);
+    if (row.length !== w) throw new Error(`${name}: row ${y} has length ${row.length}, expected ${w}`);
   });
 }
 
 /* ------------------------------------------------------------------ */
-/* Сериализация в SVG                                                  */
+/* SVG serialization                                                   */
 /* ------------------------------------------------------------------ */
 
-/** Каждый пиксель — отдельный <rect width="1" height="1">, сгруппированный по цвету. */
+/** Each pixel is its own <rect width="1" height="1">, grouped by color. */
 function gridToSvg(g, palette, { size, viewBox }) {
   const buckets = new Map();
   for (let y = 0; y < g.length; y++) {
@@ -63,7 +63,7 @@ function gridToSvg(g, palette, { size, viewBox }) {
       const ch = g[y][x];
       if (ch === '.') continue;
       const color = palette[ch];
-      if (!color) throw new Error(`Нет цвета для символа "${ch}"`);
+      if (!color) throw new Error(`No color for char "${ch}"`);
       if (!buckets.has(color)) buckets.set(color, []);
       buckets.get(color).push(`<rect x="${x}" y="${y}" width="1" height="1"/>`);
     }
@@ -75,7 +75,7 @@ function gridToSvg(g, palette, { size, viewBox }) {
   );
 }
 
-/** Для спрайта горизонтальные серии одного цвета склеиваются — иначе файл раздувается. */
+/** For the sprite, horizontal runs of one color are merged — the file bloats otherwise. */
 function gridToSvgRuns(g, palette, { size, viewBox }) {
   const buckets = new Map();
   for (let y = 0; y < g.length; y++) {
@@ -86,7 +86,7 @@ function gridToSvgRuns(g, palette, { size, viewBox }) {
       let end = x;
       while (end + 1 < g[y].length && g[y][end + 1] === ch) end++;
       const color = palette[ch];
-      if (!color) throw new Error(`Нет цвета для символа "${ch}"`);
+      if (!color) throw new Error(`No color for char "${ch}"`);
       if (!buckets.has(color)) buckets.set(color, []);
       buckets.get(color).push(`<rect x="${x}" y="${y}" width="${end - x + 1}" height="1"/>`);
       x = end + 1;
@@ -100,14 +100,14 @@ function gridToSvgRuns(g, palette, { size, viewBox }) {
 }
 
 /* ------------------------------------------------------------------ */
-/* Палитра (согласована с app/globals.css, п. 6.7.3)                   */
+/* Palette (aligned with app/globals.css, spec § 6.7.3)                */
 /* ------------------------------------------------------------------ */
 
 const OUTLINE = '#17130F';
 const CITRUS = '#FF8A00';
 const LIME = '#A3E635';
 
-/** Тона кожи: base / shadow / mouth. Пять тонов при требуемом минимуме четыре. */
+/** Skin tones: base / shadow / mouth. Five tones against the required minimum of four. */
 const SKIN = {
   light: { s: '#F2C89A', d: '#D6A275', m: '#A05C4A' },
   fair: { s: '#E8B48A', d: '#C68E62', m: '#94513F' },
@@ -116,7 +116,7 @@ const SKIN = {
   deep: { s: '#6E4426', d: '#553017', m: '#3E2314' },
 };
 
-/** Цвета волос: base / shadow. */
+/** Hair colors: base / shadow. */
 const HAIR = {
   ginger: ['#C75B12', '#96430C'],
   copper: ['#D9722A', '#A8511A'],
@@ -130,7 +130,7 @@ const HAIR = {
   lightbrown: ['#A87A4C', '#7F5934'],
 };
 
-/** Приглушённые цвета одежды + два акцента интерфейса. */
+/** Muted clothing colors + the two UI accents. */
 const SHIRT = {
   steel: '#3F5B72',
   navy: '#2F4858',
@@ -149,43 +149,43 @@ const SHIRT = {
 };
 
 /* ------------------------------------------------------------------ */
-/* Базовый шаблон портрета 16×16                                       */
+/* Base 16×16 portrait template                                        */
 /* ------------------------------------------------------------------ */
 /*
- *  o — контур        s — кожа       d — тень кожи   m — рот
- *  e — глаз          h — волосы     H — тень волос  b — борода
- *  g — оправа очков  c — головной убор              C — акцент убора
- *  t — футболка      T — акцент одежды
+ *  o — outline       s — skin       d — skin shadow  m — mouth
+ *  e — eye           h — hair       H — hair shadow  b — beard
+ *  g — glasses rim   c — headwear                    C — headwear accent
+ *  t — shirt         T — clothing accent
  *
- *  Голова: контур y=3 и y=11, лицо x=5..10 / y=4..10 — одинаковая посадка
- *  во всех 24 портретах, чтобы набор читался как один сет.
+ *  Head: outline at y=3 and y=11, face at x=5..10 / y=4..10 — identical
+ *  placement across all 24 portraits so the set reads as one collection.
  */
 const BASE = [
   '................', // 0
   '................', // 1
   '................', // 2
-  '.....oooooo.....', // 3  верх черепа
-  '....ohhhhhho....', // 4  волосы
-  '....ohhhhhho....', // 5  волосы / чёлка
-  '....osssssso....', // 6  лоб
-  '....osesseso....', // 7  глаза
-  '....osssdsso....', // 8  нос
-  '....ossmmsso....', // 9  рот
-  '....osssssso....', // 10 подбородок
-  '.....oooooo.....', // 11 линия челюсти
-  '......oddo......', // 12 шея
-  '...otttoottto...', // 13 плечи + ворот
-  '..otttttttttto..', // 14 торс
-  '.otttttttttttto.', // 15 торс
+  '.....oooooo.....', // 3  top of skull
+  '....ohhhhhho....', // 4  hair
+  '....ohhhhhho....', // 5  hair / bangs
+  '....osssssso....', // 6  forehead
+  '....osesseso....', // 7  eyes
+  '....osssdsso....', // 8  nose
+  '....ossmmsso....', // 9  mouth
+  '....osssssso....', // 10 chin
+  '.....oooooo.....', // 11 jawline
+  '......oddo......', // 12 neck
+  '...otttoottto...', // 13 shoulders + collar
+  '..otttttttttto..', // 14 torso
+  '.otttttttttttto.', // 15 torso
 ];
 
 const baseGrid = () => gridFromRows(BASE);
 
-/* ---- причёски ---------------------------------------------------- */
+/* ---- hairstyles -------------------------------------------------- */
 
 /**
- * Объёмная шапка волос: макушка становится волосами, контур уезжает выше.
- * `top` — самый верхний ряд волос (3 — прилизанная причёска, 1 — объёмная).
+ * Voluminous hair cap: the crown becomes hair, the outline moves up.
+ * `top` is the topmost hair row (3 — slicked-back, 1 — voluminous).
  */
 function hairCrown(g, top = 3) {
   fill(g, 4, top, 11, 3, 'h');
@@ -195,8 +195,8 @@ function hairCrown(g, top = 3) {
 }
 
 /**
- * Ниже линии челюсти силуэт головы сужается, и боковой элемент (волосы, капюшон)
- * повисает с дыркой в один пиксель. Эта функция её закрывает.
+ * Below the jawline the head silhouette narrows, leaving a one-pixel hole
+ * under side elements (hair, hood). This function closes it.
  */
 function fillNeckGap(g, yEnd, ch) {
   if (yEnd < 11) return;
@@ -205,7 +205,7 @@ function fillNeckGap(g, yEnd, ch) {
   else pxs(g, [[4, 12], [11, 12]], 'o');
 }
 
-/** Пряди по бокам головы: волосы идут поверх контура лица, снаружи — новый контур. */
+/** Side strands: hair covers the face outline, with a new outline outside it. */
 function hairSides(g, yEnd, yStart = 3) {
   for (let y = yStart; y <= yEnd; y++) {
     set(g, 3, y, 'h');
@@ -220,20 +220,20 @@ function hairSides(g, yEnd, yStart = 3) {
   fillNeckGap(g, yEnd, 'h');
 }
 
-/** Чёлка: ряд 5 полностью закрыт волосами + пряди заходят на висок. */
+/** Bangs: row 5 fully covered by hair, with strands reaching the temple. */
 function bangs(g) {
   fill(g, 5, 5, 10, 5, 'h');
   set(g, 5, 6, 'h');
   set(g, 10, 6, 'H');
 }
 
-/** Короткий ёжик — волос почти нет, виден только тонкий валик. */
+/** Buzz cut — almost no hair, only a thin ridge shows. */
 function crop(g) {
   fill(g, 5, 4, 10, 4, 'h');
   fill(g, 5, 5, 10, 5, 'H');
 }
 
-/** Лысина: ряды волос заменяются кожей, добавляются уши. */
+/** Bald: hair rows become skin, ears are added. */
 function bald(g) {
   fill(g, 5, 4, 10, 4, 's');
   fill(g, 5, 5, 10, 5, 's');
@@ -245,7 +245,7 @@ function ears(g) {
   set(g, 11, 8, 'd');
 }
 
-/** Волосы, выбивающиеся из-под головного убора, — иначе цвет волос не читается. */
+/** Hair peeking out from under headwear — hair color is unreadable otherwise. */
 function sideburns(g, y0 = 6, y1 = 8) {
   for (let y = y0; y <= y1; y++) {
     set(g, 3, y, 'h');
@@ -257,7 +257,7 @@ function sideburns(g, y0 = 6, y1 = 8) {
   fill(g, 12, y1 + 1, 13, y1 + 1, 'o');
 }
 
-/** Хвост сзади: жгут за правым плечом. */
+/** Ponytail: a strand behind the right shoulder. */
 function ponytail(g) {
   hairCrown(g);
   for (let y = 3; y <= 5; y++) {
@@ -275,7 +275,7 @@ function ponytail(g) {
   fill(g, 12, 11, 14, 11, 'o');
 }
 
-/** Две косы вдоль плеч с перехватом-резинкой. */
+/** Two braids along the shoulders with a hair-tie band. */
 function braids(g) {
   hairCrown(g);
   hairSides(g, 9);
@@ -289,7 +289,7 @@ function braids(g) {
   pxs(g, [[2, 14], [3, 14], [12, 14], [13, 14]], 'o');
 }
 
-/** Дреды: пряди с чередованием тона, свисают ниже плеч. */
+/** Dreads: strands with alternating tones, hanging below the shoulders. */
 function dreads(g) {
   hairCrown(g, 1);
   for (let y = 1; y <= 13; y++) {
@@ -304,7 +304,7 @@ function dreads(g) {
   fillNeckGap(g, 13, 'h');
 }
 
-/** Афро: широкий объём вокруг головы. */
+/** Afro: wide volume around the head. */
 function afro(g) {
   hairCrown(g, 1);
   fill(g, 3, 2, 12, 5, 'h');
@@ -316,11 +316,11 @@ function afro(g) {
   fill(g, 12, 1, 13, 1, 'o');
   fill(g, 2, 6, 3, 6, 'o');
   fill(g, 12, 6, 13, 6, 'o');
-  // «крапинки» тени для фактуры
+  // shadow "speckles" for texture
   pxs(g, [[4, 2], [7, 1], [10, 2], [3, 4], [12, 3], [6, 3], [9, 4]], 'H');
 }
 
-/** Кудри: бугристая макушка и завитки у висков. */
+/** Curls: a bumpy crown and ringlets at the temples. */
 function curly(g) {
   hairCrown(g, 1);
   pxs(g, [[4, 0], [5, 0], [8, 0], [9, 0], [10, 0], [11, 0]], 'o');
@@ -338,32 +338,32 @@ function curly(g) {
   fill(g, 12, 7, 13, 7, 'o');
 }
 
-/* ---- головные уборы ---------------------------------------------- */
+/* ---- headwear ---------------------------------------------------- */
 
-/** Бейсболка с козырьком. */
+/** Baseball cap with a visor. */
 function cap(g) {
   fill(g, 5, 2, 10, 2, 'o');
   fill(g, 4, 3, 11, 3, 'c');
   pxs(g, [[3, 3], [12, 3]], 'o');
   fill(g, 5, 4, 10, 4, 'c');
-  fill(g, 3, 5, 12, 5, 'C'); // козырёк
+  fill(g, 3, 5, 12, 5, 'C'); // visor
   pxs(g, [[2, 5], [13, 5], [3, 6], [12, 6]], 'o');
   set(g, 7, 2, 'C');
 }
 
-/** Бейсболка задом наперёд: козырёк уходит назад, спереди — застёжка. */
+/** Backwards baseball cap: visor points back, snapback in front. */
 function capBack(g) {
   fill(g, 5, 2, 10, 2, 'o');
   fill(g, 4, 3, 11, 3, 'c');
   pxs(g, [[3, 3], [12, 3]], 'o');
   fill(g, 5, 4, 10, 4, 'c');
   fill(g, 5, 5, 10, 5, 'C');
-  pxs(g, [[3, 4], [4, 4], [11, 4], [12, 4]], 'C'); // хвосты козырька по бокам
+  pxs(g, [[3, 4], [4, 4], [11, 4], [12, 4]], 'C'); // visor tails on the sides
   pxs(g, [[2, 4], [13, 4], [3, 5], [4, 5], [11, 5], [12, 5]], 'o');
-  pxs(g, [[7, 5], [8, 5]], 'c'); // застёжка
+  pxs(g, [[7, 5], [8, 5]], 'c'); // snapback
 }
 
-/** Вязаная шапка с отворотом. */
+/** Knit beanie with a fold. */
 function beanie(g) {
   fill(g, 6, 1, 9, 1, 'c');
   fill(g, 5, 2, 10, 2, 'c');
@@ -371,24 +371,24 @@ function beanie(g) {
   fill(g, 5, 4, 10, 4, 'c');
   fill(g, 6, 0, 9, 0, 'o');
   pxs(g, [[5, 1], [10, 1], [4, 2], [11, 2], [3, 3], [12, 3]], 'o');
-  fill(g, 4, 5, 11, 5, 'C'); // отворот
+  fill(g, 4, 5, 11, 5, 'C'); // fold
   pxs(g, [[3, 5], [12, 5], [4, 6], [11, 6]], 'o');
 }
 
-/** Бандана с узлом сбоку. */
+/** Bandana with a side knot. */
 function bandana(g) {
   fill(g, 5, 3, 10, 3, 'c');
   fill(g, 4, 4, 11, 4, 'c');
   fill(g, 5, 5, 10, 5, 'C');
   pxs(g, [[3, 4], [12, 4]], 'o');
-  pxs(g, [[12, 5], [13, 5], [13, 6]], 'c'); // узел
+  pxs(g, [[12, 5], [13, 5], [13, 6]], 'c'); // knot
   pxs(g, [[11, 5], [14, 5], [12, 6], [14, 6], [12, 7], [13, 7]], 'o');
-  // волосы выбиваются из-под банданы
+  // hair peeking out from under the bandana
   pxs(g, [[3, 6], [3, 7], [3, 8]], 'h');
   pxs(g, [[2, 6], [2, 7], [2, 8], [2, 9], [3, 9]], 'o');
 }
 
-/** Берет со «стебельком», сдвинутый набок. */
+/** Beret with a "stalk", tilted to one side. */
 function beret(g) {
   fill(g, 4, 3, 11, 3, 'c');
   fill(g, 5, 2, 11, 2, 'c');
@@ -400,41 +400,41 @@ function beret(g) {
   set(g, 8, 0, 'o');
 }
 
-/** Панама с широкими полями. */
+/** Wide-brim bucket hat. */
 function bucketHat(g) {
   fill(g, 5, 2, 10, 2, 'c');
   fill(g, 4, 3, 11, 3, 'c');
   fill(g, 5, 1, 10, 1, 'o');
   pxs(g, [[4, 2], [11, 2], [3, 3], [12, 3]], 'o');
-  fill(g, 2, 4, 13, 4, 'C'); // поля
+  fill(g, 2, 4, 13, 4, 'C'); // brim
   fill(g, 3, 5, 12, 5, 'C');
   pxs(g, [[1, 4], [14, 4], [2, 5], [13, 5], [3, 6], [12, 6]], 'o');
 }
 
-/** Спортивная повязка на лоб. */
+/** Sports headband. */
 function headband(g) {
   fill(g, 5, 4, 10, 4, 'h');
   fill(g, 4, 5, 11, 5, 'c');
   fill(g, 5, 6, 10, 6, 'C');
   pxs(g, [[3, 5], [12, 5], [3, 6], [12, 6]], 'o');
-  pxs(g, [[3, 7], [3, 8]], 'c'); // хвостик завязки
+  pxs(g, [[3, 7], [3, 8]], 'c'); // tie end
   pxs(g, [[2, 7], [2, 8], [2, 9], [3, 9]], 'o');
 }
 
-/** Наушники: дуга над головой, дужки по вискам и амбушюры у ушей. */
+/** Headphones: an arc over the head, arms along the temples, ear cups at the ears. */
 function headphones(g) {
-  fill(g, 4, 1, 11, 1, 'c'); // дуга
+  fill(g, 4, 1, 11, 1, 'c'); // arc
   fill(g, 4, 0, 11, 0, 'o');
   pxs(g, [[3, 1], [12, 1]], 'c');
   pxs(g, [[3, 0], [12, 0]], 'o');
   for (let y = 2; y <= 5; y++) {
-    set(g, 3, y, 'c'); // дужка
+    set(g, 3, y, 'c'); // arm
     set(g, 2, y, 'o');
     set(g, 12, y, 'c');
     set(g, 13, y, 'o');
   }
   for (let y = 6; y <= 8; y++) {
-    set(g, 3, y, 'C'); // амбушюр
+    set(g, 3, y, 'C'); // ear cup
     set(g, 2, y, 'o');
     set(g, 12, y, 'C');
     set(g, 13, y, 'o');
@@ -442,24 +442,25 @@ function headphones(g) {
   pxs(g, [[2, 9], [3, 9], [12, 9], [13, 9]], 'o');
 }
 
-/* ---- лицо -------------------------------------------------------- */
+/* ---- face -------------------------------------------------------- */
 
 /**
- * Очки: верхний ободок с перемычкой идёт по ряду бровей, боковые ободки — ниже.
- * Ряд глаз намеренно не трогаем, иначе на 16 px очки сливаются в чёрную полосу.
+ * Glasses: the top rim with the bridge sits on the brow row, side rims below.
+ * The eye row is intentionally untouched — at 16 px glasses would merge into
+ * a black bar otherwise.
  */
 function glasses(g) {
   fill(g, 5, 6, 10, 6, 'g');
   pxs(g, [[5, 8], [6, 8], [9, 8], [10, 8]], 'g');
 }
 
-/** Усы: рот опускается на ряд ниже. */
+/** Moustache: the mouth drops one row. */
 function moustache(g) {
   fill(g, 6, 9, 9, 9, 'b');
   pxs(g, [[7, 10], [8, 10]], 'm');
 }
 
-/** Борода: бакенбарды, скулы и подбородок; `long` добавляет клин на шею. */
+/** Beard: sideburns, cheekbones, and chin; `long` adds a wedge onto the neck. */
 function beard(g, { long = false } = {}) {
   pxs(g, [[5, 7], [10, 7], [5, 8], [10, 8], [5, 9], [10, 9], [6, 9], [9, 9]], 'b');
   fill(g, 5, 10, 10, 10, 'b');
@@ -470,7 +471,7 @@ function beard(g, { long = false } = {}) {
   }
 }
 
-/* ---- одежда ------------------------------------------------------ */
+/* ---- clothing ---------------------------------------------------- */
 
 function collarPolo(g) {
   pxs(g, [[5, 13], [6, 13], [9, 13], [10, 13]], 'T');
@@ -489,7 +490,7 @@ function collarV(g) {
 }
 
 function cardigan(g) {
-  fill(g, 7, 13, 8, 15, 'T'); // планка на молнии
+  fill(g, 7, 13, 8, 15, 'T'); // zipper placket
   pxs(g, [[4, 13], [11, 13], [3, 14], [12, 14]], 'T');
 }
 
@@ -511,139 +512,140 @@ function hoodie(g) {
 }
 
 /* ------------------------------------------------------------------ */
-/* 24 персонажа — подписи совпадают с lib/avatars.ts                   */
+/* 24 characters — labels describe the drawn portrait (generator-internal; */
+/* the user-facing call signs live in the i18n dictionaries)               */
 /* ------------------------------------------------------------------ */
 
 const AVATARS = [
   {
-    id: 'pixel-01', label: 'Рыжий в кепке',
+    id: 'pixel-01', label: 'Redhead in a cap',
     skin: 'fair', hair: 'ginger', shirt: 'steel', accent: 'navy',
     hat: CITRUS, hatAccent: '#C26A00',
     draw: (g) => { crop(g); cap(g); sideburns(g); stripe(g); },
   },
   {
-    id: 'pixel-02', label: 'Девушка с каре',
+    id: 'pixel-02', label: 'Woman with a bob cut',
     skin: 'light', hair: 'darkbrown', shirt: 'plum', accent: '#8C5064',
     draw: (g) => { hairCrown(g); hairSides(g, 10); bangs(g); collarV(g); },
   },
   {
-    id: 'pixel-03', label: 'Бородач в очках',
+    id: 'pixel-03', label: 'Bearded man in glasses',
     skin: 'tan', hair: 'darkbrown', shirt: 'olive', accent: '#3A5541',
     beard: '#332215',
     draw: (g) => { crop(g); beard(g, { long: true }); glasses(g); collarSweater(g); },
   },
   {
-    id: 'pixel-04', label: 'Кудрявая в наушниках',
+    id: 'pixel-04', label: 'Curly-haired woman in headphones',
     skin: 'brown', hair: 'black', shirt: 'moss', accent: LIME,
     hat: '#2F4858', hatAccent: CITRUS,
     draw: (g) => { curly(g); headphones(g); stripe(g); },
   },
   {
-    id: 'pixel-05', label: 'Блондин в худи',
+    id: 'pixel-05', label: 'Blond man in a hoodie',
     skin: 'light', hair: 'blond', shirt: 'ash', accent: '#7A6A55',
     draw: (g) => { hairCrown(g); bangs(g); hoodie(g); },
   },
   {
-    id: 'pixel-06', label: 'Брюнетка с хвостом',
+    id: 'pixel-06', label: 'Brunette with a ponytail',
     skin: 'fair', hair: 'black', shirt: 'navy', accent: '#4A6E8A',
     draw: (g) => { ponytail(g); bangs(g); collarV(g); },
   },
   {
-    id: 'pixel-07', label: 'Седой в свитере',
+    id: 'pixel-07', label: 'Gray-haired man in a sweater',
     skin: 'light', hair: 'grey', shirt: 'brick', accent: '#9C6350',
     draw: (g) => { crop(g); ears(g); collarSweater(g); },
   },
   {
-    id: 'pixel-08', label: 'Девушка в бандане',
+    id: 'pixel-08', label: 'Woman in a bandana',
     skin: 'tan', hair: 'darkbrown', shirt: 'olive', accent: '#6E8A56',
     hat: '#C1442E', hatAccent: '#94301F',
     draw: (g) => { bandana(g); stripe(g); },
   },
   {
-    id: 'pixel-09', label: 'Парень с усами',
+    id: 'pixel-09', label: 'Man with a mustache',
     skin: 'fair', hair: 'ash', shirt: 'slate', accent: '#6B7E92',
     beard: '#6A5033',
     draw: (g) => { crop(g); ears(g); moustache(g); collarPolo(g); },
   },
   {
-    id: 'pixel-10', label: 'Рыжая с косами',
+    id: 'pixel-10', label: 'Redhead with braids',
     skin: 'light', hair: 'ginger', shirt: 'plum', accent: '#8C5064',
     hatAccent: CITRUS,
     draw: (g) => { braids(g); bangs(g); collarV(g); },
   },
   {
-    id: 'pixel-11', label: 'Лысый в очках',
+    id: 'pixel-11', label: 'Bald man in glasses',
     skin: 'tan', hair: 'darkbrown', shirt: 'ash', accent: '#7D7264',
     draw: (g) => { bald(g); glasses(g); collarPolo(g); },
   },
   {
-    id: 'pixel-12', label: 'Девушка в берете',
+    id: 'pixel-12', label: 'Woman in a beret',
     skin: 'light', hair: 'auburn', shirt: 'sand', accent: '#B08E5F',
     hat: '#6E3B4B', hatAccent: '#8C5064',
     draw: (g) => { hairCrown(g); hairSides(g, 11); beret(g); collarV(g); },
   },
   {
-    id: 'pixel-13', label: 'Спортсмен с повязкой',
+    id: 'pixel-13', label: 'Athlete with a headband',
     skin: 'fair', hair: 'darkbrown', shirt: 'navy', accent: LIME,
     hat: LIME, hatAccent: '#7FB425',
     draw: (g) => { crop(g); headband(g); stripe(g); },
   },
   {
-    id: 'pixel-14', label: 'Тёмненькая в кофте',
+    id: 'pixel-14', label: 'Dark-haired woman in a cardigan',
     skin: 'deep', hair: 'black', shirt: 'brick', accent: '#A8664B',
     draw: (g) => { hairCrown(g); hairSides(g, 9); bangs(g); cardigan(g); },
   },
   {
-    id: 'pixel-15', label: 'Парень с дредами',
+    id: 'pixel-15', label: 'Man with dreadlocks',
     skin: 'brown', hair: 'black', shirt: 'olive', accent: '#6E8A56',
     draw: (g) => { dreads(g); collarV(g); },
   },
   {
-    id: 'pixel-16', label: 'Девушка в панаме',
+    id: 'pixel-16', label: 'Woman in a bucket hat',
     skin: 'light', hair: 'blond', shirt: 'moss', accent: LIME,
     hat: '#7A6A55', hatAccent: '#94826A',
     draw: (g) => { hairCrown(g); hairSides(g, 10); bucketHat(g); stripe(g); },
   },
   {
-    id: 'pixel-17', label: 'Хипстер с бородой',
+    id: 'pixel-17', label: 'Hipster with a beard',
     skin: 'fair', hair: 'darkbrown', shirt: 'rust', accent: '#C97A44',
     beard: '#3D2A1B',
     draw: (g) => { hairCrown(g); bangs(g); beard(g, { long: true }); collarSweater(g); },
   },
   {
-    id: 'pixel-18', label: 'Короткая стрижка',
+    id: 'pixel-18', label: 'Short-cropped hair',
     skin: 'brown', hair: 'black', shirt: 'slate', accent: '#6B7E92',
     draw: (g) => { crop(g); ears(g); collarPolo(g); },
   },
   {
-    id: 'pixel-19', label: 'Парень в бейсболке задом наперёд',
+    id: 'pixel-19', label: 'Man in a backwards cap',
     skin: 'fair', hair: 'ash', shirt: 'ash', accent: '#7D7264',
     hat: '#3F5B72', hatAccent: CITRUS,
     draw: (g) => { crop(g); capBack(g); sideburns(g); stripe(g); },
   },
   {
-    id: 'pixel-20', label: 'Девушка в очках',
+    id: 'pixel-20', label: 'Woman in glasses',
     skin: 'light', hair: 'ash', shirt: 'plum', accent: '#8C5064',
     draw: (g) => { hairCrown(g); hairSides(g, 10); bangs(g); glasses(g); collarV(g); },
   },
   {
-    id: 'pixel-21', label: 'Русый в поло',
+    id: 'pixel-21', label: 'Fair-haired man in a polo',
     skin: 'fair', hair: 'lightbrown', shirt: 'olive', accent: 'cream',
     draw: (g) => { crop(g); ears(g); collarPolo(g); },
   },
   {
-    id: 'pixel-22', label: 'Афропричёска',
+    id: 'pixel-22', label: 'Afro hairstyle',
     skin: 'deep', hair: 'black', shirt: 'citrus', accent: '#C26A00',
     draw: (g) => { afro(g); collarV(g); },
   },
   {
-    id: 'pixel-23', label: 'Парень в шапке',
+    id: 'pixel-23', label: 'Man in a beanie',
     skin: 'tan', hair: 'darkbrown', shirt: 'ash', accent: '#7D7264',
     hat: '#2F4858', hatAccent: LIME,
     draw: (g) => { crop(g); beanie(g); sideburns(g); stripe(g); },
   },
   {
-    id: 'pixel-24', label: 'Девушка с челкой',
+    id: 'pixel-24', label: 'Woman with bangs',
     skin: 'light', hair: 'copper', shirt: 'steel', accent: '#5C7E9A',
     draw: (g) => { hairCrown(g); hairSides(g, 12); bangs(g); collarV(g); },
   },
@@ -672,15 +674,15 @@ function avatarPalette(spec) {
 }
 
 /**
- * Портреты берутся из DiceBear (стиль `pixel-art`), а не из матриц выше.
+ * Portraits come from DiceBear (`pixel-art` style), not from the matrices above.
  *
- * Файлы по-прежнему статика в репозитории, а не запросы к api.dicebear.com:
- * лента рейтинга рисует до десятка аватаров сразу, и внешний хост на этом месте
- * означал бы столько же сторонних запросов на каждый рендер плюс неработающее
- * приложение без сети. Ассеты фиксируются в git ровно так же, как раньше.
+ * Files are still static assets in the repo, not requests to api.dicebear.com:
+ * the leaderboard renders up to a dozen avatars at once, and a remote host here
+ * would mean that many third-party requests per render plus an app that breaks
+ * offline. Assets are committed to git exactly as before.
  *
- * `seed` — сам id пресета, поэтому генерация детерминирована: повторный запуск
- * скрипта даёт те же 24 портрета, а значения `avatar_id` в БД остаются валидными.
+ * `seed` is the preset id itself, so generation is deterministic: rerunning the
+ * script yields the same 24 portraits and `avatar_id` values in the DB stay valid.
  */
 function buildAvatars() {
   const dir = join(PUBLIC, 'avatars');
@@ -688,12 +690,12 @@ function buildAvatars() {
   for (const spec of AVATARS) {
     const svg = createAvatar(pixelArt, {
       seed: spec.id,
-      // Цитрусовая подложка — та же, что раньше давала обёртка аватара (п. 6.7.3).
+      // Citrus backdrop — the same one the avatar wrapper used to provide (spec § 6.7.3).
       backgroundColor: ['ff8a00'],
-      // Круглую маску даёт сам компонент аватара, поэтому в файле углы не режем.
+      // The avatar component applies the round mask itself, so no corner clipping here.
       radius: 0,
-      // Штатная кадрировка DiceBear: голова по центру, плечи снизу — ровно то,
-      // что нужно круглой маске. Рамки вокруг аватара нет, ужимать портрет незачем.
+      // DiceBear's default framing: head centered, shoulders at the bottom — exactly
+      // what the round mask needs. No frame around the avatar, no reason to shrink it.
       scale: 100,
     }).toString();
     writeFileSync(join(dir, `${spec.id}.svg`), svg, 'utf8');
@@ -702,7 +704,7 @@ function buildAvatars() {
 }
 
 /* ------------------------------------------------------------------ */
-/* Спрайтшит ходьбы: 8 кадров 32×32 → 256×32                           */
+/* Walk spritesheet: 8 frames of 32×32 → 256×32                        */
 /* ------------------------------------------------------------------ */
 
 const FRAMES = 8;
@@ -710,20 +712,20 @@ const FRAME = 32;
 
 const WALK_PALETTE = {
   O: OUTLINE,
-  K: '#E8B48A', // кожа
-  D: '#C68E62', // тень кожи
-  M: '#94513F', // рот
-  H: '#4B3423', // волосы
-  S: CITRUS, // футболка
-  s: '#C96C00', // футболка, теневая сторона и ближняя рука
-  a: '#8F4B00', // дальняя рука
-  P: '#3F5B72', // штаны, ближняя нога
-  p: '#2A3E4F', // штаны, дальняя нога
-  B: '#241C16', // обувь
-  b: '#171210', // обувь дальняя
+  K: '#E8B48A', // skin
+  D: '#C68E62', // skin shadow
+  M: '#94513F', // mouth
+  H: '#4B3423', // hair
+  S: CITRUS, // shirt
+  s: '#C96C00', // shirt, shaded side and near arm
+  a: '#8F4B00', // far arm
+  P: '#3F5B72', // pants, near leg
+  p: '#2A3E4F', // pants, far leg
+  B: '#241C16', // shoe
+  b: '#171210', // far shoe
 };
 
-/** Толстая линия по Брезенхему — «кость» конечности шириной t. */
+/** Thick Bresenham line — a limb "bone" of width t. */
 function limb(g, ox, x0, y0, x1, y1, ch, t = 2) {
   const n = Math.max(Math.abs(x1 - x0), Math.abs(y1 - y0), 1);
   for (let i = 0; i <= n; i++) {
@@ -734,12 +736,12 @@ function limb(g, ox, x0, y0, x1, y1, ch, t = 2) {
 }
 
 /**
- * Параметры конечности для фазы p.
- * Помимо синуса добавлена составляющая от косинуса — без неё кадры 1 и 3
- * (и 5 с 7) совпали бы по позиции и цикл выглядел бы четырёхкадровым.
+ * Limb parameters for phase p.
+ * A cosine component is added on top of the sine — without it frames 1 and 3
+ * (and 5 and 7) would share a position and the cycle would look four-frame.
  */
 function limbPhase(p) {
-  const swing = Math.max(0, Math.cos(p)); // нога идёт вперёд — колено согнуто, стопа поднята
+  const swing = Math.max(0, Math.cos(p)); // leg swings forward — knee bent, foot lifted
   return {
     dx: Math.round(4 * Math.sin(p)),
     knee: Math.round(2 * Math.sin(p) + 1.5 * swing),
@@ -752,8 +754,8 @@ function drawLeg(g, ox, prm, dy, chLeg, chShoe) {
   const hipY = 23 + dy;
   const kneeX = 16 + prm.knee;
   const kneeY = 26 + dy;
-  // стопа не участвует в покачивании корпуса: линия земли обязана стоять на месте,
-  // иначе на кадрах с приседанием персонаж «проваливается» под пол
+  // the foot ignores the torso bob: the ground line must stay put, otherwise
+  // the character "sinks" through the floor on crouching frames
   const ankleX = 16 + prm.dx;
   const ankleY = 29 - prm.lift;
   limb(g, ox, hipX, hipY, kneeX, kneeY, chLeg, 2);
@@ -770,7 +772,7 @@ function drawArm(g, ox, prm, dy, ch, chHand) {
   const haY = 21 + dy;
   limb(g, ox, shX, shY, elX, elY, ch, 2);
   limb(g, ox, elX, elY, haX, haY, ch, 2);
-  fill(g, ox + haX, haY + 1, ox + haX + 1, haY + 1, chHand); // кисть
+  fill(g, ox + haX, haY + 1, ox + haX + 1, haY + 1, chHand); // hand
 }
 
 function drawWalkFrame(g, index) {
@@ -778,25 +780,25 @@ function drawWalkFrame(g, index) {
   const p = (index / FRAMES) * Math.PI * 2;
   const near = limbPhase(p);
   const far = limbPhase(p + Math.PI);
-  const dy = Math.abs(near.dx) >= 4 ? 1 : 0; // корпус проседает на максимальном шаге
+  const dy = Math.abs(near.dx) >= 4 ? 1 : 0; // torso dips at full stride
 
-  // дальняя нога и дальняя рука — под корпусом, поэтому рисуются первыми
+  // far leg and far arm sit under the torso, so they are drawn first
   drawLeg(g, ox, far, dy, 'p', 'b');
   drawArm(g, ox, far, dy, 'a', 'D');
 
-  // корпус
+  // torso
   fill(g, ox + 13, 14 + dy, ox + 19, 21 + dy, 'S');
-  fill(g, ox + 13, 14 + dy, ox + 13, 21 + dy, 's'); // теневая сторона спины
+  fill(g, ox + 13, 14 + dy, ox + 13, 21 + dy, 's'); // shaded side of the back
   fill(g, ox + 13, 22 + dy, ox + 19, 23 + dy, 'P');
   for (let y = 14 + dy; y <= 23 + dy; y++) {
     set(g, ox + 12, y, 'O');
     set(g, ox + 20, y, 'O');
   }
 
-  // голова, вид сбоку, лицом вправо
+  // head, side view, facing right
   fill(g, ox + 13, 5 + dy, ox + 20, 12 + dy, 'K');
   fill(g, ox + 13, 5 + dy, ox + 20, 6 + dy, 'H');
-  fill(g, ox + 13, 7 + dy, ox + 15, 10 + dy, 'H'); // затылок
+  fill(g, ox + 13, 7 + dy, ox + 15, 10 + dy, 'H'); // back of the head
   for (let x = 13; x <= 20; x++) {
     set(g, ox + x, 4 + dy, 'O');
     set(g, ox + x, 13 + dy, 'O');
@@ -805,12 +807,12 @@ function drawWalkFrame(g, index) {
     set(g, ox + 12, y, 'O');
     set(g, ox + 21, y, 'O');
   }
-  set(g, ox + 18, 9 + dy, 'O'); // глаз
-  set(g, ox + 20, 11 + dy, 'M'); // рот
-  set(g, ox + 16, 10 + dy, 'D'); // ухо
-  fill(g, ox + 19, 12 + dy, ox + 20, 12 + dy, 'D'); // подбородок
+  set(g, ox + 18, 9 + dy, 'O'); // eye
+  set(g, ox + 20, 11 + dy, 'M'); // mouth
+  set(g, ox + 16, 10 + dy, 'D'); // ear
+  fill(g, ox + 19, 12 + dy, ox + 20, 12 + dy, 'D'); // chin
 
-  // ближняя нога и ближняя рука (рука качается в противофазе к ноге)
+  // near leg and near arm (the arm swings in antiphase to the leg)
   drawLeg(g, ox, near, dy, 'P', 'B');
   drawArm(g, ox, near, dy, 's', 'K');
 }
@@ -827,7 +829,7 @@ function buildWalkSprite() {
 }
 
 /* ------------------------------------------------------------------ */
-/* Уборка дефолтных ассетов Next                                       */
+/* Cleanup of default Next assets                                      */
 /* ------------------------------------------------------------------ */
 
 function cleanDefaults() {
@@ -849,4 +851,4 @@ const avatars = buildAvatars();
 const sprites = buildWalkSprite();
 const removed = cleanDefaults();
 
-console.log(`Аватары: ${avatars} · спрайты: ${sprites} · удалено дефолтных: ${removed}`);
+console.log(`Avatars: ${avatars} · sprites: ${sprites} · defaults removed: ${removed}`);

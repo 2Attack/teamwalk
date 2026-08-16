@@ -1,4 +1,4 @@
-<!-- Первый шаг: след подошвы с каблуком. Сетка 24×24. -->
+<!-- First Step: sole print with a heel. 24×24 grid. -->
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
   <path d="M8 3h8v2H8zM6 5h12v4H6zM7 9h10v2H7zM8 14h8v2H8zM9 16h6v2H9z"/>
 </svg>

@@ -16,6 +16,7 @@ import { Label } from '@/components/ui/8bit/label';
 import { Icon } from '@/components/ui/icon';
 import { ApiError, apiSend, revalidateRoutes } from '@/lib/client/api';
 import { ROUTE_POINTS_MAX } from '@/lib/config';
+import { fmt, m } from '@/lib/i18n';
 import type { RouteAdminDto, RouteCityDto, RouteDraftDto } from '@/lib/types';
 import { routePointsSchema, treadmillNameSchema } from '@/lib/validation';
 
@@ -94,9 +95,9 @@ export function RouteFormDialog({ open, route, llmEnabled, onClose }: RouteFormD
   function validate(): RouteCityDto[] | null {
     const errors: Array<string | null> = points.map((point, index) => {
       const city = treadmillNameSchema.safeParse(point.city);
-      if (!city.success) return city.error.issues[0]?.message ?? 'Некорректное название';
+      if (!city.success) return city.error.issues[0]?.message ?? m.routes.invalidName;
       if (!/^\d+$/.test(point.km.trim())) {
-        return index === 0 ? null : 'Километры — целое число';
+        return index === 0 ? null : m.routes.kmInteger;
       }
       return null;
     });
@@ -111,7 +112,7 @@ export function RouteFormDialog({ open, route, llmEnabled, onClose }: RouteFormD
       .sort((a, b) => a.km - b.km);
     const list = routePointsSchema.safeParse(parsedPoints);
     if (!list.success) {
-      setListError(list.error.issues[0]?.message ?? 'Проверьте точки маршрута');
+      setListError(list.error.issues[0]?.message ?? m.routes.pointsInvalid);
       return null;
     }
     setListError(null);
@@ -180,11 +181,9 @@ export function RouteFormDialog({ open, route, llmEnabled, onClose }: RouteFormD
       <DialogShell>
         <DialogHeader>
           <DialogTitle className="retro text-sm leading-snug break-words sm:text-base">
-            {route ? 'Изменить маршрут' : 'Новый маршрут'}
+            {route ? m.routes.formEditTitle : m.routes.formNewTitle}
           </DialogTitle>
-          <DialogDescription>
-            Города с накопительными километрами от старта. Расстояния ориентировочные.
-          </DialogDescription>
+          <DialogDescription>{m.routes.formDescription}</DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col gap-5">
@@ -196,7 +195,7 @@ export function RouteFormDialog({ open, route, llmEnabled, onClose }: RouteFormD
                   font="normal"
                   className="block text-sm text-text-dim"
                 >
-                  Опишите маршрут
+                  {m.routes.aiLabel}
                 </Label>
                 {/* The input takes the full dialog width; the action sits on
                     its own row below — a long description needs the room. */}
@@ -205,7 +204,7 @@ export function RouteFormDialog({ open, route, llmEnabled, onClose }: RouteFormD
                   font="normal"
                   value={aiPrompt}
                   onChange={(e) => setAiPrompt(e.target.value)}
-                  placeholder="например: от Ярославля до Токио"
+                  placeholder={m.routes.aiPlaceholder}
                   className="min-h-11 w-full text-base"
                   maxLength={300}
                   disabled={aiBusy}
@@ -217,23 +216,21 @@ export function RouteFormDialog({ open, route, llmEnabled, onClose }: RouteFormD
                   onClick={() => void handleGenerate()}
                   disabled={aiBusy || aiPrompt.trim().length < 3}
                 >
-                  {aiBusy ? 'Генерируем…' : 'Сгенерировать'}
+                  {aiBusy ? m.routes.aiGenerating : m.routes.aiGenerate}
                 </Button>
                 {aiError ? (
                   <p role="alert" className="text-sm text-destructive">
                     {aiError}
                   </p>
                 ) : (
-                  <p className="text-xs text-text-dim">
-                    ИИ заполнит черновик — города и километры можно поправить перед сохранением.
-                  </p>
+                  <p className="text-xs text-text-dim">{m.routes.aiHint}</p>
                 )}
               </div>
             )}
 
             <div className="space-y-2">
               <Label htmlFor={nameId} font="normal" className="block text-sm text-text-dim">
-                Название *
+                {m.routes.nameLabel}
               </Label>
               <Input
                 id={nameId}
@@ -253,7 +250,7 @@ export function RouteFormDialog({ open, route, llmEnabled, onClose }: RouteFormD
             </div>
 
             <div className="space-y-3">
-              <p className="text-sm text-text-dim">Города и километры от старта</p>
+              <p className="text-sm text-text-dim">{m.routes.pointsLabel}</p>
               {points.map((point, index) => (
                 <PointRow
                   key={index}
@@ -280,7 +277,7 @@ export function RouteFormDialog({ open, route, llmEnabled, onClose }: RouteFormD
                 disabled={points.length >= ROUTE_POINTS_MAX}
               >
                 <Icon name="plus" size={16} />
-                Добавить город
+                {m.routes.addCity}
               </Button>
             </div>
 
@@ -302,14 +299,14 @@ export function RouteFormDialog({ open, route, llmEnabled, onClose }: RouteFormD
               onClick={onClose}
               disabled={saving}
             >
-              Отмена
+              {m.common.cancel}
             </Button>
             <Button
               type="submit"
               className="min-h-11 w-full text-xs sm:w-auto"
               disabled={saving}
             >
-              {saving ? 'Сохраняем…' : route ? 'Сохранить' : 'Создать'}
+              {saving ? m.common.saving : route ? m.common.save : m.common.create}
             </Button>
           </DialogFooter>
         </form>
@@ -336,8 +333,8 @@ function PointRow({ index, point, error, removable, onChange, onRemove }: PointR
           font="normal"
           value={point.city}
           onChange={(e) => onChange({ city: e.target.value })}
-          placeholder={isStart ? 'Старт' : 'Город'}
-          aria-label={isStart ? 'Стартовый город' : `Город ${index + 1}`}
+          placeholder={isStart ? m.routes.startPlaceholder : m.routes.cityPlaceholder}
+          aria-label={isStart ? m.routes.startCityAria : fmt(m.routes.cityAria, { index: index + 1 })}
           aria-invalid={error !== null}
           className="min-h-11 w-full text-base"
           maxLength={60}
@@ -351,7 +348,7 @@ function PointRow({ index, point, error, removable, onChange, onRemove }: PointR
           step={1}
           value={isStart ? '0' : point.km}
           onChange={(e) => onChange({ km: e.target.value })}
-          aria-label={`Километры до точки ${index + 1}`}
+          aria-label={fmt(m.routes.kmToPointAria, { index: index + 1 })}
           // The start is pinned to 0 km (spec § 6.12.3).
           disabled={isStart}
           className="min-h-11 w-24 shrink-0 text-base"
@@ -362,8 +359,8 @@ function PointRow({ index, point, error, removable, onChange, onRemove }: PointR
             variant="destructive"
             size="icon"
             className="size-11 shrink-0"
-            aria-label={`Убрать город ${point.city || index + 1}`}
-            title="Убрать"
+            aria-label={fmt(m.routes.removeCityAria, { name: point.city || index + 1 })}
+            title={m.routes.removeCityTitle}
             onClick={onRemove}
           >
             <Icon name="trash" size={16} />
@@ -373,7 +370,7 @@ function PointRow({ index, point, error, removable, onChange, onRemove }: PointR
           <span aria-hidden className="size-11 shrink-0" />
         )}
       </div>
-      {isStart && <p className="text-xs text-text-dim">Старт — всегда 0 км.</p>}
+      {isStart && <p className="text-xs text-text-dim">{m.routes.startAlwaysZero}</p>}
       {error && (
         <p role="alert" className="text-sm text-destructive">
           {error}
@@ -386,5 +383,5 @@ function PointRow({ index, point, error, removable, onChange, onRemove }: PointR
 /** Human error text: the API message or a neutral fallback. */
 function errorText(error: unknown): string {
   if (error instanceof ApiError) return error.message;
-  return 'Не удалось связаться с сервером. Проверьте сеть и повторите.';
+  return m.common.networkError;
 }

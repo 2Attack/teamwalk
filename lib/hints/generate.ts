@@ -5,6 +5,7 @@ import {
 } from '@/lib/config';
 import { db } from '@/lib/db';
 import { hintsCache } from '@/lib/db/schema';
+import { LOCALE } from '@/lib/i18n';
 import { shuffle } from '@/lib/random';
 import type { LlmHint } from '@/lib/validation';
 
@@ -16,18 +17,18 @@ import type { SnapshotResult } from './snapshot';
 import { buildSnapshot } from './snapshot';
 
 /**
- * Оркестрация генерации пула (пп. 6.6.4–6.6.7 ТЗ):
- * снапшот → LLM → Zod → постфильтр → правила подбора → подстановка имён → запись.
+ * Pool generation orchestration (spec § 6.6.4–6.6.7):
+ * snapshot → LLM → Zod → post-filter → selection rules → name substitution → write.
  *
- * Функция вызывается только из фона (`waitUntil`), в горячем пути её нет.
+ * Called only from the background (`waitUntil`), never in the hot path.
  */
 
 const PLACEHOLDER = /\{\{(u\d+)\}\}/g;
 
 /**
- * Подстановка реальных имён происходит на нашей стороне (п. 6.6.2). Если модель
- * сослалась на слот, которого нет в снапшоте, фразу выбрасываем: подставить
- * нечего, а «{{u9}}» на общем экране — хуже, чем на одну шутку меньше.
+ * Real names are substituted on our side (spec § 6.6.2). A slot missing from
+ * the snapshot drops the phrase: nothing to substitute, and "{{u9}}" on the
+ * shared screen is worse than one joke fewer.
  */
 function substituteNames(text: string, slotToName: ReadonlyMap<string, string>): string | null {
   let ok = true;
@@ -47,7 +48,7 @@ interface FilterStats {
   rejected: number;
 }
 
-/** Фразы LLM → строки пула. Всё, что не прошло, логируется с причиной (п. 8). */
+/** LLM phrases → pool rows. Everything rejected is logged with a reason (spec § 8). */
 function toPoolRows(hints: readonly LlmHint[], snapshot: SnapshotResult, stats: FilterStats): PoolRow[] {
   const teasedSubjects = new Set<string>();
   const rows: PoolRow[] = [];
@@ -62,9 +63,8 @@ function toPoolRows(hints: readonly LlmHint[], snapshot: SnapshotResult, stats: 
 
     const subject = hint.subject ?? null;
 
-    // Новичков не подкалываем, и про одного человека не больше одной колкой
-    // фразы в сутки: пул живёт час, поэтому дедупликация внутри пула и есть
-    // дедупликация в сутках (п. 6.6.7).
+    // Newcomers are never teased, and at most one tease per person per day:
+    // the pool lives an hour, so in-pool dedup is the daily dedup (spec § 6.6.7).
     if (hint.tone === 'tease' && subject) {
       if (snapshot.newcomerSlots.has(subject)) {
         stats.rejected += 1;
@@ -85,7 +85,7 @@ function toPoolRows(hints: readonly LlmHint[], snapshot: SnapshotResult, stats: 
       continue;
     }
 
-    // Имена длиннее плейсхолдера — проверяем длину ещё раз уже по финальной строке.
+    // Names are longer than placeholders — re-check length on the final string.
     const finalReason = rejectReason(text);
     if (finalReason) {
       stats.rejected += 1;
@@ -107,11 +107,11 @@ function toPoolRows(hints: readonly LlmHint[], snapshot: SnapshotResult, stats: 
 }
 
 /**
- * Добивка статикой до минимума, без дублей по тексту (п. 6.6.4).
+ * Static top-up to the minimum, deduplicated by text (spec § 6.6.4).
  *
- * Каталог тасуем: пул обрезается до `HINTS_POOL_MAX`, поэтому без перемешивания
- * в кэш всегда попадали бы первые фразы массива, а весь его хвост оставался бы
- * мёртвым грузом. `select.ts` тасует статику по той же причине.
+ * The catalog is shuffled: the pool is cut to `HINTS_POOL_MAX`, so without a
+ * shuffle only the first array entries would ever reach the cache and the
+ * tail would stay dead weight. `select.ts` shuffles static for the same reason.
  */
 function topUpWithStatic(rows: readonly PoolRow[]): PoolRow[] {
   if (rows.length >= HINTS_MIN_AFTER_FILTER) return [...rows];
@@ -121,23 +121,25 @@ function topUpWithStatic(rows: readonly PoolRow[]): PoolRow[] {
   return [...rows, ...filler].slice(0, HINTS_POOL_MAX);
 }
 
-/** Запись пула: старые строки удаляются, новые вставляются одним батчем. */
+/** Pool write: old rows deleted, new ones inserted, one batch. */
 async function writePool(rows: readonly PoolRow[]): Promise<void> {
   const values = rows.map((row) => ({
     text: row.text,
     tone: row.tone,
     subjectId: row.subjectId,
     source: row.source,
+    locale: LOCALE,
   }));
 
-  // `db.batch` у neon-http выполняет запросы одной транзакцией: пул не может
-  // остаться пустым между DELETE и INSERT (интерактивных транзакций у HTTP-драйвера нет).
+  // `db.batch` on neon-http runs the queries in one transaction: the pool
+  // cannot be empty between DELETE and INSERT (the HTTP driver has no
+  // interactive transactions).
   await db.batch([db.delete(hintsCache), db.insert(hintsCache).values(values)]);
 }
 
 /**
- * Полная регенерация пула. Возвращает число записанных фраз; `0` означает,
- * что кэш остался прежним — пустой пул не записывается никогда (п. 6.6.5).
+ * Full pool regeneration. Returns the number of rows written; `0` means the
+ * cache was left as is — an empty pool is never written (spec § 6.6.5).
  */
 export async function regenerateHints(): Promise<number> {
   const snapshot = await buildSnapshot();
@@ -145,8 +147,8 @@ export async function regenerateHints(): Promise<number> {
   const stats: FilterStats = { accepted: 0, rejected: 0 };
   let rows: PoolRow[] = [];
 
-  // Рубильник HINTS_ENABLED=false: к LLM не обращаемся вообще, пул собирается
-  // из статического каталога (критерий приёмки п. 12).
+  // HINTS_ENABLED=false kill switch: no LLM call at all, the pool is built
+  // from the static catalog (acceptance criterion, spec § 12).
   const useLlm = HINTS_ENABLED && snapshot.snapshot.participants.length > 0;
 
   if (useLlm) {
@@ -170,7 +172,7 @@ export async function regenerateHints(): Promise<number> {
   const pool = topUpWithStatic(rows).slice(0, HINTS_POOL_MAX);
 
   if (pool.length === 0) {
-    console.warn('[hints] пустой пул не записан, кэш оставлен прежним');
+    console.warn('[hints] empty pool not written, cache left as is');
     return 0;
   }
 

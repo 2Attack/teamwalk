@@ -1,11 +1,11 @@
 /*
-  Правка относительно версии из реестра 8bitcn: она написана под shadcn на Radix,
-  а в проекте стиль `base-nova` — примитивы на Base UI (см. components.json).
-  Отсюда два отличия: тип берётся у самого `PopoverContent` вместо
-  `@radix-ui/react-popover`, а `PopoverAnchor` снят — в Base UI его нет.
+  Patched vs the 8bitcn registry version, which targets shadcn on Radix; this
+  project uses the `base-nova` style — Base UI primitives (see components.json).
+  Two differences: the type comes from `PopoverContent` itself instead of
+  `@radix-ui/react-popover`, and `PopoverAnchor` is removed — Base UI has none.
 
-  Осторожно: `npx shadcn add @8bitcn/popover` перезаписывает файл и возвращает
-  и то, и другое — после установки правку нужно повторить.
+  Careful: `npx shadcn add @8bitcn/popover` overwrites this file and brings
+  both back — reapply the patch after installing.
 */
 import { type VariantProps, cva } from "class-variance-authority";
 

@@ -11,6 +11,7 @@ import {
 import { deleteTreadmill, updateTreadmill } from '@/lib/db/queries/treadmills';
 import type { TreadmillAdminDto } from '@/lib/types';
 import { patchTreadmillSchema, uuidSchema } from '@/lib/validation';
+import { m } from '@/lib/i18n';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -26,11 +27,11 @@ export function PATCH(request: Request, context: RouteContext) {
 
     try {
       const updated = await updateTreadmill(id, patch);
-      if (!updated) return apiError(404, 'NOT_FOUND', 'Дорожка не найдена');
+      if (!updated) return apiError(404, 'NOT_FOUND', m.apiMessages.treadmillNotFound);
       return NextResponse.json(updated);
     } catch (error) {
       if (isUniqueViolation(error, 'treadmills_name_uniq')) {
-        return apiError(409, 'NAME_TAKEN', 'Дорожка с таким названием уже есть', {
+        return apiError(409, 'NAME_TAKEN', m.apiMessages.treadmillNameTaken, {
           field: 'name',
         });
       }
@@ -50,14 +51,14 @@ export function DELETE(_request: Request, context: RouteContext) {
 
     try {
       const deleted = await deleteTreadmill(id);
-      if (!deleted) return apiError(404, 'NOT_FOUND', 'Дорожка не найдена');
+      if (!deleted) return apiError(404, 'NOT_FOUND', m.apiMessages.treadmillNotFound);
       return NextResponse.json({ ok: true });
     } catch (error) {
       if (isForeignKeyViolation(error, 'walks_treadmill_id')) {
         return apiError(
           409,
           'TREADMILL_HAS_WALKS',
-          'По этой дорожке уже есть прогулки — вместо удаления выключите её',
+          m.apiMessages.treadmillHasWalks,
         );
       }
       throw error;

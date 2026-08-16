@@ -1,34 +1,46 @@
 import { APP_NAME, STALE_WALK_HOURS } from '@/lib/config';
-import { formatDuration, formatKm, plural } from '@/lib/format';
+import { formatDuration, formatKm } from '@/lib/format';
+import { LOCALE } from '@/lib/i18n';
+import type { Locale } from '@/lib/i18n';
+
+import { en } from './texts/en';
+import { es } from './texts/es';
+import { ru } from './texts/ru';
+
+import type { TelegramTexts, TelegramUiTexts } from './texts/types';
 
 /**
- * Тексты Telegram-уведомлений (п. 6.10.4 ТЗ). Чистый модуль без БД.
+ * Telegram notification texts (TZ 6.10.4). Pure module, no DB access.
  *
- * Тон — хинтовый (п. 6.6): шутим про ходьбу, дорожку, кресло и статистику —
- * никогда про тело, вес, еду, здоровье и возраст. По несколько вариантов на
- * событие, выбор случайный; LLM в этом контуре не используется — объём мал,
- * а цена ошибки в личке выше, чем в общей ленте.
+ * Tone follows the hints contract (TZ 6.6): jokes about walking, the treadmill,
+ * the chair and stats — never about body, weight, food, health or age. Several
+ * variants per event, picked at random; no LLM in this loop — the volume is
+ * small and the cost of a mistake in a DM is higher than in the shared feed.
+ *
+ * Locale-specific phrasing lives in `./texts/{ru,en,es}.ts` (one shared
+ * interface); this module keeps all branching and delegates content to the
+ * module of the active `LOCALE`.
  */
 
-/** Случайный вариант — маленький тираж, Фишер — Йетс здесь избыточен. */
+const ALL: Record<Locale, TelegramTexts> = { en, es, ru };
+
+/** Content of the active locale. */
+const t: TelegramTexts = ALL[LOCALE];
+
+/** Short UI strings (buttons, toasts, menu labels) of the active locale. */
+export const uiText: TelegramUiTexts = t.ui;
+
+/** Random variant — tiny pools, Fisher–Yates would be overkill here. */
 function pick<T>(variants: readonly T[]): T {
   return variants[Math.floor(Math.random() * variants.length)];
 }
 
-const days = (n: number): string => `${n} ${plural(n, 'день', 'дня', 'дней')}`;
-const workdays = (n: number): string =>
-  `${n} ${plural(n, 'рабочий день', 'рабочих дня', 'рабочих дней')}`;
-
-/** Старт прогулки — тихое, с кнопкой «Это не я» (п. 6.10.4). */
+/** Walk started — silent, with an "It's not me" button (TZ 6.10.4). */
 export function startText(i: { speedKmh: number; treadmillName: string }): string {
-  return pick([
-    `🚶 Поехали: ${i.speedKmh} км/ч на «${i.treadmillName}».`,
-    `🚶 Старт: «${i.treadmillName}», ${i.speedKmh} км/ч. Кресло остаётся в одиночестве.`,
-    `🚶 «${i.treadmillName}» пришла в движение — ${i.speedKmh} км/ч. Если это не ты, кнопка ниже.`,
-  ]);
+  return pick(t.startVariants(i));
 }
 
-/** Финиш — главное сообщение продукта: км, время, серия, место, достижения. */
+/** Finish — the product's main message: km, time, streak, rank, achievements. */
 export function finishText(i: {
   distanceKm: number;
   durationSec: number;
@@ -40,193 +52,126 @@ export function finishText(i: {
 }): string {
   const lines: string[] = [];
 
-  let stats = `🏁 ${formatKm(i.distanceKm)} км за ${formatDuration(i.durationSec)} (${i.avgSpeedKmh} км/ч).`;
-  if (i.streakDays > 0) stats += ` Серия — ${days(i.streakDays)}.`;
+  let stats = t.finishStats({
+    distance: formatKm(i.distanceKm),
+    duration: formatDuration(i.durationSec),
+    avgSpeedKmh: i.avgSpeedKmh,
+  });
+  if (i.streakDays > 0) stats += t.finishStreakTail(i.streakDays);
   lines.push(stats);
 
-  // Про место — только когда есть чем гордиться: падение в рейтинге не комментируем.
+  // Mention the rank only when there is something to be proud of: a drop in
+  // the leaderboard gets no commentary.
   if (i.rankPrevious !== null && i.rankCurrent < i.rankPrevious) {
-    lines.push(`📈 Ты поднялся на ${i.rankCurrent}-е место.`);
+    lines.push(t.rankUpLine(i.rankCurrent));
   }
 
   for (const title of i.achievements) {
-    lines.push(`🏅 Новое достижение: «${title}»`);
+    lines.push(t.achievementLine(title));
   }
 
-  lines.push(
-    pick([
-      'Кресло сегодня проиграло всухую.',
-      'Дорожка передаёт спасибо.',
-      'Статистика пополнена — диктор доволен.',
-      'Ещё одна строка в летописи ходьбы.',
-    ]),
-  );
+  lines.push(pick(t.finishClosingVariants));
 
   return lines.join('\n');
 }
 
-/** Автозакрытие (п. 7.6): дистанция не записана — человек должен узнать сразу. */
+/** Autoclose (TZ 7.6): distance was not recorded — the person must know at once. */
 export function autocloseText(): string {
-  return pick([
-    `⏸ Прогулка закрыта автоматически: прошло ${STALE_WALK_HOURS} часов, а «Финиш» так никто и не нажал. Дистанция не записана.`,
-    `⏸ Дорожка ${STALE_WALK_HOURS} часов ждала кнопку «Финиш» и сдалась — прогулка закрыта автоматически, дистанция не записана.`,
-    `⏸ Прогулка висела дольше ${STALE_WALK_HOURS} часов и закрыта автоматически. Километры не записаны — в следующий раз жми «Финиш».`,
-  ]);
+  return pick(t.autocloseVariants(STALE_WALK_HOURS));
 }
 
-/** «Была занята 40 минут» / «1 ч 20 мин»; null — меньше минуты, фразу опускаем. */
+/** "was busy for 40 minutes" / "1 h 20 min"; null — under a minute, phrase omitted. */
 function busyFor(busySec: number): string | null {
-  // floor, не round: 40 секунд — это ещё не «1 минута», фразу честнее опустить.
+  // floor, not round: 40 seconds is not "1 minute" yet — omitting is more honest.
   const min = Math.floor(busySec / 60);
   if (min < 1) return null;
-  if (min < 60) return `${min} ${plural(min, 'минуту', 'минуты', 'минут')}`;
+  if (min < 60) return t.busyMinutes(min);
   const h = Math.floor(min / 60);
   const m = min % 60;
-  return m > 0 ? `${h} ч ${m} мин` : `${h} ${plural(h, 'час', 'часа', 'часов')}`;
+  return m > 0 ? t.busyHoursMinutes(h, m) : t.busyHoursExact(h);
 }
 
 /**
- * «Дорожка освободилась» (п. 6.10.4): скоропортящееся событие, формулировка —
- * «только что освободилась», а не «свободна сейчас»: это подсказка, не бронь.
+ * "Treadmill freed up" (TZ 6.10.4): a perishable event, worded as "just freed
+ * up" rather than "is free now" — it is a nudge, not a reservation.
  */
 export function freeText(i: { treadmillName: string; busySec: number }): string {
   const busy = busyFor(i.busySec);
-  const tail = busy !== null ? ` — была занята ${busy}` : '';
-  return pick([
-    `🟢 «${i.treadmillName}» только что освободилась${tail}. Кто первый?`,
-    `🟢 «${i.treadmillName}» снова свободна${tail}. Очередь рассосалась — момент твой.`,
-    `🟢 Место на «${i.treadmillName}» освободилось${tail}. Двадцать минут шага сами себя не пройдут.`,
-  ]);
+  const busyTail = busy !== null ? t.busyTail(busy) : '';
+  return pick(t.freeVariants({ treadmillName: i.treadmillName, busyTail }));
 }
 
 /**
- * Напоминание «пора размяться» (п. 6.10.4): текст обязан давать конкретный
- * повод, а не констатировать вину. Серия под угрозой — игровая механика;
- * «вы не ходили N дней» — табель учёта, так нельзя.
+ * "Time to stretch" reminder (TZ 6.10.4): the text must give a concrete reason,
+ * not state guilt. A streak at risk is game mechanics; "you haven't walked for
+ * N days" is a timesheet — not allowed.
  */
 export function remindText(i: {
   idleWorkdays: number;
   streakDays: number;
   freezesLeft: number;
 }): string {
-  if (i.streakDays > 0) {
-    const streak = days(i.streakDays);
-    const freezes = `${plural(i.freezesLeft, 'Осталась', 'Осталось', 'Осталось')} ${i.freezesLeft} ${plural(i.freezesLeft, 'заморозка', 'заморозки', 'заморозок')}.`;
-    return pick([
-      `Серия ${streak} под угрозой — сегодня решается. ${freezes}`,
-      `Дорожка стоит ${workdays(i.idleWorkdays)} и смотрит в окно. Серия ${streak} пока цела — сегодня последний шанс. ${freezes}`,
-      `${workdays(i.idleWorkdays)} без прогулок, а серия ${streak} всё ещё держится. Один заход сегодня — и она живёт дальше. ${freezes}`,
-    ]);
-  }
-
-  return pick([
-    `Дорожка не видела тебя ${workdays(i.idleWorkdays)}. Она не обижается — просто медленно покрывается пылью.`,
-    `Кресло празднует ${workdays(i.idleWorkdays)} безраздельной власти. Дорожка предлагает государственный переворот.`,
-    `${workdays(i.idleWorkdays)} тишины в статистике. Двадцать минут шага — и график снова оживёт.`,
-  ]);
+  if (i.streakDays > 0) return pick(t.remindStreakVariants(i));
+  return pick(t.remindIdleVariants(i.idleWorkdays));
 }
 
-/** Недельный дайджест — понедельник, тихое (п. 6.10.4). */
+/** Weekly digest — Mondays, silent (TZ 6.10.4). */
 export function digestText(i: {
   weekKm: number;
-  /** null — маршрут не выбран (п. 6.12.6): дайджест обходится без географии. */
+  /** null — no route selected (TZ 6.12.6): the digest skips geography. */
   passedCity: string | null;
   top: Array<{ name: string; km: number }>;
   selfRank: number | null;
   selfKm: number;
 }): string {
   const lines: string[] = [];
+  const weekKm = formatKm(i.weekKm);
 
   lines.push(
     i.passedCity === null
-      ? pick([
-          `Неделя закрыта: команда +${formatKm(i.weekKm)} км 🎉`,
-          `Итоги недели: +${formatKm(i.weekKm)} км на общий счёт.`,
-        ])
-      : pick([
-          `Неделя закрыта: команда +${formatKm(i.weekKm)} км. Последняя отметка на маршруте — ${i.passedCity} 🎉`,
-          `Итоги недели: +${formatKm(i.weekKm)} км на общий счёт. На карте команда прошла отметку «${i.passedCity}».`,
-          `Ещё ${formatKm(i.weekKm)} км позади. Маршрут показывает: ${i.passedCity} уже за спиной.`,
-        ]),
+      ? pick(t.digestHeadVariants(weekKm))
+      : pick(t.digestHeadCityVariants(weekKm, i.passedCity)),
   );
 
   if (i.top.length > 0) {
-    lines.push(`Топ-3: ${i.top.map((t) => `${t.name} ${formatKm(t.km)}`).join(' · ')}.`);
+    lines.push(t.digestTopLine(i.top.map((x) => `${x.name} ${formatKm(x.km)}`).join(' · ')));
   }
 
   if (i.selfRank !== null) {
-    lines.push(`Ты — ${i.selfRank}-й (${formatKm(i.selfKm)} км).`);
+    lines.push(t.digestSelfLine(i.selfRank, formatKm(i.selfKm)));
   } else {
-    lines.push(
-      pick([
-        'Твоя неделя прошла без километров — новая начинается с чистого листа.',
-        'У тебя на этой неделе 0.00 км. Дорожка готова это исправить в любой момент.',
-      ]),
-    );
+    lines.push(pick(t.digestSelfZeroVariants));
   }
 
   return lines.join('\n');
 }
 
-/** Приветствие после привязки: что будет приходить и как этим управлять. */
+/** Greeting after linking: what will arrive and how to control it. */
 export function welcomeText(name: string): string {
-  const hello = pick([
-    `Привет, ${name}! Telegram привязан — теперь дорожка умеет писать первой.`,
-    `${name}, на связи! Карточка привязана, канал открыт.`,
-    `Готово, ${name}: этот чат теперь знает о твоих прогулках всё.`,
-  ]);
-  return [
-    hello,
-    '',
-    'Что буду присылать:',
-    '• старт — с кнопкой «Это не я», если стартовали за тебя',
-    '• финиш: километры, серия, достижения',
-    '• напоминание, если дорожка заскучала',
-    '• «дорожка освободилась», когда были заняты все',
-    '• недельный дайджест по понедельникам',
-    '',
-    'Каждая категория выключается отдельно: /settings. Пауза — /mute, отвязка — /stop.',
-  ].join('\n');
+  return [pick(t.welcomeHelloVariants(name)), '', ...t.welcomeBodyLines].join('\n');
 }
 
-/** В вытесненный чат при перепривязке (п. 6.10.3). */
+/** Sent to the displaced chat on relink (TZ 6.10.3). */
 export function relinkedText(name: string): string {
-  return pick([
-    `Карточка «${name}» теперь привязана к другому Telegram — уведомления сюда больше не ходят. Если это сюрприз, возьми новую ссылку в приложении и верни всё как было.`,
-    `Связь с карточкой «${name}» переехала в другой чат. Уведомления здесь остановлены; вернуть привязку можно свежей ссылкой из приложения.`,
-  ]);
+  return pick(t.relinkedVariants(name));
 }
 
-/** Ответ на незнакомые сообщения в привязанном чате. */
+/** Reply to unrecognized messages in a linked chat. */
 export function helpText(): string {
-  return [
-    'Я умею немного, но по делу:',
-    '/settings — какие уведомления присылать',
-    '/mute — заглушить на день, неделю или навсегда',
-    '/stop — отвязать Telegram',
-    '',
-    `Всё остальное — старт, финиш, рейтинг — живёт в приложении ${APP_NAME}.`,
-  ].join('\n');
+  return t.helpLines(APP_NAME).join('\n');
 }
 
-/** Прощание после `/stop`. */
+/** Farewell after `/stop`. */
 export function farewellText(): string {
-  return pick([
-    'Отвязал. Дорожка не в обиде — она вообще редко обижается. Захочешь вернуться — свежая ссылка ждёт в приложении.',
-    'Связь разорвана, статистика цела. Новая ссылка привязки — в карточке участника, когда надумаешь.',
-    'Больше ни одного сообщения. Дорожка будет молча скучать; ссылка на возвращение — в приложении.',
-  ]);
+  return pick(t.farewellVariants);
 }
 
-/** Ачивка, начисленная вне финиша (например, «На связи» при привязке). */
+/** Achievement granted outside a finish (e.g. "Connected" on linking). */
 export function achievementUnlockedText(title: string): string {
-  return `🏅 Новое достижение: «${title}»`;
+  return t.achievementUnlocked(title);
 }
 
-/** Повторный или просроченный токен привязки (п. 6.10.3). */
+/** Reused or expired linking token (TZ 6.10.3). */
 export function staleTokenText(): string {
-  return pick([
-    'Ссылка устарела или уже использована. Возьми свежую в приложении — в карточке участника.',
-    'Этот токен своё отжил: ссылки привязки одноразовые. Новая ждёт в приложении, в карточке участника.',
-  ]);
+  return pick(t.staleTokenVariants);
 }

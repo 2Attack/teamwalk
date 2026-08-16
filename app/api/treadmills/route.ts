@@ -6,6 +6,7 @@ import { listActiveTreadmills } from '@/lib/db/queries/walks';
 import type { TreadmillAdminDto, TreadmillDto } from '@/lib/types';
 import { createTreadmillSchema } from '@/lib/validation';
 import { closeStaleWalks } from '@/lib/walks/autoclose';
+import { m } from '@/lib/i18n';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -39,7 +40,7 @@ export async function POST(request: Request) {
       // The `treadmills_name_uniq` index is the source of truth for name
       // conflicts — no pre-check, races are caught by the DB error.
       if (isUniqueViolation(error, 'treadmills_name_uniq')) {
-        return apiError(409, 'NAME_TAKEN', 'Дорожка с таким названием уже есть', {
+        return apiError(409, 'NAME_TAKEN', m.apiMessages.treadmillNameTaken, {
           field: 'name',
         });
       }

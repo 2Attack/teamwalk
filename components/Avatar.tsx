@@ -1,14 +1,13 @@
 'use client';
 
 /**
- * Аватар участника (п. 6.5) — `Avatar` из 8bitcn в варианте `pixel`:
- * круглая пиксельная рамка-«лесенка» рисуется самой библиотекой, поэтому своей
- * цитрусовой обводки здесь больше нет.
+ * Member avatar (spec § 6.5) — 8bitcn `Avatar`, `pixel` variant.
  *
- * Портрет — статика из `/public/avatars/{id}.svg`, сгенерированная DiceBear
- * (`npm run gen:assets`). Fallback обязателен в двух случаях: пресет удалили из
- * каталога после релиза (`isAvatarId` → false) и файл не отдался. Битая картинка
- * в строке рейтинга выглядит как поломка приложения, поэтому рисуется силуэт.
+ * Portrait is static DiceBear output from `/public/avatars/{id}.svg`
+ * (`npm run gen:assets`). Fallback is required for two cases: the preset was
+ * removed from the catalog after release (`isAvatarId` → false) or the file
+ * failed to load — a broken image in a leaderboard row looks like an app bug,
+ * so a silhouette is drawn instead.
  */
 import * as React from 'react';
 
@@ -18,33 +17,28 @@ import { cn } from '@/lib/cn';
 
 export interface AvatarProps {
   avatarId: string;
-  /** Имя участника. Задаёт `alt`; без него аватар декоративен. */
+  /** Member name; sets `alt`. Without it the avatar is decorative. */
   name?: string;
   size?: number;
   className?: string;
 }
 
 /**
- * Обод 8bitcn скрыт.
- *
- * Рамку библиотека рисует плашками внутри первого дочернего div обёртки, и
- * отключить её пропом нельзя: `pixel` даёт круглую «лесенку», `default` и `retro` —
- * четыре планки по краям. Поэтому контейнер рамки просто прячется. Селектор
- * попадает и на Root, но там среди детей нет ни одного div (картинка и fallback),
- * так что задеть ему нечего.
+ * Hides the 8bitcn frame. The library draws it inside the wrapper's first
+ * child div and offers no prop to disable it, so the frame container is hidden.
+ * The selector also hits Root, but its children include no divs, so nothing breaks.
  */
 const NO_FRAME = '[&>div:first-child]:hidden';
 
 /**
- * Квадратная маска вместо круглой.
- *
- * `variant="pixel"` жёстко ставит `rounded-full` и на самом аватаре, и на
- * fallback-силуэте, а нулевое скругление — общее правило проекта (`--radius: 0`,
- * п. 6.7.1). Классы идут после библиотечных, поэтому tailwind-merge оставляет наши.
+ * Square mask instead of round: `variant="pixel"` hardcodes `rounded-full` on
+ * both the avatar and the fallback, while zero radius is a project-wide rule
+ * (`--radius: 0`, spec § 6.7.1). Our classes come after the library's, so
+ * tailwind-merge keeps ours.
  */
 const SQUARE = 'rounded-none';
 
-/** Нейтральный силуэт: голова и плечи по пиксельной сетке 16×16, без внешних файлов. */
+/** Neutral silhouette: head and shoulders on a 16×16 pixel grid, no external files. */
 function FallbackSilhouette(): React.JSX.Element {
   return (
     <svg viewBox="0 0 16 16" className="h-full w-full" aria-hidden focusable="false">
@@ -60,10 +54,9 @@ export function Avatar({ avatarId, name, size = 40, className }: AvatarProps): R
 
   return (
     /*
-      Размер держит эта обёртка, а не сам компонент: `AvatarPicker` растягивает
-      аватар по ячейке сетки классами `h-full!`/`w-full!`, и они должны попадать
-      на тот же элемент, что и числовой размер. Внутренний `h-full w-full`
-      уводит портрет 8bitcn под этот бокс.
+      This wrapper owns the size, not the component itself: `AvatarPicker`
+      stretches the avatar with `h-full!`/`w-full!`, which must land on the same
+      element as the numeric size.
     */
     <span className={cn('inline-flex shrink-0', className)} style={{ width: size, height: size }}>
       <BitAvatar variant="pixel" font="normal" className={cn('h-full w-full', NO_FRAME, SQUARE)}>
@@ -77,9 +70,9 @@ export function Avatar({ avatarId, name, size = 40, className }: AvatarProps): R
           />
         ) : null}
         {/*
-          Radix показывает fallback, пока картинка не загрузилась и если она упала.
-          `delayMs` не ставим: на локальной статике мигание не успевает случиться,
-          а без fallback пустой круг читался бы как сломанный аватар.
+          Radix shows the fallback while the image loads and if it fails.
+          No `delayMs`: local static assets load too fast to flicker, and an
+          empty circle without a fallback would read as a broken avatar.
         */}
         <AvatarFallback className={cn('bg-bg-panel', SQUARE)}>
           <FallbackSilhouette />

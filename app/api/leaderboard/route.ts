@@ -11,14 +11,14 @@ export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 /**
- * `GET /api/leaderboard?period=week|month|all` — агрегированный рейтинг (п. 5.3).
- * Произвольный период: `?period=custom&from=YYYY-MM-DD&to=YYYY-MM-DD` (обе даты включительно).
+ * `GET /api/leaderboard?period=week|month|all` — aggregated ranking (spec § 5.3).
+ * Custom period: `?period=custom&from=YYYY-MM-DD&to=YYYY-MM-DD` (both inclusive).
  */
 export async function GET(request: Request) {
   return handle<LeaderboardDto | ApiErrorBody>(async () => {
-    // Ленивый фолбэк cron-рассылки (п. 6.10.5): если Vercel Cron не сработал,
-    // обход запускается при обращении к API — не чаще раза в час, под мьютексом
-    // `notify_meta`; сам уходит в waitUntil, ответ не задерживает.
+    // Lazy fallback for the cron sweep (spec § 6.10.5): if Vercel Cron didn't
+    // fire, run on API access — at most hourly, under the `notify_meta` mutex,
+    // in waitUntil so the response isn't delayed.
     ensureNotifySweep();
 
     const params = new URL(request.url).searchParams;
@@ -29,8 +29,8 @@ export async function GET(request: Request) {
     });
     if (!parsed.success) return validationError(parsed.error);
 
-    // Забытые прогулки закрываются перед выдачей рейтинга (п. 7.6):
-    // иначе они висят «активными» и не попадают в суммы.
+    // Close stale walks before ranking (spec § 7.6): otherwise they stay
+    // "active" and are excluded from totals.
     try {
       await closeStaleWalks();
     } catch (error) {

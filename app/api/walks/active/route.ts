@@ -10,8 +10,8 @@ export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 /**
- * GET /api/walks/active?userId= — активная прогулка участника или `null`.
- * `startedAt` — источник истины для таймера на клиенте (п. 5.2).
+ * GET /api/walks/active?userId= — the member's active walk or `null`.
+ * `startedAt` is the source of truth for the client timer (spec § 5.2).
  */
 export async function GET(request: Request) {
   const parsed = uuidSchema.safeParse(new URL(request.url).searchParams.get('userId') ?? '');
@@ -19,7 +19,7 @@ export async function GET(request: Request) {
   const userId = parsed.data;
 
   return handle<ActiveWalkDto | null | ApiErrorBody>(async () => {
-    // Ленивое автозакрытие: забытая прогулка не должна показываться активной (п. 7.6).
+    // Lazy autoclose: a forgotten walk must not show as active (spec § 7.6).
     await closeStaleWalks();
 
     const walk: ActiveWalkDto | null = await getActiveWalk(userId);

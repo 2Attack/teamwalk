@@ -1,19 +1,18 @@
 #!/usr/bin/env node
 /**
- * Генератор иконочного набора TeamWalk (п. 6.7.4 ТЗ: один набор, без иконочных
- * шрифтов).
+ * TeamWalk icon set generator (spec § 6.7.4: a single set, no icon fonts).
  *
- * Источник — pixelarticons (https://pixelarticons.com, MIT, пакет `pixelarticons`):
- * готовые пиксельные иконки 24×24 на сетке 1×1. Раньше набор рисовался ASCII-матрицами
- * прямо в `gen-avatars.mjs` — свой велосипед на 14 иконок, который пришлось бы
- * дорисовывать при каждой новой кнопке.
+ * Source — pixelarticons (https://pixelarticons.com, MIT, `pixelarticons`
+ * package): ready-made 24×24 pixel icons on a 1×1 grid. The set used to be
+ * hand-drawn as ASCII matrices in `gen-avatars.mjs` — a homegrown 14-icon
+ * wheel that had to be extended for every new button.
  *
- * Что делает: собирает `lib/icons.generated.ts` — карту «имя → массив path d».
- * Данные инлайнятся в бандл, а не лежат в `/public`: иконка рендерится как <svg>
- * с `fill="currentColor"` и потому наследует цвет текста (у <img> currentColor
- * разрешается в чёрный — на тёмном фоне приложения иконки пропадали).
+ * Builds `lib/icons.generated.ts` — a "name → array of path d" map. The data
+ * is inlined into the bundle rather than served from `/public`: icons render
+ * as <svg> with `fill="currentColor"` and inherit the text color (in <img>,
+ * currentColor resolves to black — icons vanished on the app's dark background).
  *
- * Запуск: `npm run gen:icons`.
+ * Run: `npm run gen:icons`.
  */
 
 import { readFileSync, readdirSync, writeFileSync } from 'node:fs';
@@ -25,75 +24,75 @@ const SRC = join(ROOT, 'node_modules', 'pixelarticons', 'svg');
 const OUT = join(ROOT, 'lib', 'icons.generated.ts');
 
 /**
- * Имя в коде → файл pixelarticons.
+ * Code name → pixelarticons file.
  *
- * Слева — роль в интерфейсе, справа — файл набора: если для роли найдётся иконка
- * лучше, меняется одна строка, а не все места вызова.
+ * Left side is the UI role, right side is the set's file: if a better icon
+ * turns up for a role, one line changes instead of every call site.
  */
 const MAP = {
-  /** Серия дней подряд. */
+  /** Consecutive-day streak. */
   flame: 'fire',
-  /** Личный рекорд, достижение и кубок на тумбе подиума. */
+  /** Personal record, achievement, and the podium cup. */
   trophy: 'trophy',
-  /** Время, ожидание, «дорожка занята». */
+  /** Time, waiting, "treadmill busy". */
   clock: 'clock',
-  /** Реплика NPC в ленте хинтов. */
+  /** NPC line in the hints feed. */
   hint: 'comment-text',
-  /** Подтверждение. */
+  /** Confirmation. */
   check: 'check',
-  /** Добавить участника; прибавить скорость на экране прогулки. */
+  /** Add a member; increase speed on the walk screen. */
   plus: 'plus',
-  /** Сбросить скорость на экране прогулки. */
+  /** Decrease speed on the walk screen. */
   minus: 'minus',
-  /** Старт прогулки. */
+  /** Start a walk. */
   play: 'play',
-  /** Завершение прогулки: флаг на финише, а не «стоп» — прогулку доводят до конца. */
+  /** Finish a walk: a finish-line flag, not "stop" — walks are seen through. */
   finish: 'flag',
-  /** Ходьба: заголовок и пустые состояния. */
+  /** Walking: headings and empty states. */
   walk: 'human-arms-down',
-  /** Пункт достижения. */
+  /** Achievement list item. */
   star: 'star',
-  /** Дорожка на карте зала. */
+  /** Treadmill on the room map. */
   pin: 'map-pin',
-  /** «Раскрыть список» — на триггере комбобокса участника. */
+  /** "Expand list" — on the member combobox trigger. */
   chevronDown: 'chevron-down',
-  /** Произвольный период рейтинга — на кнопке выбора диапазона дат. */
+  /** Custom leaderboard period — on the date-range picker button. */
   calendar: 'calendar-range',
-  /** Ачивка «Коробка передач»: шестерёнка (п. 6.8.3). */
+  /** "Gearbox" achievement: a cog (spec § 6.8.3). */
   gear: 'settings-cog-2',
-  /** Ачивка «На связи»: бумажный самолётик — привязка Telegram. */
+  /** "In touch" achievement: paper plane — Telegram link. */
   send: 'send',
-  /** Ачивка «Дальний рейс»: 5+ км за одну прогулку. */
+  /** "Long haul" achievement: 5+ km in one walk. */
   car: 'car',
-  /** Редактирование дорожки в настройках (п. 6.11.2). */
+  /** Edit a treadmill in settings (spec § 6.11.2). */
   edit: 'pencil',
-  /** Удаление дорожки без прогулок (п. 6.11.4). */
+  /** Delete a treadmill that has no walks (spec § 6.11.4). */
   trash: 'trash',
-  /** Включить дорожку обратно (п. 6.11.4). */
+  /** Re-enable a treadmill (spec § 6.11.4). */
   power: 'power',
-  /** Выключить дорожку — деактивация вместо удаления (п. 6.11.4). */
+  /** Disable a treadmill — deactivation instead of deletion (spec § 6.11.4). */
   powerOff: 'power-off',
 };
 
 /**
- * Самодельные иконки — `scripts/icons/*.svg`: та же сетка 24×24 и блочный
- * стиль, что у pixelarticons, но нарисованы под конкретные роли (ачивки,
- * п. 6.8.3). Имя в коде — camelCase от имени файла. Исходники лежат рядом
- * со скриптом, итог всё равно попадает только в сгенерированный файл.
+ * Hand-drawn icons — `scripts/icons/*.svg`: same 24×24 grid and blocky style
+ * as pixelarticons, drawn for specific roles (achievements, spec § 6.8.3).
+ * Code name is the camelCased file name. Sources live next to the script;
+ * only the generated file is consumed.
  */
 const CUSTOM_DIR = join(ROOT, 'scripts', 'icons');
 
-/** pixelarticons рисует иконку одним-двумя <path>; берём их в порядке следования. */
+/** pixelarticons draws an icon with one or two <path>; keep them in order. */
 function extractPaths(svgText, label) {
   const paths = [...svgText.matchAll(/<path[^>]*\sd="([^"]+)"/g)].map((m) => m[1]);
-  if (paths.length === 0) throw new Error(`В ${label} не найдено ни одного <path d>`);
+  if (paths.length === 0) throw new Error(`No <path d> found in ${label}`);
   return paths;
 }
 
-/** Все иконки набора — 24×24; смешивать сетки нельзя, иначе разъедется толщина штриха. */
+/** Every icon must be 24×24; mixing grids would break stroke weight. */
 function assertViewBox(svgText, label) {
   if (!svgText.includes('viewBox="0 0 24 24"')) {
-    throw new Error(`${label} не на сетке 24×24 — набор должен быть однородным`);
+    throw new Error(`${label} is not on a 24×24 grid — the set must be uniform`);
   }
 }
 
@@ -107,7 +106,7 @@ for (const file of readdirSync(CUSTOM_DIR).filter((f) => f.endsWith('.svg')).sor
   const name = file.replace(/\.svg$/, '').replace(/-([a-z])/g, (_, c) => c.toUpperCase());
   const svg = readFileSync(join(CUSTOM_DIR, file), 'utf8');
   assertViewBox(svg, `scripts/icons/${file}`);
-  entries.push([name, `свой, scripts/icons/${file}`, extractPaths(svg, `scripts/icons/${file}`)]);
+  entries.push([name, `custom, scripts/icons/${file}`, extractPaths(svg, `scripts/icons/${file}`)]);
 }
 
 const body = entries
@@ -118,13 +117,13 @@ const body = entries
   .join('\n');
 
 const out = `/**
- * СГЕНЕРИРОВАНО \`npm run gen:icons\` — руками не править.
+ * GENERATED by \`npm run gen:icons\` — do not edit by hand.
  *
- * Иконки pixelarticons (https://pixelarticons.com), лицензия MIT.
- * Сетка 24×24, координаты целочисленные — см. \`components/ui/icon.tsx\`.
+ * pixelarticons icons (https://pixelarticons.com), MIT license.
+ * 24×24 grid, integer coordinates — see \`components/ui/icon.tsx\`.
  */
 
-/** Сетка всех иконок набора: на ней держится crispEdges-рендер. */
+/** Shared grid of the icon set: crispEdges rendering relies on it. */
 export const ICON_VIEWBOX = '0 0 24 24';
 
 export const ICON_PATHS = {
@@ -135,4 +134,4 @@ export type IconName = keyof typeof ICON_PATHS;
 `;
 
 writeFileSync(OUT, out, 'utf8');
-console.log(`Иконки: ${entries.length} → lib/icons.generated.ts`);
+console.log(`Icons: ${entries.length} → lib/icons.generated.ts`);

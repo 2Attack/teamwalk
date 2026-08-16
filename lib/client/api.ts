@@ -2,6 +2,8 @@
 
 import useSWR, { type SWRConfiguration, mutate as globalMutate } from 'swr';
 
+import { m } from '@/lib/i18n';
+
 import type {
   ActiveWalkDto,
   AchievementDto,
@@ -42,7 +44,7 @@ async function parse<T>(response: Response): Promise<T> {
     throw new ApiError(
       response.status,
       envelope?.error?.code ?? 'INTERNAL_ERROR',
-      envelope?.error?.message ?? 'Что-то пошло не так',
+      envelope?.error?.message ?? m.api.clientFallback,
       envelope?.error?.field,
       json,
     );

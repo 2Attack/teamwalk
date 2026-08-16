@@ -35,6 +35,7 @@ import {
 } from '@/lib/client/api';
 import { LAST_USER_STORAGE_KEY, SHORT_WALK_CANCEL_SEC } from '@/lib/config';
 import { calcSegmentedDistanceKm, formatTimeOfDay } from '@/lib/format';
+import { fmt, m } from '@/lib/i18n';
 import type { ActiveWalkDto, FinishWalkResultDto, StatsDto, WalkDto } from '@/lib/types';
 
 /**
@@ -152,7 +153,7 @@ function LoadingScreen() {
   return (
     <main className="mx-auto flex min-h-dvh w-full max-w-lg flex-col justify-center px-4 py-8">
       <LoadingScreenBlock
-        title="ЗАГРУЗКА"
+        title={m.common.loading}
         tips={LOADING_TIPS}
         autoProgress
         autoProgressDuration={2000}
@@ -168,14 +169,14 @@ function NotFoundScreen({ onHome }: { onHome: () => void }) {
     <main className="mx-auto flex min-h-dvh w-full max-w-lg flex-col justify-center gap-6 px-4 py-8">
       <div className="pixel-panel flex flex-col items-center gap-4 p-6 text-center">
         <Icon name="walk" size={32} />
-        <p className="font-pixel text-[16px] leading-relaxed text-text-main">ПРОГУЛКИ НЕТ</p>
-        <p className="text-sm text-text-dim">
-          Её уже завершили или отменили — возможно, с другого устройства. Возвращаем на главную.
+        <p className="font-pixel text-[16px] leading-relaxed text-text-main">
+          {m.walk.notFoundTitle}
         </p>
+        <p className="text-sm text-text-dim">{m.walk.notFoundBody}</p>
       </div>
       <div className="px-1.5">
         <Button type="button" onClick={onHome} className="min-h-11 w-full">
-          На главную
+          {m.common.home}
         </Button>
       </div>
     </main>
@@ -268,7 +269,7 @@ export default function WalkPage({ params }: { params: Promise<{ id: string }> }
       setCancelError(
         error instanceof Error && error.message
           ? error.message
-          : 'Не вышло отменить — проверьте связь и попробуйте ещё раз',
+          : m.walk.cancelFailed,
       );
       setCancelling(false);
     }
@@ -286,7 +287,10 @@ export default function WalkPage({ params }: { params: Promise<{ id: string }> }
         {/* Start line — above the card, centered; a short label, the pixel
             font is appropriate (§ 6.7.1). */}
         <p className="text-center font-pixel text-[10px] leading-relaxed text-text-dim">
-          Старт в {formatTimeOfDay(walk.startedAt)} · {walk.treadmillName}
+          {fmt(m.walk.startLine, {
+            time: formatTimeOfDay(walk.startedAt),
+            treadmill: walk.treadmillName,
+          })}
         </p>
         <PlayerProfileCard
           // Compact variant: the base Card reads all spacing from
@@ -349,7 +353,7 @@ export default function WalkPage({ params }: { params: Promise<{ id: string }> }
           className="min-h-14 w-full text-base"
         >
           <Icon name="finish" size={16} />
-          End walk
+          {m.walk.endWalk}
         </Button>
         <Button
           variant="ghost"
@@ -358,7 +362,7 @@ export default function WalkPage({ params }: { params: Promise<{ id: string }> }
           type="button"
           className="min-h-11 w-full text-sm text-text-dim"
         >
-          Отменить прогулку
+          {m.walk.cancelWalk}
         </Button>
       </div>
 
@@ -386,10 +390,13 @@ export default function WalkPage({ params }: { params: Promise<{ id: string }> }
         <DialogShell>
           <DialogHeader>
             <DialogTitle className="text-[16px] leading-relaxed">
-              {accidental ? 'Меньше 10 секунд' : 'Отменить прогулку?'}
+              {accidental
+                ? fmt(m.walk.accidentalTitle, { seconds: SHORT_WALK_CANCEL_SEC })
+                : m.walk.cancelTitle}
             </DialogTitle>
             <DialogDescription className="font-sans">
-              {accidental ? 'Похоже на случайное нажатие. ' : ''}Прогулка не будет сохранена.
+              {accidental ? m.walk.accidentalNote : ''}
+              {m.walk.willNotBeSaved}
             </DialogDescription>
           </DialogHeader>
 
@@ -406,7 +413,7 @@ export default function WalkPage({ params }: { params: Promise<{ id: string }> }
               type="button"
               className="min-h-11 w-full sm:w-auto"
             >
-              {accidental ? 'Сохранить' : 'Иду дальше'}
+              {accidental ? m.common.save : m.walk.keepWalking}
             </Button>
             <Button
               variant="destructive"
@@ -415,7 +422,7 @@ export default function WalkPage({ params }: { params: Promise<{ id: string }> }
               type="button"
               className="min-h-11 w-full sm:w-auto"
             >
-              {cancelling ? 'Отменяем…' : 'Да, отменить'}
+              {cancelling ? m.walk.cancelling : m.walk.confirmCancel}
             </Button>
           </DialogFooter>
         </DialogShell>

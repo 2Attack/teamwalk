@@ -28,35 +28,36 @@ import {
   formatSpeedTrail,
   parseDecimalInput,
 } from '@/lib/format';
+import { fmt, m } from '@/lib/i18n';
 import type { FinishWalkResultDto } from '@/lib/types';
 
 /**
- * Модалка завершения (п. 6.4). Рамка и метки кнопок — пиксельные, само поле ввода
- * намеренно самое обычное: это единственное обязательное поле в приложении,
- * стилизация здесь только мешает (п. 6.7.7). Отсюда `font="normal"` на инпуте и
- * на всех подписях: их читают, а не разглядывают (п. 6.7.1).
+ * Finish-walk dialog (spec § 6.4). Frame and button labels are pixel; the input
+ * itself is deliberately plain — it's the only required field in the app, and
+ * styling would only get in the way (spec § 6.7.7). Hence `font="normal"` on
+ * the input and all captions (spec § 6.7.1).
  */
 
 interface FinishWalkDialogProps {
   open: boolean;
   walkId: string;
   /**
-   * Скорости прогулки по порядку: одна, если её не меняли (п. 6.3).
-   * Показываются, но не редактируются — правят итоговую дистанцию.
+   * Walk speeds in order; a single one if never changed (spec § 6.3).
+   * Shown but not editable — users correct the final distance instead.
    */
   speedTrail: number[];
-  /** Расчётная дистанция по отрезкам скорости на момент нажатия «End walk». */
+  /** Distance computed from speed segments at the moment "End walk" was pressed. */
   calculatedKm: number;
-  /** Длительность, зафиксированная в момент нажатия «End walk». */
+  /** Duration captured at the moment "End walk" was pressed. */
   durationSec: number;
-  /** Esc / клик вне модалки: прогулка остаётся активной, данные не теряются. */
+  /** Esc / outside click: the walk stays active, nothing is lost. */
   onClose: () => void;
   onFinished: (result: FinishWalkResultDto) => void;
 }
 
 function errorMessage(error: unknown): string {
   if (error instanceof Error && error.message) return error.message;
-  return 'Не получилось связаться с сервером. Данные не потеряны — попробуйте ещё раз.';
+  return m.finishDialog.submitFailed;
 }
 
 export function FinishWalkDialog({
@@ -79,8 +80,8 @@ export function FinishWalkDialog({
   const hintId = `${fieldId}-hint`;
   const errorId = `${fieldId}-error`;
 
-  // Каждое открытие начинается с расчётного значения: перебитая и брошенная
-  // правка не должна всплыть в следующей прогулке.
+  // Each open starts from the computed value: an abandoned edit must not
+  // resurface in the next walk.
   useEffect(() => {
     if (!open) return;
     setValue(formatKm(calculated));
@@ -96,29 +97,33 @@ export function FinishWalkDialog({
 
   const inputError =
     value.trim() === ''
-      ? 'Без дистанции прогулку не сохранить'
+      ? m.finishDialog.errorRequired
       : parsed === null
-        ? 'Только число: 1.25 или 1,25'
+        ? m.finishDialog.errorNotANumber
         : outOfRange
-          ? `Допустимо от ${formatKm(MIN_DISTANCE_KM)} до ${formatKm(MAX_DISTANCE_KM)} км`
+          ? fmt(m.finishDialog.errorOutOfRange, {
+              min: formatKm(MIN_DISTANCE_KM),
+              max: formatKm(MAX_DISTANCE_KM),
+            })
           : undefined;
 
   const warnings: string[] = [];
   if (valid && rounded !== null) {
     if (calculated > 0 && Math.abs(rounded - calculated) / calculated > DISTANCE_MISMATCH_RATIO) {
       warnings.push(
-        `Рассчитали ${formatKm(calculated)} км, вы ввели ${formatKm(rounded)}. Всё верно?`,
+        fmt(m.finishDialog.warnMismatch, {
+          calculated: formatKm(calculated),
+          entered: formatKm(rounded),
+        }),
       );
     }
     const factual = avgSpeedKmh(rounded, durationSec);
     if (factual > SUSPICIOUS_AVG_SPEED_KMH) {
-      warnings.push(
-        `Получилось ${Math.round(factual)} км/ч, а дорожка так не умеет. Проверьте число`,
-      );
+      warnings.push(fmt(m.finishDialog.warnTooFast, { speed: Math.round(factual) }));
     }
   }
   if (durationSec < SHORT_WALK_WARN_SEC) {
-    warnings.push('Прогулка короче минуты — сохраним, но она почти ничего не добавит');
+    warnings.push(m.finishDialog.warnShort);
   }
 
   async function submit() {
@@ -126,7 +131,7 @@ export function FinishWalkDialog({
     setSubmitting(true);
     setFailure(null);
     try {
-      // Повтор безопасен: сервер отвечает 200 с текущим состоянием (п. 8).
+      // Retry is safe: the server responds 200 with current state (spec § 8).
       const result = await apiSend<FinishWalkResultDto>('POST', `/api/walks/${walkId}/finish`, {
         distanceKm: rounded,
       });
@@ -146,23 +151,26 @@ export function FinishWalkDialog({
     <Dialog
       open={open}
       onOpenChange={(next: boolean) => {
-        // Esc и клик вне модалки возвращают на экран активной прогулки:
-        // прогулка остаётся активной, введённое значение просто отбрасывается.
+        // Esc / outside click returns to the active-walk screen:
+        // the walk stays active, the entered value is discarded.
         if (!next && !submitting) onClose();
       }}
     >
       <DialogShell>
         <DialogHeader>
-          <DialogTitle className="text-[16px] leading-relaxed">Завершить прогулку</DialogTitle>
+          <DialogTitle className="text-[16px] leading-relaxed">{m.finishDialog.title}</DialogTitle>
           <DialogDescription className="font-sans">
-            Длительность {formatDurationHuman(durationSec)} · скорость {speedLabel}
+            {fmt(m.finishDialog.summary, {
+              duration: formatDurationHuman(durationSec),
+              speeds: speedLabel,
+            })}
           </DialogDescription>
         </DialogHeader>
 
         <DialogBody className="space-y-3">
-          {/* `font="normal"`: метка — sans, как и поле под ней (п. 6.7.1). */}
+          {/* `font="normal"`: label is sans, same as the field below (spec § 6.7.1). */}
           <Label htmlFor={fieldId} font="normal" className="block font-sans text-sm text-text-main">
-            Дистанция, км
+            {m.finishDialog.distanceLabel}
           </Label>
 
           <Input
@@ -176,8 +184,8 @@ export function FinishWalkDialog({
             value={value}
             aria-invalid={inputError !== undefined}
             aria-describedby={describedBy}
-            /* Значение выделяется целиком при открытии: ввод сразу заменяет его,
-               а при возврате в поле руками курсор уже не прыгает (п. 6.4). */
+            /* Select the whole value on first focus so typing replaces it;
+               on later manual focus the cursor no longer jumps (spec § 6.4). */
             onFocus={(event) => {
               if (selectedOnce.current) return;
               selectedOnce.current = true;
@@ -190,7 +198,7 @@ export function FinishWalkDialog({
           />
 
           <p id={hintId} className="text-sm text-text-dim">
-            рассчитано по {speedLabel} — поправьте, если на дорожке другое число
+            {fmt(m.finishDialog.hint, { speeds: speedLabel })}
           </p>
 
           {inputError !== undefined ? (
@@ -199,7 +207,7 @@ export function FinishWalkDialog({
             </p>
           ) : null}
 
-          {/* Мягкие предупреждения ничего не блокируют — только просят перепроверить. */}
+          {/* Soft warnings block nothing — they only ask to double-check. */}
           {warnings.map((warning) => (
             <p key={warning} className="text-sm text-citrus">
               {warning}
@@ -208,7 +216,7 @@ export function FinishWalkDialog({
 
           {failure !== null ? (
             <p role="alert" className="text-sm text-citrus">
-              {failure} Нажмите «Сохранить» ещё раз — повтор не создаст дубль.
+              {failure} {m.finishDialog.retrySafe}
             </p>
           ) : null}
         </DialogBody>
@@ -221,7 +229,7 @@ export function FinishWalkDialog({
             type="button"
             className="min-h-11 w-full sm:w-auto"
           >
-            Назад
+            {m.common.back}
           </Button>
           <Button
             variant="default"
@@ -230,7 +238,7 @@ export function FinishWalkDialog({
             type="button"
             className="min-h-11 w-full sm:w-auto"
           >
-            {submitting ? 'Сохраняем…' : 'Сохранить'}
+            {submitting ? m.common.saving : m.common.save}
           </Button>
         </DialogFooter>
       </DialogShell>

@@ -1,25 +1,26 @@
 'use client';
 
 /**
- * Шагающий персонаж — лицо экрана прогулки (п. 6.7.6).
+ * Walking character — the face of the walk screen (spec § 6.7.6).
  *
- * Спрайт-лист: 8 кадров по 32×32 → 256×32. Кейфреймы `walk-cycle` в globals.css
- * сдвигают фон ровно на 256px за цикл, поэтому анимируемый слой всегда 1×,
- * а увеличение делается `transform: scale()` на обёртке — масштабирование
- * через background-size сбило бы шаг кейфрейма.
+ * Sprite sheet: 8 frames of 32×32 → 256×32. The `walk-cycle` keyframes in
+ * globals.css shift the background exactly 256px per cycle, so the animated
+ * layer is always 1×; scaling is `transform: scale()` on the wrapper —
+ * scaling via background-size would break the keyframe step.
  *
- * `prefers-reduced-motion` глушится глобальным CSS: отдельной проверки здесь нет,
- * чтобы не расходиться с ним в поведении.
+ * `prefers-reduced-motion` is handled by global CSS: no separate check here,
+ * to avoid diverging from it.
  */
 
 import { cn } from '@/lib/cn';
+import { m } from '@/lib/i18n';
 
 const FRAME_PX = 32;
 const SHEET_PX = 256;
 
-/** Ступенчатая привязка темпа шага к скорости: без плавной интерполяции (п. 6.7.6). */
+/** Stepped mapping of stride tempo to speed: no smooth interpolation (spec § 6.7.6). */
 function stepDurationSec(speedKmh: number): number {
-  // Скорость приходит с сервера: NaN сломал бы CSS-анимацию целиком.
+  // Speed comes from the server: NaN would break the CSS animation entirely.
   if (!Number.isFinite(speedKmh) || speedKmh <= 2) return 1.2;
   if (speedKmh <= 3) return 1;
   if (speedKmh <= 4) return 0.8;
@@ -29,9 +30,9 @@ function stepDurationSec(speedKmh: number): number {
 }
 
 interface WalkerSpriteProps {
-  /** Заявленная скорость дорожки — задаёт частоту шагов. */
+  /** Declared treadmill speed — sets the stride frequency. */
   speedKmh: number;
-  /** Кратно 32: 32 / 64 / 96. */
+  /** Multiple of 32: 32 / 64 / 96. */
   size?: 32 | 64 | 96;
   className?: string;
 }
@@ -45,7 +46,7 @@ export function WalkerSprite({ speedKmh, size = 64, className }: WalkerSpritePro
       className={cn('block shrink-0 overflow-hidden', className)}
       style={{ width: size, height: size }}
       role="img"
-      aria-label="Пиксельный человечек идёт по дорожке"
+      aria-label={m.walkerSprite.aria}
     >
       <div
         className="pixelated"

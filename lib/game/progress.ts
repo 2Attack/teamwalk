@@ -8,18 +8,17 @@ import { positionOnRoute } from '../hints/route';
 import type { TeamProgressDto } from '../types';
 
 /**
- * Командная цель и личные рекорды (п. 6.8.2 ТЗ).
- *
- * Ничего из этого не хранится: после удаления прогулки (п. 7.7) сохранённые
- * значения пришлось бы пересчитывать, а расхождение заметил бы каждый.
+ * Team goal and personal records (spec § 6.8.2). None of it is stored:
+ * deleting a walk (spec § 7.7) would require recomputing saved values, and
+ * everyone would notice a mismatch.
  */
 
-/** Офисный день прогулки — см. `lib/game/streak.ts`: границы суток по `Europe/Moscow`. */
+/** Office day of a walk — see `lib/game/streak.ts`: day boundaries per `Europe/Moscow`. */
 const officeDayExpr = sql<string>`to_char(${walks.startedAt} AT TIME ZONE ${sql.raw(
   `'${TZ}'`,
 )}, 'YYYY-MM-DD')`;
 
-/** numeric приходит строкой; заодно срезаем хвосты после сложения дробей. */
+/** numeric arrives as a string; also trims tails left by fraction addition. */
 const round2 = (value: number): number => Math.round(value * 100) / 100;
 
 const sumKm = sql<number>`coalesce(sum(${walks.distanceKm}), 0)`.mapWith(Number);
@@ -65,8 +64,8 @@ export async function getTeamProgress(): Promise<TeamProgressDto> {
 }
 
 /**
- * Личный рекорд. `excludeWalkId` даёт значение **до** указанной прогулки — так экран
- * успеха понимает, побит ли рекорд именно сейчас (п. 6.8.2).
+ * Personal record. `excludeWalkId` yields the value **before** the given walk —
+ * that's how the success screen knows the record was beaten just now (spec § 6.8.2).
  */
 export async function getPersonalRecord(
   userId: string,
@@ -87,8 +86,8 @@ export async function getPersonalRecord(
     )
     .groupBy(officeDayExpr);
 
-  // Максимум по дням берём в памяти: дней у участника десятки, второй агрегат в SQL
-  // потребовал бы подзапроса ради того же результата.
+  // Daily max is taken in memory: a participant has tens of days, and a second
+  // SQL aggregate would need a subquery for the same result.
   let bestDayKm = 0;
   let bestWalkKm = 0;
   for (const row of rows) {
@@ -102,7 +101,7 @@ export async function getPersonalRecord(
 export interface UserTotals {
   totalKm: number;
   walksCount: number;
-  /** Скорость и дорожка последней прогулки — для предвыбора при следующем старте (п. 6.2). */
+  /** Speed and treadmill of the last walk — preselected on the next start (spec § 6.2). */
   lastSpeedKmh: number | null;
   lastTreadmillId: string | null;
 }
@@ -114,8 +113,8 @@ export async function getUserTotals(userId: string): Promise<UserTotals> {
       .from(walks)
       .where(and(eq(walks.userId, userId), eq(walks.status, 'finished')))
       .then((rows) => rows[0]),
-    // Для предвыбора берём последнюю не отменённую прогулку: отменённая длилась секунды
-    // и её скорость не отражает привычку участника.
+    // Preselect from the last non-cancelled walk: a cancelled one lasted seconds
+    // and its speed reflects no habit.
     db
       .select({ speedKmh: walks.speedKmh, treadmillId: walks.treadmillId })
       .from(walks)

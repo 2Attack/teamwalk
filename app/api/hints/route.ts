@@ -10,22 +10,21 @@ export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 /**
- * GET /api/hints?userId= — пул готовых фраз из `hints_cache` (п. 6.6.9 ТЗ).
- *
- * Синхронного обращения к LLM здесь не происходит никогда: пул отдаётся из БД,
- * а регенерация уходит в фон через `waitUntil` уже после формирования ответа.
+ * GET /api/hints?userId= — pool of ready phrases from `hints_cache` (spec § 6.6.9).
+ * Never calls the LLM synchronously: the pool comes from the DB, regeneration
+ * goes to the background via `waitUntil` after the response is built.
  */
 export function GET(request: Request) {
   return handle<HintsResponseDto | ApiErrorBody>(async () => {
     const raw = new URL(request.url).searchParams.get('userId');
-    // Кривой userId — не ошибка, а повод отдать общий пул: лента не тот элемент,
-    // ради которого стоит показывать пользователю сообщение об ошибке.
+    // Malformed userId falls back to the generic pool: the hint feed is not
+    // worth surfacing an error for.
     const parsed = raw ? uuidSchema.safeParse(raw) : null;
     const userId = parsed?.success ? parsed.data : undefined;
 
     const pool = await getHintsPool(userId);
 
-    // Проверка свежести и генерация — строго после того, как ответ собран.
+    // Freshness check and generation strictly after the response is assembled.
     ensureFreshPool();
 
     return NextResponse.json(pool, {

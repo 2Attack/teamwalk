@@ -1,4 +1,4 @@
-<!-- Первая сотня: верстовой столб с табличкой-вехой. Сетка 24×24. -->
+<!-- First Hundred: milestone post with a marker plate. 24×24 grid. -->
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
   <path d="M6 3h12v2H6zM6 5h2v4H6zM16 5h2v4h-2zM6 9h12v2H6zM11 6h2v2h-2zM11 11h2v8h-2zM8 19h8v2H8z"/>
 </svg>

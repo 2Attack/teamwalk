@@ -14,17 +14,17 @@ import { reminderDecision, type ReminderFacts } from './remind-rules';
 import { digestText, remindText } from './texts';
 
 /**
- * Напоминания и недельный дайджест (п. 6.10.5 ТЗ).
+ * Reminders and the weekly digest (spec § 6.10.5).
  *
- * Основной вход — Vercel Cron (`GET /api/cron/notify`), ленивый фолбэк —
- * `ensureNotifySweep()` при обращениях к API по образцу `closeStaleWalks()`.
- * Дедупликация по журналу гарантирует, что cron и фолбэк не отправят дважды.
+ * Main entry — Vercel Cron (`GET /api/cron/notify`); lazy fallback —
+ * `ensureNotifySweep()` on API access, modeled on `closeStaleWalks()`.
+ * Log-based dedup guarantees cron and fallback never send twice.
  */
 
-/** Условие «не заглушено /mute»: `muted_until` пуст или в прошлом. */
+/** "Not muted via /mute": `muted_until` is empty or in the past. */
 const notMuted = or(isNull(telegramLinks.mutedUntil), lt(telegramLinks.mutedUntil, sql`now()`));
 
-/** true — ключ вставлен нами; false — другой инстанс уже отправил. */
+/** true — we inserted the key; false — another instance already sent. */
 async function tryDedup(userId: string, kind: string, dedupKey: string): Promise<boolean> {
   const rows = await db
     .insert(notificationLog)
@@ -34,15 +34,14 @@ async function tryDedup(userId: string, kind: string, dedupKey: string): Promise
   return rows.length > 0;
 }
 
-/** Драйвер отдаёт timestamptz строкой Postgres — просим сразу ISO. */
+/** The driver returns timestamptz as a Postgres string — request ISO right away. */
 const lastWalkAtExpr = sql<
   string | null
 >`to_char(max(${walks.startedAt}) at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"')`;
 
 /**
- * Напоминания «пора размяться». Участников ≤100, поэтому факты собираются
- * тремя групповыми запросами: привязки с участниками, последние прогулки,
- * журнал отправленных напоминаний.
+ * "Time to stretch" reminders. With ≤100 participants the facts come from
+ * three bulk queries: links with users, last walks, sent-reminder log.
  */
 async function sendReminders(now: Date, today: string): Promise<void> {
   const links = await db
@@ -86,7 +85,7 @@ async function sendReminders(now: Date, today: string): Promise<void> {
   for (const link of links) {
     try {
       const lastWalkAt = lastWalkByUser.get(link.userId) ?? null;
-      // База отсчёта затухания: финиш последней прогулки либо привязка.
+      // Backoff baseline: last walk finish, or the linking time.
       const baselineAt = lastWalkAt ?? link.linkedAt;
       const reminds = remindsByUser.get(link.userId) ?? [];
       const sinceWalk = reminds.filter((sentAt) => sentAt.getTime() > baselineAt.getTime());
@@ -106,7 +105,7 @@ async function sendReminders(now: Date, today: string): Promise<void> {
       if (!reminderDecision(facts)) continue;
       if (!(await tryDedup(link.userId, 'remind', `remind:${link.userId}:${today}`))) continue;
 
-      // Полностью пропущенные рабочие дни — та же формула, что в reminderDecision.
+      // Fully missed workdays — same formula as in reminderDecision.
       const baselineDay = facts.lastWalkDay ?? facts.linkedDay;
       const idleWorkdays = workdaysSince(baselineDay, today) - (isWeekend(today) ? 0 : 1);
 
@@ -121,9 +120,9 @@ async function sendReminders(now: Date, today: string): Promise<void> {
   }
 }
 
-/** Недельный дайджест: только по понедельникам, тихое (п. 6.10.4). */
+/** Weekly digest: Mondays only, silent (spec § 6.10.4). */
 async function sendDigest(today: string): Promise<void> {
-  // Прошлая неделя: от понедельника −7 до воскресенья включительно.
+  // Previous week: from Monday −7 through Sunday inclusive.
   const from = addOfficeDays(today, -7);
   const to = addOfficeDays(today, -1);
 
@@ -147,7 +146,7 @@ async function sendDigest(today: string): Promise<void> {
     try {
       if (!(await tryDedup(link.userId, 'digest', `digest:${link.userId}:${from}`))) continue;
 
-      // Место без километров не показываем: ничья по нулям — не позиция.
+      // No rank without kilometers: a tie at zero is not a position.
       const self = board.rows.find((row) => row.user.id === link.userId);
       const selfRank = self !== undefined && self.totalKm > 0 ? self.rank : null;
 
@@ -169,8 +168,8 @@ async function sendDigest(today: string): Promise<void> {
 }
 
 /**
- * Один проход рассылки. Окно (п. 6.10.4): рабочий день, [11:00; 17:00) МСК —
- * фолбэк, сработавший в 19:00, ничего не отправит, а перенесёт на завтра.
+ * One sweep pass. Window (spec § 6.10.4): workday, [11:00; 17:00) MSK — a
+ * fallback firing at 19:00 sends nothing and defers to tomorrow.
  */
 export async function runNotifySweep(now: Date = new Date()): Promise<void> {
   if (!TELEGRAM_ENABLED) return;
@@ -181,14 +180,14 @@ export async function runNotifySweep(now: Date = new Date()): Promise<void> {
   if (hour < NOTIFY_WINDOW_START_HOUR || hour >= NOTIFY_WINDOW_END_HOUR) return;
 
   await sendReminders(now, today);
-  // 1 = понедельник в нумерации getUTCDay.
+  // 1 = Monday in getUTCDay numbering.
   if (officeWeekday(today) === 1) await sendDigest(today);
 }
 
 /**
- * Лок одним запросом — точная копия механики `hints_meta` (п. 6.6.5):
- * advisory-локи не живут в стейтлесс HTTP-драйвере Neon. Интервал в час
- * ограничивает частоту фолбэка; пустой результат — обход уже шёл недавно.
+ * Single-query lock, same mechanics as `hints_meta` (spec § 6.6.5): advisory
+ * locks do not survive the stateless Neon HTTP driver. The one-hour interval
+ * caps fallback frequency; an empty result — a sweep ran recently.
  */
 async function acquireLock(): Promise<boolean> {
   await db.insert(notifyMeta).values({ id: true }).onConflictDoNothing();
@@ -201,7 +200,7 @@ async function acquireLock(): Promise<boolean> {
 }
 
 async function sweepIfDue(now: Date): Promise<void> {
-  // Быстрая проверка окна без единого запроса к БД: вне окна фолбэк бесплатен.
+  // Fast window check without a single DB query: outside the window the fallback is free.
   if (!TELEGRAM_ENABLED) return;
   if (isWeekend(toOfficeDay(now))) return;
   const hour = officeHour(now);
@@ -212,9 +211,9 @@ async function sweepIfDue(now: Date): Promise<void> {
 }
 
 /**
- * Ленивый фолбэк на случай несработавшего cron — по образцу `ensureFreshPool`:
- * управление возвращается немедленно, работа доживает в `waitUntil` после
- * ответа пользователю. Любая ошибка гасится — рассылка не стоит 500-й.
+ * Lazy fallback for a missed cron, modeled on `ensureFreshPool`: returns
+ * immediately, the work outlives the response in `waitUntil`. Errors are
+ * swallowed — notifications are not worth a 500.
  */
 export function ensureNotifySweep(): void {
   waitUntil(

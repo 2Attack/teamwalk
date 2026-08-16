@@ -9,27 +9,28 @@ import { getPersonalRecord, getUserTotals } from '@/lib/game/progress';
 import { getStreak } from '@/lib/game/streak';
 import type { UserStatsDto } from '@/lib/types';
 import { uuidSchema } from '@/lib/validation';
+import { m } from '@/lib/i18n';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 type RouteContext = { params: Promise<{ id: string }> };
 
-/** GET /api/users/:id/stats — серия, рекорд, достижения, позиция в рейтинге (п. 6.8.6). */
+/** GET /api/users/:id/stats — streak, record, achievements, leaderboard rank (spec § 6.8.6). */
 export function GET(_request: Request, context: RouteContext) {
   return handle<UserStatsDto | ApiErrorBody>(async () => {
-    // Валидация uuid до запроса: иначе Postgres упадёт на кривом значении с 500 вместо 400.
+    // Validate uuid before querying: Postgres would fail on a malformed value with 500 instead of 400.
     const id = uuidSchema.parse((await context.params).id);
 
     const user = await getUser(id);
-    if (!user) return apiError(404, 'NOT_FOUND', 'Участник не найден');
+    if (!user) return apiError(404, 'NOT_FOUND', m.apiMessages.userNotFound);
 
-    // Блоки независимы — считаем параллельно, чтобы уложиться в бюджет ответа (п. 8).
+    // Independent blocks — computed in parallel to fit the response budget (spec § 8).
     const [streak, personalRecord, totals, rank, achievements] = await Promise.all([
       getStreak(id),
       getPersonalRecord(id),
       getUserTotals(id),
-      // Позиция — в недельном рейтинге: он открыт по умолчанию (п. 6.8.2).
+      // Rank uses the weekly leaderboard: the default view (spec § 6.8.2).
       getUserRank(id, 'week'),
       listUserAchievements(id),
     ]);

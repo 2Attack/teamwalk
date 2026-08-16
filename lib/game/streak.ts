@@ -6,18 +6,16 @@ import { isWeekend, prevWorkday, toOfficeDay } from '../time';
 import type { StreakDto } from '../types';
 
 /**
- * Серии (п. 6.8.2 ТЗ).
- *
- * Серия нигде не хранится: денормализация рассинхронизировалась бы при удалении
- * прогулки (п. 7.7). Единственное сохраняемое состояние — израсходованные
- * заморозки, потому что «сколько пропусков уже прощено в этом месяце» из `walks`
- * не восстанавливается.
+ * Streaks (spec § 6.8.2). The streak itself is never stored: denormalization
+ * would drift on walk deletion (spec § 7.7). The only persisted state is used
+ * freezes — "how many misses were forgiven this month" cannot be recovered
+ * from `walks`.
  */
 
 /**
- * Офисный день прогулки считаем в SQL: границы суток — по `Europe/Moscow`,
- * иначе прогулка в 23:30 попадала бы в следующий день (п. 6.8.5).
- * `TZ` — константа конфига, не пользовательский ввод, поэтому `sql.raw` безопасен.
+ * The walk's office day is computed in SQL: day boundaries follow `Europe/Moscow`,
+ * or a 23:30 walk would land in the next day (spec § 6.8.5). `TZ` is a config
+ * constant, not user input, so `sql.raw` is safe.
  */
 const officeDayExpr = sql<string>`to_char(${walks.startedAt} AT TIME ZONE ${sql.raw(
   `'${TZ}'`,
@@ -27,21 +25,21 @@ export interface StreakComputation {
   days: number;
   frozen: boolean;
   freezesLeft: number;
-  /** Заморозки, которые нужно записать в `streak_freezes` по итогам расчёта. */
+  /** Freezes to persist into `streak_freezes` after this computation. */
   freezesToUse: string[];
 }
 
 const monthOf = (day: string): string => day.slice(0, 7);
 
 /**
- * Чистое ядро расчёта — вся логика серии здесь, чтобы её можно было покрыть тестами
- * без базы. Даты — офисные строки `YYYY-MM-DD`, сравнение строк совпадает
- * с хронологическим порядком.
+ * Pure computation core — all streak logic lives here so it can be tested
+ * without a database. Dates are office `YYYY-MM-DD` strings; string comparison
+ * matches chronological order.
  *
- * @param days        дни с хотя бы одной завершённой прогулкой (в любом порядке)
- * @param today       сегодняшний офисный день
- * @param freezesUsed уже израсходованные заморозки (даты пропущенных дней)
- * @param freezesLimit лимит заморозок на календарный месяц
+ * @param days        days with at least one finished walk (any order)
+ * @param today       today's office day
+ * @param freezesUsed already-spent freezes (dates of the missed days)
+ * @param freezesLimit freeze limit per calendar month
  */
 export function computeStreak(
   days: string[],
@@ -49,39 +47,39 @@ export function computeStreak(
   freezesUsed: string[],
   freezesLimit: number,
 ): StreakComputation {
-  // Прогулки в выходные серию не увеличивают, поэтому в расчёт не попадают вовсе.
+  // Weekend walks don't extend the streak, so they are excluded entirely.
   const walked = new Set(days.filter((day) => !isWeekend(day)));
   const usedSet = new Set(freezesUsed);
   const currentMonth = monthOf(today);
 
-  /** Занято заморозок в месяце: уже записанные плюс запланированные этим расчётом. */
+  /** Freezes taken in a month: already persisted plus planned by this computation. */
   const spentIn = (month: string, planned: readonly string[]): number =>
     freezesUsed.filter((day) => monthOf(day) === month).length +
     planned.filter((day) => monthOf(day) === month && !usedSet.has(day)).length;
 
-  /** Заморозки, которые реально держат текущую серию. */
+  /** Freezes that actually hold the current streak together. */
   const committed: string[] = [];
-  /** Заморозки после последнего засчитанного дня — пока неизвестно, спасают ли они что-то. */
+  /** Freezes past the last counted day — unknown yet whether they save anything. */
   let pending: string[] = [];
   let streak = 0;
 
   const earliest = walked.size > 0 ? [...walked].sort()[0] : null;
 
   if (earliest !== null) {
-    // Сегодняшний день без прогулки — ещё не пропуск: рабочий день не закончился,
-    // тратить на него заморозку рано. Отсчёт начинаем с предыдущего рабочего дня.
+    // Today without a walk is not a miss yet: the workday isn't over, spending a
+    // freeze on it is premature. Counting starts from the previous workday.
     let cursor = isWeekend(today) || !walked.has(today) ? prevWorkday(today) : today;
 
     while (cursor >= earliest) {
       if (walked.has(cursor)) {
         streak += 1;
-        // Пропуски «за спиной» подтверждаются только когда нашёлся день, который они спасают:
-        // иначе заморозка сгорела бы впустую в самом начале истории.
+        // Trailing misses are committed only once a day they actually save is
+        // found: otherwise a freeze would burn for nothing at the start of history.
         committed.push(...pending);
         pending = [];
       } else {
         const planned = committed.concat(pending);
-        // Уже оплаченный ранее пропуск повторно бюджет не тратит.
+        // A previously paid-for miss doesn't spend the budget again.
         if (!usedSet.has(cursor) && spentIn(monthOf(cursor), planned) >= freezesLimit) break;
         pending.push(cursor);
       }
@@ -98,19 +96,19 @@ export function computeStreak(
 }
 
 /**
- * Подключение к БД подтягивается лениво: `lib/db` падает без `DATABASE_URL`,
- * а чистый `computeStreak` должен импортироваться в юнит-тестах без окружения.
+ * DB connection is imported lazily: `lib/db` throws without `DATABASE_URL`,
+ * and pure `computeStreak` must be importable in unit tests with no env.
  */
 async function database() {
   const { db } = await import('../db');
   return db;
 }
 
-/** Фиксация расхода заморозок: пропуск гасится один раз, а не при каждом расчёте. */
+/** Persist spent freezes: a miss is paid once, not on every computation. */
 async function persistFreezes(rows: { userId: string; usedOn: string }[]): Promise<void> {
   if (rows.length === 0) return;
   const db = await database();
-  // Гонку двух параллельных расчётов разруливает индекс streak_freezes_uniq.
+  // A race between two concurrent computations is settled by streak_freezes_uniq.
   await db.insert(streakFreezes).values(rows).onConflictDoNothing();
 }
 
@@ -142,8 +140,8 @@ export async function getStreak(userId: string, now: Date = new Date()): Promise
 }
 
 /**
- * Серии сразу для списка участников. Лидерборд зовёт это на сотню человек,
- * поэтому запросов ровно два — на дни и на заморозки, независимо от размера списка.
+ * Streaks for a list of participants at once. The leaderboard calls this for a
+ * hundred people, so exactly two queries — days and freezes — regardless of list size.
  */
 export async function getStreakDaysBulk(userIds: string[]): Promise<Map<string, number>> {
   const ids = [...new Set(userIds)];
@@ -190,7 +188,7 @@ export async function getStreakDaysBulk(userIds: string[]): Promise<Map<string, 
     for (const usedOn of result.freezesToUse) pending.push({ userId: id, usedOn });
   }
 
-  // Один общий insert на всех: расход заморозок не должен превращаться в N запросов.
+  // One shared insert for everyone: freeze spending must not become N queries.
   await persistFreezes(pending);
 
   return streaks;

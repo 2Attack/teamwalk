@@ -9,25 +9,28 @@ import { answerCallbackQuery, editMessageReplyMarkup, sendMessage } from './clie
 import { consumeLinkToken, getLinkByChat, setMutedUntil, togglePref, unlinkByChat, upsertLink } from './links';
 import type { PrefKey } from './links';
 import { notifyTreadmillFreed, wereAllTreadmillsBusy } from './notify';
+import { m } from '@/lib/i18n';
+
 import {
   achievementUnlockedText,
   farewellText,
   helpText,
   relinkedText,
   staleTokenText,
+  uiText,
   welcomeText,
 } from './texts';
 
 /**
- * Обработка одного апдейта Telegram (п. 6.10.3 ТЗ). Никогда не бросает:
- * webhook обязан быстро ответить 200, а Telegram ретраит недоставленное —
- * идемпотентность держит unique-индекс на `update_id`.
+ * Processing of one Telegram update (spec § 6.10.3). Never throws: the
+ * webhook must answer 200 fast, and Telegram retries undelivered updates —
+ * idempotency is held by the unique index on `update_id`.
  *
- * Бот почти ничего не может (п. 6.10.1): единственная мутация — отменить
- * свою активную прогулку; всё остальное — настройки уведомлений.
+ * The bot can do almost nothing (spec § 6.10.1): the only mutation is
+ * cancelling one's own active walk; the rest is notification settings.
  */
 
-/** Узкое подмножество Telegram Update — только то, что реально читаем. */
+/** Narrow subset of a Telegram Update — only what we actually read. */
 interface TgMessage {
   message_id?: unknown;
   chat?: { id?: unknown };
@@ -42,22 +45,23 @@ interface TgUpdate {
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-/** Подсказка для чатов без привязки — токен берут в приложении, не у бота. */
-const NOT_LINKED_TEXT = `Этот чат не привязан к ${APP_NAME}. Возьми ссылку привязки в приложении — она живёт в карточке участника.`;
+/** Hint for unlinked chats — the token comes from the app, not the bot. */
+const NOT_LINKED_TEXT = uiText.notLinked(APP_NAME);
 
-/** Тумблеры категорий для `/settings`: ✅ — включено, ⬜ — выключено. */
+/** Category toggles for `/settings`: ✅ — on, ⬜ — off. */
 function settingsKeyboard(link: TelegramLink): unknown {
   const row = (on: boolean, label: string, data: string) => [
     { text: `${on ? '✅' : '⬜'} ${label}`, callback_data: data },
   ];
+  const labels = uiText.settingsLabels;
   return {
     inline_keyboard: [
-      row(link.notifyStart, 'Старт прогулки', 'pref:start'),
-      row(link.notifyFinish, 'Финиш прогулки', 'pref:finish'),
-      row(link.notifyRemind, 'Напоминания', 'pref:remind'),
-      row(link.notifyFree, 'Дорожка освободилась', 'pref:free'),
-      row(link.notifyDigest, 'Недельный дайджест', 'pref:digest'),
-      row(link.attachHints, 'Хинты в сообщениях', 'pref:hints'),
+      row(link.notifyStart, labels.start, 'pref:start'),
+      row(link.notifyFinish, labels.finish, 'pref:finish'),
+      row(link.notifyRemind, labels.remind, 'pref:remind'),
+      row(link.notifyFree, labels.free, 'pref:free'),
+      row(link.notifyDigest, labels.digest, 'pref:digest'),
+      row(link.attachHints, labels.hints, 'pref:hints'),
     ],
   };
 }
@@ -71,7 +75,7 @@ const PREF_KEYS: Record<string, PrefKey> = {
   hints: 'attachHints',
 };
 
-/** `/start <токен>`: погасить токен, привязать чат, уведомить вытесненный. */
+/** `/start <token>`: consume the token, link the chat, notify the displaced one. */
 async function handleStart(chatId: number, token: string | null): Promise<void> {
   const userId = token !== null ? await consumeLinkToken(token) : null;
   if (userId === null) {
@@ -86,24 +90,24 @@ async function handleStart(chatId: number, token: string | null): Promise<void> 
     .from(users)
     .where(eq(users.id, userId))
     .limit(1);
-  const name = userRows[0]?.name ?? 'участник';
+  const name = userRows[0]?.name ?? uiText.fallbackUserName;
 
-  // Чат, потерявший карточку, узнаёт о перепривязке — это и есть защита
-  // модели доверия: настоящий владелец всегда видит, что его перепривязали.
+  // The displaced chat learns about the relink — this is the trust-model
+  // safeguard: the real owner always sees they were relinked.
   if (displacedChatId !== null) {
     await sendMessage(displacedChatId, relinkedText(name));
   }
   await sendMessage(chatId, welcomeText(name));
 
-  // «На связи» (п. 6.8.3) — единственная ачивка вне транзакции финиша:
-  // начисляется здесь, а поздравление приходит в свежепривязанный чат.
+  // "Connected" (spec § 6.8.3) — the only achievement granted outside the
+  // finish transaction: awarded here, congratulation goes to the fresh chat.
   const unlocked = await db
     .insert(achievements)
     .values({ userId, code: 'connected' })
     .onConflictDoNothing()
     .returning({ code: achievements.code });
   if (unlocked.length > 0) {
-    await sendMessage(chatId, achievementUnlockedText('На связи'));
+    await sendMessage(chatId, achievementUnlockedText(m.achievements.connected.title));
   }
 }
 
@@ -120,7 +124,7 @@ async function handleMessage(chatId: number, text: string): Promise<void> {
       await sendMessage(chatId, NOT_LINKED_TEXT);
       return;
     }
-    await sendMessage(chatId, '⚙️ Настройки уведомлений — жми, чтобы переключить:', {
+    await sendMessage(chatId, uiText.settingsPrompt, {
       replyMarkup: settingsKeyboard(link),
     });
     return;
@@ -132,13 +136,13 @@ async function handleMessage(chatId: number, text: string): Promise<void> {
       await sendMessage(chatId, NOT_LINKED_TEXT);
       return;
     }
-    await sendMessage(chatId, 'Насколько заглушить уведомления?', {
+    await sendMessage(chatId, uiText.mutePrompt, {
       replyMarkup: {
         inline_keyboard: [
           [
-            { text: 'День', callback_data: 'mute:day' },
-            { text: 'Неделя', callback_data: 'mute:week' },
-            { text: 'Навсегда', callback_data: 'mute:forever' },
+            { text: uiText.muteDay, callback_data: 'mute:day' },
+            { text: uiText.muteWeek, callback_data: 'mute:week' },
+            { text: uiText.muteForever, callback_data: 'mute:forever' },
           ],
         ],
       },
@@ -156,14 +160,14 @@ async function handleMessage(chatId: number, text: string): Promise<void> {
   await sendMessage(chatId, link ? helpText() : NOT_LINKED_TEXT);
 }
 
-/** «Это не я»: отмена своей активной прогулки — образец SQL в `lib/walks/autoclose.ts`. */
+/** "It's not me": cancel one's own active walk — SQL modeled on `lib/walks/autoclose.ts`. */
 async function handleCancel(cbId: string, walkId: string, link: TelegramLink): Promise<void> {
   if (!UUID_RE.test(walkId)) {
-    await answerCallbackQuery(cbId, 'Прогулка уже не активна');
+    await answerCallbackQuery(cbId, uiText.walkNotActiveToast);
     return;
   }
 
-  // До отмены: этот путь освобождает дорожку так же, как POST /cancel (п. 6.10.4).
+  // Before the cancel: this path frees the treadmill just like POST /cancel (spec § 6.10.4).
   const wasFullHouse = await wereAllTreadmillsBusy();
 
   const cancelled = await db
@@ -176,7 +180,10 @@ async function handleCancel(cbId: string, walkId: string, link: TelegramLink): P
     .where(and(eq(walks.id, walkId), eq(walks.status, 'active'), eq(walks.userId, link.userId)))
     .returning({ id: walks.id, treadmillId: walks.treadmillId, durationSec: walks.durationSec });
 
-  await answerCallbackQuery(cbId, cancelled.length > 0 ? 'Прогулка отменена' : 'Прогулка уже не активна');
+  await answerCallbackQuery(
+    cbId,
+    cancelled.length > 0 ? uiText.walkCancelledToast : uiText.walkNotActiveToast,
+  );
 
   if (cancelled.length > 0 && wasFullHouse) {
     const rows = await db
@@ -186,7 +193,7 @@ async function handleCancel(cbId: string, walkId: string, link: TelegramLink): P
       .limit(1);
     await notifyTreadmillFreed({
       walkId: cancelled[0].id,
-      treadmillName: rows[0]?.name ?? 'Дорожка',
+      treadmillName: rows[0]?.name ?? uiText.fallbackTreadmillName,
       freedByUserId: link.userId,
       busySec: cancelled[0].durationSec ?? 0,
     });
@@ -202,7 +209,7 @@ async function handleCallback(cbId: string, data: string, message: TgMessage | u
 
   const link = await getLinkByChat(chatId);
   if (!link) {
-    await answerCallbackQuery(cbId, 'Чат не привязан');
+    await answerCallbackQuery(cbId, uiText.chatNotLinkedToast);
     return;
   }
 
@@ -235,7 +242,7 @@ async function handleCallback(cbId: string, data: string, message: TgMessage | u
           ? new Date(Date.now() + 7 * 86_400_000)
           : new Date('9999-01-01');
     await setMutedUntil(chatId, until);
-    await answerCallbackQuery(cbId, 'Заглушил');
+    await answerCallbackQuery(cbId, uiText.mutedToast);
     return;
   }
 
@@ -247,11 +254,11 @@ export async function processTelegramUpdate(update: unknown): Promise<void> {
     if (update === null || typeof update !== 'object') return;
     const u = update as TgUpdate;
 
-    // Апдейты без update_id игнорируем: без него нечем дедуплицировать.
+    // Updates without update_id are ignored: nothing to dedup by.
     if (typeof u.update_id !== 'number') return;
 
-    // Telegram ретраит недоставленные апдейты — пустой returning значит,
-    // что этот update_id уже обработан (тем же или другим инстансом).
+    // Telegram retries undelivered updates — an empty returning means this
+    // update_id was already processed (by this or another instance).
     const inserted = await db
       .insert(telegramUpdates)
       .values({ updateId: u.update_id })

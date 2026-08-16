@@ -16,38 +16,38 @@ import {
 } from '../lib/telegram/texts';
 
 /**
- * Тексты Telegram-уведомлений (п. 6.10.4 ТЗ). Внутри генераторов — случайный
- * выбор шаблона, поэтому каждое свойство проверяется на серии вызовов: один
- * «удачный» прогон ничего не гарантирует.
+ * Telegram notification texts (spec § 6.10.4). Generators pick templates at
+ * random, so each property is checked over a series of calls: one "lucky"
+ * run guarantees nothing.
  *
- * Ключевой инвариант — тот же постфильтр, что у хинтов (п. 6.6.4): темы тела,
- * веса, еды и здоровья в личку не попадают ни в одном варианте шаблона.
- * `isSafe` дополнительно режет строки длиннее 160 символов, а сообщение
- * может быть многострочным (финиш с ачивками) — поэтому фильтр гоняем
- * построчно, а общий лимит в 400 символов проверяем на целом тексте.
+ * Key invariant — the same post-filter as hints (spec § 6.6.4): body, weight,
+ * food, and health topics must not reach DMs in any template variant.
+ * `isSafe` also rejects lines over 160 chars, while a message can be
+ * multi-line (finish with achievements) — so the filter runs per line and
+ * the overall 400-char limit is checked on the whole text.
  */
 
 const RUNS = 20;
 
-/** Каждая непустая строка обязана проходить постфильтр хинтов. */
+/** Every non-empty line must pass the hint post-filter. */
 function expectSafeLines(text: string): void {
   for (const line of text.split('\n')) {
     if (line.trim().length === 0) continue;
-    expect(rejectReason(line), `строка не прошла постфильтр: «${line}»`).toBeNull();
+    expect(rejectReason(line), `line failed the post-filter: «${line}»`).toBeNull();
   }
 }
 
-/** Общие свойства любого сообщения: непустое, без плейсхолдеров, ≤ 400, безопасное. */
+/** Common properties of any message: non-empty, no placeholders, ≤ 400, safe. */
 function expectWellFormed(text: string): void {
   expect(text.trim().length).toBeGreaterThan(0);
-  expect(text, `недоподставленный плейсхолдер в «${text}»`).not.toContain('{{');
+  expect(text, `unsubstituted placeholder in «${text}»`).not.toContain('{{');
   expect(text).not.toContain('}}');
   expect(text.length).toBeLessThanOrEqual(400);
   expectSafeLines(text);
 }
 
 describe('startText', () => {
-  it('все варианты безопасны и корректны на разных скоростях', () => {
+  it('all variants are safe and well-formed at various speeds', () => {
     const speeds = [1, 2.5, 4, 6.5];
     for (let i = 0; i < RUNS; i += 1) {
       const text = startText({
@@ -60,7 +60,7 @@ describe('startText', () => {
 });
 
 describe('finishText', () => {
-  /** Репрезентативные комбинации: серия 0/6, ачивки есть/нет, место выросло/без прошлого. */
+  /** Representative combos: streak 0/6, achievements or none, rank up / no previous. */
   const inputs = [
     {
       distanceKm: 2.1,
@@ -100,13 +100,13 @@ describe('finishText', () => {
     },
   ];
 
-  it('все варианты безопасны и корректны', () => {
+  it('all variants are safe and well-formed', () => {
     for (let i = 0; i < RUNS; i += 1) {
       expectWellFormed(finishText(inputs[i % inputs.length]));
     }
   });
 
-  it('содержит форматированную дистанцию', () => {
+  it('contains the formatted distance', () => {
     for (let i = 0; i < RUNS; i += 1) {
       expect(finishText(inputs[1])).toContain('2.1');
     }
@@ -114,7 +114,7 @@ describe('finishText', () => {
 });
 
 describe('autocloseText', () => {
-  it('все варианты безопасны и корректны', () => {
+  it('all variants are safe and well-formed', () => {
     for (let i = 0; i < RUNS; i += 1) {
       expectWellFormed(autocloseText());
     }
@@ -122,7 +122,7 @@ describe('autocloseText', () => {
 });
 
 describe('freeText', () => {
-  it('все варианты безопасны на разных длительностях занятости', () => {
+  it('all variants are safe across busy durations', () => {
     const busySecs = [0, 40, 60 * 40, 3600, 3600 + 60 * 20, 8 * 3600];
     for (let i = 0; i < RUNS; i += 1) {
       const text = freeText({
@@ -134,11 +134,11 @@ describe('freeText', () => {
     }
   });
 
-  it('занятость меньше минуты не упоминается, длинная — в часах', () => {
+  it('sub-minute busy time is not mentioned; long durations are in hours', () => {
     for (let i = 0; i < RUNS; i += 1) {
-      // 40 секунд: фразы про занятость нет вовсе (отмена случайного старта).
+      // 40 seconds: no busy-time phrase at all (an accidental start was cancelled).
       expect(freeText({ treadmillName: 'Т', busySec: 40 })).not.toContain('занята');
-      // 40 минут — минутами, 8 часов — часами, не «480 минут».
+      // 40 minutes in minutes, 8 hours in hours — not "480 minutes".
       expect(freeText({ treadmillName: 'Т', busySec: 60 * 40 })).toContain('40 минут');
       const long = freeText({ treadmillName: 'Т', busySec: 8 * 3600 });
       expect(long).toContain('8 часов');
@@ -148,7 +148,7 @@ describe('freeText', () => {
 });
 
 describe('remindText', () => {
-  it('все варианты безопасны при разных сериях и заморозках', () => {
+  it('all variants are safe across streaks and freezes', () => {
     const inputs = [
       { idleWorkdays: 2, streakDays: 0, freezesLeft: 2 },
       { idleWorkdays: 2, streakDays: 6, freezesLeft: 1 },
@@ -160,9 +160,9 @@ describe('remindText', () => {
     }
   });
 
-  it('при живой серии даёт конкретный повод — упоминает серию (п. 6.10.4)', () => {
-    // Шаблон выбирается случайно; достаточно, чтобы серия упоминалась хотя бы
-    // в одном из 30 прогонов — иначе повод «серия под угрозой» потерян вовсе.
+  it('with a live streak gives a concrete reason — mentions the streak (spec § 6.10.4)', () => {
+    // Templates are random; it suffices that the streak is mentioned in at
+    // least one of 30 runs — otherwise the "streak at risk" angle is lost entirely.
     const texts = Array.from({ length: 30 }, () =>
       remindText({ idleWorkdays: 2, streakDays: 6, freezesLeft: 1 }),
     );
@@ -183,14 +183,14 @@ describe('digestText', () => {
     selfKm: 6.2,
   };
 
-  it('все варианты безопасны, включая участника без места в топе', () => {
+  it('all variants are safe, including a member with no top rank', () => {
     for (let i = 0; i < RUNS; i += 1) {
       expectWellFormed(digestText(input));
       expectWellFormed(digestText({ ...input, selfRank: null, selfKm: 0 }));
     }
   });
 
-  it('содержит имена из топа и пройденный город', () => {
+  it('contains the top names and the passed city', () => {
     for (let i = 0; i < RUNS; i += 1) {
       const text = digestText(input);
       expect(text).toContain('Аня');
@@ -202,7 +202,7 @@ describe('digestText', () => {
 });
 
 describe('welcomeText / relinkedText', () => {
-  it('welcomeText безопасен и обращается по имени', () => {
+  it('welcomeText is safe and addresses by name', () => {
     for (let i = 0; i < RUNS; i += 1) {
       const text = welcomeText('Егор');
       expectWellFormed(text);
@@ -210,7 +210,7 @@ describe('welcomeText / relinkedText', () => {
     }
   });
 
-  it('relinkedText безопасен и обращается по имени', () => {
+  it('relinkedText is safe and addresses by name', () => {
     for (let i = 0; i < RUNS; i += 1) {
       const text = relinkedText('Маша');
       expectWellFormed(text);
@@ -219,20 +219,20 @@ describe('welcomeText / relinkedText', () => {
   });
 });
 
-describe('служебные тексты', () => {
-  it('helpText безопасен и корректен', () => {
+describe('service texts', () => {
+  it('helpText is safe and well-formed', () => {
     for (let i = 0; i < RUNS; i += 1) {
       expectWellFormed(helpText());
     }
   });
 
-  it('farewellText безопасен и корректен', () => {
+  it('farewellText is safe and well-formed', () => {
     for (let i = 0; i < RUNS; i += 1) {
       expectWellFormed(farewellText());
     }
   });
 
-  it('staleTokenText безопасен и корректен', () => {
+  it('staleTokenText is safe and well-formed', () => {
     for (let i = 0; i < RUNS; i += 1) {
       expectWellFormed(staleTokenText());
     }

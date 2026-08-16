@@ -2,6 +2,7 @@ import { and, eq, isNull, sql } from 'drizzle-orm';
 
 import { TZ } from '../config';
 import { db } from '../db';
+import { m } from '../i18n';
 import { achievements, treadmills, walkSpeedSegments, walks } from '../db/schema';
 import { addOfficeDays, officeDayStart, officeWeekday, toOfficeDay } from '../time';
 import type { AchievementDto } from '../types';
@@ -9,37 +10,41 @@ import type { AchievementDto } from '../types';
 import { getStreak } from './streak';
 
 /**
- * Достижения (п. 6.8.3 ТЗ) — за характер, а не за объём: ачивки за километраж
- * снова выигрывает лидер, поэтому почти все условия доступны любому участнику.
+ * Achievements (spec § 6.8.3) reward character, not volume: mileage-based ones
+ * would always go to the leader, so almost all conditions are reachable by anyone.
  *
- * Отзыва достижений нет намеренно (п. 7.7): снимать уже показанную ачивку при
- * удалении прогулки — худший из вариантов поведения.
+ * Achievements are deliberately never revoked (spec § 7.7): taking back an
+ * already-shown badge on walk deletion is the worst possible behavior.
  */
 
-export const ACHIEVEMENTS: ReadonlyArray<{ code: string; title: string; description: string }> = [
-  { code: 'first_walk', title: 'Первый шаг', description: 'Первая завершённая прогулка' },
-  { code: 'early_bird', title: 'Ранняя пташка', description: 'Прогулка начата до 9:00' },
-  { code: 'night_owl', title: 'Сова', description: 'Прогулка начата после 18:00' },
-  { code: 'lunch_walker', title: 'Обеденный странник', description: 'Прогулка начата между 12:00 и 14:00' },
-  { code: 'friday_closer', title: 'Пятничный', description: 'Финиш в пятницу после 17:00' },
-  { code: 'marathon', title: 'Марафон', description: 'Одна прогулка дольше часа' },
-  { code: 'zen', title: 'Дзен', description: '30 минут на скорости не выше 2 км/ч' },
-  { code: 'long_haul', title: 'Дальний рейс', description: '5 км за одну прогулку' },
-  { code: 'gearbox', title: 'Коробка передач', description: 'Три смены скорости за одну прогулку' },
-  { code: 'cruise', title: 'Круиз-контроль', description: '10 прогулок без единой смены скорости' },
-  { code: 'five_days', title: 'Пятидневка', description: '5 рабочих дней подряд' },
-  { code: 'ten_day_streak', title: 'Двухнедельник', description: 'Серия 10 рабочих дней' },
-  { code: 'ten_walks', title: 'Десятка', description: '10 завершённых прогулок' },
-  { code: 'fifty_walks', title: 'Полсотни ходок', description: '50 завершённых прогулок' },
-  { code: 'stayer', title: 'Стайер', description: '10 прогулок на скорости 7+ км/ч' },
-  { code: 'full_throttle', title: 'Полный газ', description: '10 минут на потолке дорожки' },
-  { code: 'fifty_km', title: 'Полтинник', description: '50 км суммарно' },
-  { code: 'first_hundred', title: 'Первая сотня', description: '100 км суммарно' },
-  { code: 'warm_treadmill', title: 'Дорожка не остыла', description: 'Две прогулки в один день' },
-  { code: 'connected', title: 'На связи', description: 'Привязан Telegram-бот' },
-];
+/** Award order is the display order; titles come from the i18n dictionary. */
+const ACHIEVEMENT_CODES = [
+  'first_walk',
+  'early_bird',
+  'night_owl',
+  'lunch_walker',
+  'friday_closer',
+  'marathon',
+  'zen',
+  'long_haul',
+  'gearbox',
+  'cruise',
+  'five_days',
+  'ten_day_streak',
+  'ten_walks',
+  'fifty_walks',
+  'stayer',
+  'full_throttle',
+  'fifty_km',
+  'first_hundred',
+  'warm_treadmill',
+  'connected',
+] as const;
 
-/** Пороги условий. Значения смысловые, а не настроечные, поэтому живут рядом с каталогом. */
+export const ACHIEVEMENTS: ReadonlyArray<{ code: string; title: string; description: string }> =
+  ACHIEVEMENT_CODES.map((code) => ({ code, ...m.achievements[code] }));
+
+/** Condition thresholds. Semantic, not tunable — hence they live next to the catalog. */
 const EARLY_BIRD_BEFORE_HOUR = 9;
 const NIGHT_OWL_FROM_HOUR = 18;
 const LUNCH_FROM_HOUR = 12;
@@ -66,8 +71,8 @@ const SAME_DAY_WALKS = 2;
 const CATALOG = new Map(ACHIEVEMENTS.map((item) => [item.code, item]));
 
 /**
- * Час начала прогулки в офисном поясе: «до 9:00» для человека в Москве — это
- * московские 9:00, а не UTC (п. 6.8.5).
+ * Walk start hour in the office timezone: "before 9:00" means Moscow 9:00,
+ * not UTC (spec § 6.8.5).
  */
 const hourFormatter = new Intl.DateTimeFormat('en-GB', {
   timeZone: TZ,
@@ -79,22 +84,22 @@ const officeHour = (date: Date): number => Number(hourFormatter.format(date));
 
 const toDto = (code: string, earnedAt: Date | null): AchievementDto | null => {
   const item = CATALOG.get(code);
-  // Код не из каталога (остаток снятой механики) молча пропускаем, а не падаем.
+  // A code missing from the catalog (leftover of a removed mechanic) is skipped, not fatal.
   if (!item) return null;
   return { ...item, earnedAt: earnedAt ? earnedAt.toISOString() : null };
 };
 
 /**
- * Начисление по факту завершения прогулки. Вызывается из `POST /api/walks/:id/finish`,
- * возвращает только реально новые ачивки — их показывает экран успеха.
+ * Awarding on walk finish. Called from `POST /api/walks/:id/finish`; returns
+ * only genuinely new achievements — the success screen shows them.
  */
 export async function awardAchievements(userId: string, walkId: string): Promise<AchievementDto[]> {
   const [walk] = await db.select().from(walks).where(eq(walks.id, walkId)).limit(1);
-  // Достижения только за свою завершённую прогулку: автозакрытая и отменённая не считаются.
+  // Only your own finished walk counts: auto-closed and cancelled ones do not.
   if (!walk || walk.userId !== userId || walk.status !== 'finished') return [];
 
   const day = toOfficeDay(walk.startedAt);
-  // Сравнение по диапазону, а не по вычисленной дате: попадает в индекс walks_user_started_idx.
+  // Range comparison instead of a computed date: it hits the walks_user_started_idx index.
   const dayStart = officeDayStart(day).toISOString();
   const nextDayStart = officeDayStart(addOfficeDays(day, 1)).toISOString();
 
@@ -114,11 +119,11 @@ export async function awardAchievements(userId: string, walkId: string): Promise
       .from(walks)
       .where(and(eq(walks.userId, userId), eq(walks.status, 'finished')))
       .then((rows) => rows[0]),
-    // Серию считаем на день прогулки, а не на «сейчас»: прогулка, начатая в 23:50
-    // и закрытая после полуночи, должна проверяться по своему офисному дню.
+    // Streak is computed for the walk's day, not "now": a walk started at 23:50
+    // and finished past midnight must be checked against its own office day.
     getStreak(userId, walk.startedAt),
-    // «Круиз-контроль»: прогулки без единой смены скорости — left join вместо
-    // коррелированного exists в filter: тот drizzle собирает неверно.
+    // "Cruise control": walks with zero speed changes — left join instead of a
+    // correlated exists in filter, which drizzle compiles incorrectly.
     db
       .select({ steadyWalks: sql<number>`count(*)`.mapWith(Number) })
       .from(walks)
@@ -131,7 +136,7 @@ export async function awardAchievements(userId: string, walkId: string): Promise
         ),
       )
       .then((rows) => rows[0]),
-    // Отрезки текущей прогулки: число смен и весь диапазон скоростей.
+    // Segments of the current walk: change count and full speed range.
     db
       .select({ speedKmh: walkSpeedSegments.speedKmh })
       .from(walkSpeedSegments)
@@ -150,7 +155,7 @@ export async function awardAchievements(userId: string, walkId: string): Promise
   const finishWeekday = officeWeekday(toOfficeDay(finishAt));
   const durationSec = walk.durationSec ?? 0;
   const distanceKm = Number(walk.distanceKm ?? 0);
-  // Все скорости прогулки: стартовая — в `walks`, смены — отдельными отрезками.
+  // All walk speeds: the starting one in `walks`, changes as separate segments.
   const speeds = [walk.speedKmh, ...segments.map((segment) => segment.speedKmh)];
   const maxSpeed = Math.max(...speeds);
   const minSpeed = Math.min(...speeds);
@@ -158,7 +163,7 @@ export async function awardAchievements(userId: string, walkId: string): Promise
 
   const earned: string[] = [];
 
-  earned.push('first_walk'); // Первая — она же любая: дубль отсечёт unique-индекс.
+  earned.push('first_walk'); // Any walk qualifies; the unique index drops duplicates.
   if (hour < EARLY_BIRD_BEFORE_HOUR) earned.push('early_bird');
   if (hour >= NIGHT_OWL_FROM_HOUR) earned.push('night_owl');
   if (hour >= LUNCH_FROM_HOUR && hour < LUNCH_TO_HOUR) earned.push('lunch_walker');
@@ -188,8 +193,8 @@ export async function awardAchievements(userId: string, walkId: string): Promise
 
   if (earned.length === 0) return [];
 
-  // Один раз на участника: дубль отсекает achievements_user_code_uniq, а `returning`
-  // оставляет только те строки, которые вставились именно сейчас.
+  // Once per participant: achievements_user_code_uniq drops duplicates, and
+  // `returning` keeps only the rows inserted right now.
   const inserted = await db
     .insert(achievements)
     .values(earned.map((code) => ({ userId, code, walkId })))
@@ -204,7 +209,7 @@ export async function awardAchievements(userId: string, walkId: string): Promise
   });
 }
 
-/** Полученные достижения участника в порядке каталога — карточка не должна прыгать. */
+/** Participant's earned achievements in catalog order — the card must not jump around. */
 export async function listUserAchievements(userId: string): Promise<AchievementDto[]> {
   const rows = await db
     .select({ code: achievements.code, earnedAt: achievements.earnedAt })

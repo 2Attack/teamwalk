@@ -7,6 +7,7 @@ import { Icon } from '@/components/ui/icon';
 import { useStats } from '@/lib/client/api';
 import { APP_NAME, IS_VERCEL_PREVIEW } from '@/lib/config';
 import { formatKm } from '@/lib/format';
+import { m } from '@/lib/i18n';
 
 /**
  * Home header: pixel-font logo + team total kilometers (spec § 6.1) + the gear
@@ -40,7 +41,7 @@ export function AppHeader() {
               {formatKm(error ? 0 : data?.teamTotalKm)}
               {/* The caption does not scale with the number: set in 24 px pixel
                   type it would take half the header. */}
-              <span className="font-ui text-xs font-normal text-text-dim">km/team</span>
+              <span className="font-ui text-xs font-normal text-text-dim">{m.units.kmTeam}</span>
             </p>
           )}
         </div>
@@ -51,7 +52,7 @@ export function AppHeader() {
             icon centers on the km line instead of stretching the header. */}
         <Link
           href="/settings"
-          aria-label="Настройки"
+          aria-label={m.home.settingsAria}
           className="-my-3 flex min-h-11 min-w-11 items-center justify-center text-text-dim transition-colors hover:text-text-main focus-visible:text-text-main"
         >
           <Icon name="gear" size={16} />

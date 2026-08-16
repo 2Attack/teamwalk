@@ -5,21 +5,22 @@
 @custom-variant dark (&:is(.dark *));
 
 /*
-  Тема приложения. Единственный источник цвета — токены shadcn/8bitcn ниже;
-  собственные имена (`bg-panel`, `citrus`, `text-dim`…) оставлены как
-  псевдонимы поверх них, иначе тему пришлось бы «раскатывать» правкой всех
-  вызовов `bg-bg-panel` / `text-citrus` по компонентам.
+  App theme. The only color source is the shadcn/8bitcn tokens below; our own
+  names (`bg-panel`, `citrus`, `text-dim`…) are aliases on top of them —
+  otherwise a theme change would mean editing every `bg-bg-panel` /
+  `text-citrus` call site.
 
-  Псевдоним — это `var(--…)`, а не значение: подстановка происходит в рантайме,
-  поэтому смена класса темы на <html> уводит за собой и псевдонимы. Важно, что
-  класс висит именно на <html> (см. app/layout.tsx): `@theme` печатает
-  псевдонимы в `:root`, и на этом же элементе их `var()` разрешается в нужную
-  ветку темы. Класс `dark` на внутреннем <div> псевдонимы бы не переключил.
+  An alias is a `var(--…)`, not a value: substitution happens at runtime, so
+  switching the theme class on <html> carries the aliases along. The class must
+  sit on <html> (see app/layout.tsx): `@theme` prints the aliases into `:root`,
+  where their `var()` resolves into the right theme branch. A `dark` class on
+  an inner <div> would not switch them.
 */
 @theme {
   /*
-    Цвета медалей — вне темы. Золото/серебро/бронза и «пройдено» на маршруте
-    опознаются по самому цвету, поэтому в светлой и тёмной теме они одинаковы.
+    Medal colors sit outside the theme. Gold/silver/bronze and the route
+    "passed" state are recognized by the color itself, so they are identical
+    in light and dark themes.
   */
   --color-lime: #a3e635;
   --color-silver: #c0c0c0;
@@ -79,9 +80,9 @@
   --accent: oklch(0.65 0.12 45);
   --accent-foreground: oklch(0.98 0 0);
   /*
-    Ровно из темы. На `--card` это 3.5:1 — ниже 4.5:1, которые ТЗ требует от
-    текста (п. 6.7.7): для рамки и заливки хватает, для сообщения об ошибке
-    мелким кеглем — нет. Осветление до ~oklch(0.68 0.16 25) даёт 4.5:1.
+    Straight from the theme. On `--card` that is 3.5:1 — below the 4.5:1 the
+    spec requires for text (spec § 6.7.7): enough for a border and fill, not
+    for a small-type error message. Lightening to ~oklch(0.68 0.16 25) gives 4.5:1.
   */
   --destructive: oklch(0.55 0.2 25);
   --border: oklch(0.3 0.03 45);
@@ -111,9 +112,9 @@
   --color-input: var(--input);
   --color-ring: var(--ring);
   /*
-    Радиус из темы. Видимой геометрии он почти не меняет: и компоненты 8bitcn,
-    и наши панели гасят скругление своим `rounded-none` / `border-radius: 0` —
-    пиксельная рамка со скруглением несовместима (п. 6.7.1).
+    Radius from the theme. It barely affects visible geometry: both 8bitcn
+    components and our panels cancel it with `rounded-none` /
+    `border-radius: 0` — a pixel frame is incompatible with rounding (spec § 6.7.1).
   */
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
@@ -139,9 +140,8 @@ body {
 
 body {
   /*
-    Тонкая пиксельная сетка на фоне — читается как «экран консоли».
-    Цвет линии берётся из темы (раньше был вшит цитрусовый #ff8a00), иначе
-    сетка осталась бы оранжевой на любой смене палитры.
+    A faint pixel grid on the background — reads as a "console screen". The
+    line color comes from the theme so the grid follows any palette change.
   */
   --grid-line: color-mix(in oklab, var(--color-citrus) 3.5%, transparent);
   background-image:
@@ -151,10 +151,10 @@ body {
 }
 
 /*
-  Пиксельный шрифт только на числах, метках и заголовках (п. 6.7.1).
-  Класс `.retro` приходит из 8bitcn — переопределяем его на наш шрифт,
-  подключённый через next/font с кириллическим subset: их вариант тянет
-  Press Start 2P с CDN Google и без кириллицы.
+  Pixel font only on numbers, labels and headings (spec § 6.7.1). The `.retro`
+  class comes from 8bitcn — overridden to our font loaded via next/font with
+  the Cyrillic subset: their variant pulls Press Start 2P from the Google CDN
+  without Cyrillic.
 */
 .font-pixel,
 .retro {
@@ -164,7 +164,7 @@ body {
   line-height: 1.5;
 }
 
-/* ── Пиксельная геометрия: нулевое скругление, рамка 3px, тень без blur ── */
+/* ── Pixel geometry: zero radius, 3px border, blur-free shadows ── */
 .pixel-panel {
   border-radius: 0;
   border: 3px solid var(--color-border-dim);
@@ -187,7 +187,7 @@ body {
 }
 
 .pixel-btn:active:not(:disabled) {
-  /* Кнопка «вдавливается» в свою тень. */
+  /* The button presses into its own shadow. */
   transform: translate(4px, 4px);
   box-shadow: none;
 }
@@ -198,7 +198,7 @@ body {
   cursor: not-allowed;
 }
 
-/* Фокус виден всегда: тач-таргеты и клавиатура равноправны (п. 8). */
+/* Focus is always visible: touch and keyboard are equal citizens (spec § 8). */
 :where(a, button, input, select, textarea, [tabindex]):focus-visible {
   outline: 3px solid var(--color-citrus);
   outline-offset: 2px;
@@ -209,7 +209,7 @@ img.pixel,
   image-rendering: pixelated;
 }
 
-/* ── Анимации: только transform/opacity, шаги без интерполяции (п. 6.7.6) ── */
+/* ── Animations: transform/opacity only, stepped, no interpolation (spec § 6.7.6) ── */
 @keyframes walk-cycle {
   from {
     background-position-x: 0;
@@ -304,7 +304,7 @@ img.pixel,
   scrollbar-color: var(--color-border-dim) transparent;
 }
 
-/* prefers-reduced-motion глушит всё, включая спрайт и посимвольный вывод (п. 6.7.7). */
+/* prefers-reduced-motion silences everything, sprite and typewriter output included (spec § 6.7.7). */
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

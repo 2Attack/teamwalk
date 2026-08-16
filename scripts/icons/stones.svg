@@ -1,4 +1,4 @@
-<!-- Дзен: пирамидка камней. Сетка 24×24. -->
+<!-- Zen: stacked stone cairn. 24×24 grid. -->
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
   <path d="M9 5h6v4H9zM7 11h10v4H7zM5 17h14v4H5z"/>
 </svg>

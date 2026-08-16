@@ -1,31 +1,30 @@
 /**
- * Чистые вычисления для обогащения снапшота хинтов (без БД).
+ * Pure computations enriching the hint snapshot (no DB).
  *
- * Принцип тот же, что у `route_position`: всю арифметику — разности, ранги,
- * прогнозы — считаем мы, модель числа только цитирует. На вычислениях LLM
- * ошибается охотнее всего, а «u2 отстаёт на 3.4 км» с неверным числом рядом
- * с настоящей таблицей убивает доверие к ленте.
+ * Same principle as `route_position`: all arithmetic — gaps, ranks,
+ * forecasts — is ours; the model only quotes numbers. A wrong "u2 trails by
+ * 3.4 km" next to the real table kills trust in the feed.
  */
 
 const ROUND = (value: number): number => Math.round(value * 100) / 100;
 
-/** Рабочих дней в неделе — темп «догонит через N дней» считается по ним. */
+/** Workdays per week — the "catches up in N days" pace uses them. */
 const WORKDAYS_PER_WEEK = 5;
 
-/** Прогноз дальше этого горизонта — уже не шутка, а гадание. */
+/** Beyond this horizon a forecast is fortune-telling, not a joke. */
 const CATCHUP_MAX_DAYS = 60;
 
 export interface MilestoneInfo {
-  /** Ближайший круглый рубеж, кратный 100 км. */
+  /** Nearest round milestone, a multiple of 100 km. */
   at: number;
-  /** Сколько осталось до него. */
+  /** Kilometers left to it. */
   left: number;
 }
 
-/** Ближайший командный рубеж: до 500 км осталось 12 — кто добьёт? */
+/** Nearest team milestone: 12 km left to 500 — who finishes it? */
 export function nextMilestone(totalKm: number): MilestoneInfo {
   const at = Math.max(100, Math.ceil(totalKm / 100) * 100);
-  // Ровно на рубеже — целимся в следующий: «осталось 0» шуткой не станет.
+  // Exactly on a milestone — aim for the next one: "0 left" makes no joke.
   const target = at === totalKm ? at + 100 : at;
   return { at: target, left: ROUND(target - totalKm) };
 }
@@ -38,8 +37,8 @@ export interface RankChangeInput {
 }
 
 /**
- * Изменение места за неделю: ранг по «тоталу минус неделя» против ранга сейчас.
- * Положительное значение — поднялся. Тай-брейк тот же, что в рейтинге: имя.
+ * Rank change over the week: rank by "total minus week" vs rank now.
+ * Positive — climbed. Same tie-break as the leaderboard: name.
  */
 export function rankChanges(input: readonly RankChangeInput[]): Map<string, number> {
   const byTotal = [...input].sort(
@@ -56,9 +55,9 @@ export function rankChanges(input: readonly RankChangeInput[]): Map<string, numb
 }
 
 /**
- * Через сколько рабочих дней догоняющий поравняется с лидером, если оба
- * сохранят темп этой недели. `null` — не догоняет (темп не выше) или прогноз
- * дальше горизонта: такие «догонит через 400 дней» веселья не добавляют.
+ * Working days until the chaser catches the leader, both keeping this week's
+ * pace. `null` — not catching up (pace not higher) or beyond the horizon:
+ * "catches up in 400 days" adds no fun.
  */
 export function catchupDays(
   gapKm: number,

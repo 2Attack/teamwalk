@@ -77,9 +77,9 @@ function Tooltip({ children, ...props }: BitTooltipProps) {
 }
 
 /*
-  Адаптация: база собрана на Base UI, а не Radix (как и Tabs — см.
-  docs/8BITCN.md): у провайдера проп называется `delay`, а `asChild`
-  у триггера не существует — свой элемент передаётся через `render`.
+  Adaptation: the base is built on Base UI, not Radix (like Tabs — see
+  docs/8BITCN.md): the provider prop is `delay`, and the trigger has no
+  `asChild` — a custom element is passed via `render`.
 */
 export interface BitTooltipProviderProps
   extends React.ComponentPropsWithoutRef<typeof ShadcnTooltipProvider> {}

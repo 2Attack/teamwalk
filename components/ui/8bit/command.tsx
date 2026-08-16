@@ -63,10 +63,10 @@ function CommandDialog({
   ...props
 }: Omit<React.ComponentProps<typeof Dialog>, "children"> & {
   /*
-    `children` переопределён относительно версии из реестра 8bitcn: в проекте
-    стиль `base-nova`, и у диалога Base UI `children` — это ещё и render-функция
-    (`(payload) => ReactNode`). Такую внутрь <Command> положить нельзя, поэтому
-    здесь сужаем до обычного узла. Перезаписывается при `shadcn add @8bitcn/command`.
+    `children` overridden vs the 8bitcn registry version: with the project's
+    `base-nova` style, the Base UI dialog's `children` may also be a render
+    function (`(payload) => ReactNode`), which can't go inside <Command>, so
+    it's narrowed to a plain node. Overwritten by `shadcn add @8bitcn/command`.
   */
   children?: React.ReactNode;
   title?: string;

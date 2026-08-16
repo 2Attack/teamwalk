@@ -20,17 +20,19 @@ import { Icon } from '@/components/ui/icon';
 import { achievementIcon } from '@/lib/achievement-icons';
 import { apiSend, revalidateAfterWalk, useHints } from '@/lib/client/api';
 import { DELETE_WINDOW_MINUTES } from '@/lib/config';
-import { formatDuration, formatKm, plural } from '@/lib/format';
+import { formatDuration, formatKm } from '@/lib/format';
+import { fmt, m, plural } from '@/lib/i18n';
 import type { FinishWalkResultDto } from '@/lib/types';
 
 /**
- * Экран успеха (п. 6.4) — «уведомление о награде» (п. 6.7.5): прибавка, позиция,
- * серия, новые достижения. Всё рисуется из ответа `POST /finish` — второго запроса
- * за достижениями, серией и рейтингом нет по построению.
+ * Success screen (spec § 6.4) — the "award notification" (spec § 6.7.5): gain,
+ * rank, streak, new achievements. All rendered from the `POST /finish`
+ * response — by construction there is no second request for achievements,
+ * streak, or rank.
  *
- * Пиксельный шрифт — на прибавке, номере места и заголовках блоков. Названия
- * достижений, описания и хинт идут обычным sans: длинные русские строки в
- * bitmap-шрифте не помещаются в 360px (п. 6.7.1).
+ * Pixel font on the gain, rank number, and block titles. Achievement titles,
+ * descriptions, and the hint are regular sans: long Russian strings in a
+ * bitmap font don't fit 360px (spec § 6.7.1).
  */
 
 const RECORD_ANIMATION_MS = 700;
@@ -40,7 +42,7 @@ function prefersReducedMotion(): boolean {
   return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 }
 
-/** Плавный набор числа: перерисовка текста, без анимации геометрии. */
+/** Smooth number count-up: text repaint, no geometry animation. */
 function useCountUp(target: number): number {
   const [value, setValue] = useState(() => (prefersReducedMotion() ? target : 0));
 
@@ -63,13 +65,13 @@ function useCountUp(target: number): number {
   return value;
 }
 
-/** Короткая метка места — пиксельная. Сама фраза о перемещении идёт ниже, sans. */
+/** Short rank label — pixel font. The movement phrase itself goes below, sans. */
 function rankDelta(rank: FinishWalkResultDto['rank']): string {
   const { current, previous } = rank;
-  if (previous === null) return 'первая позиция в недельном рейтинге';
-  if (previous > current) return `поднялись с ${previous} места в недельном рейтинге`;
-  if (previous < current) return `опустились с ${previous} места в недельном рейтинге`;
-  return 'позиция в недельном рейтинге не изменилась';
+  if (previous === null) return m.walkSuccess.rankFirst;
+  if (previous > current) return fmt(m.walkSuccess.rankUp, { previous });
+  if (previous < current) return fmt(m.walkSuccess.rankDown, { previous });
+  return m.walkSuccess.rankSame;
 }
 
 export function WalkSuccess({ result }: { result: FinishWalkResultDto }) {
@@ -90,7 +92,7 @@ export function WalkSuccess({ result }: { result: FinishWalkResultDto }) {
     return endedAt + DELETE_WINDOW_MINUTES * 60_000;
   }, [walk.endedAt]);
 
-  // Окно удаления считается от времени сервера; кнопка исчезает синхронно с 403.
+  // The delete window counts from server time; the button vanishes in sync with the 403.
   useEffect(() => {
     const tick = () => setSecondsLeft(Math.max(0, Math.ceil((deadlineMs - Date.now()) / 1000)));
     tick();
@@ -110,7 +112,7 @@ export function WalkSuccess({ result }: { result: FinishWalkResultDto }) {
       setDeleteError(
         error instanceof Error && error.message
           ? error.message
-          : 'Запись удалить не вышло — окно в 15 минут могло уже закрыться',
+          : fmt(m.walkSuccess.deleteFailed, { minutes: DELETE_WINDOW_MINUTES }),
       );
       setDeleting(false);
     }
@@ -121,7 +123,7 @@ export function WalkSuccess({ result }: { result: FinishWalkResultDto }) {
 
   return (
     <main className="mx-auto flex min-h-dvh w-full max-w-md flex-col justify-center gap-5 px-4 py-8">
-      {/* Анимируются только opacity и scale — transform, без reflow (п. 6.7.6). */}
+      {/* Only opacity and scale animate — transform, no reflow (spec § 6.7.6). */}
       <motion.div
         initial={{ opacity: 0, scale: 0.92 }}
         animate={{ opacity: 1, scale: 1 }}
@@ -129,19 +131,22 @@ export function WalkSuccess({ result }: { result: FinishWalkResultDto }) {
         className="text-center"
       >
         <p className="font-pixel text-[32px] leading-none tabular-nums text-lime sm:text-[48px]">
-          +{formatKm(shown)} км
+          +{formatKm(shown)} {m.units.km}
         </p>
         <p className="mt-3 text-sm text-text-dim">
-          {formatDuration(walk.durationSec ?? 0)} на дорожке «{walk.treadmillName}»
+          {fmt(m.walkSuccess.durationOnTreadmill, {
+            duration: formatDuration(walk.durationSec ?? 0),
+            treadmill: walk.treadmillName,
+          })}
         </p>
       </motion.div>
 
-      {/* `font="normal"` проставляется на каждом слоте: 8bitcn вешает `retro`
-          на любой подкомпонент, которому его не передали явно. */}
+      {/* `font="normal"` is set on every slot: 8bitcn applies `retro` to any
+          subcomponent that doesn't receive it explicitly. */}
       <Card font="normal">
         <CardHeader font="normal">
           <CardTitle className="text-[16px] leading-relaxed">
-            {result.rank.current} МЕСТО
+            {fmt(m.walkSuccess.placeTitle, { rank: result.rank.current })}
           </CardTitle>
           <CardDescription font="normal" className="font-sans">
             {rankDelta(result.rank)}
@@ -151,39 +156,39 @@ export function WalkSuccess({ result }: { result: FinishWalkResultDto }) {
 
       <Card font="normal">
         <CardHeader font="normal">
-          <CardTitle className="text-[16px] leading-relaxed">СЕРИЯ</CardTitle>
+          <CardTitle className="text-[16px] leading-relaxed">{m.walkSuccess.streakTitle}</CardTitle>
         </CardHeader>
         <CardContent font="normal" className="flex flex-wrap items-center gap-3">
           <StreakBadge days={streakDays} />
           <span className="text-sm text-text-dim">
             {streakDays === 0
-              ? 'серия начнётся со следующей прогулки'
-              : `${streakDays} ${plural(streakDays, 'день', 'дня', 'дней')} подряд`}
-            {streak.frozen ? ' · серию спасла заморозка' : ''}
+              ? m.walkSuccess.streakNone
+              : plural(m.walkSuccess.streakDays, streakDays)}
+            {streak.frozen ? m.walkSuccess.streakFrozen : ''}
           </span>
         </CardContent>
         <CardFooter font="normal">
           {personalRecord.isNew ? (
             <p className="flex items-center gap-2 text-sm text-lime">
               <Icon name="trophy" size={16} />
-              Новый личный рекорд дня — {formatKm(personalRecord.bestDayKm)} км
+              {fmt(m.walkSuccess.newDayRecord, { km: formatKm(personalRecord.bestDayKm) })}
             </p>
           ) : (
             <p className="text-sm text-text-dim">
-              Лучший день — {formatKm(personalRecord.bestDayKm)} км
+              {fmt(m.walkSuccess.bestDay, { km: formatKm(personalRecord.bestDayKm) })}
             </p>
           )}
         </CardFooter>
       </Card>
 
-      {/* Тост всплывает и уходит, поэтому список наград дублируется текстом:
-          экран успеха — единственное место, где их показывают целиком. */}
+      {/* The toast comes and goes, so the award list is duplicated as text:
+          the success screen is the only place showing them in full. */}
       {newAchievements.length > 0 ? (
         <>
           <AchievementToast achievements={newAchievements} />
           <Card font="normal">
             <CardHeader font="normal">
-              <CardTitle className="text-[16px] leading-relaxed">НОВЫЕ НАГРАДЫ</CardTitle>
+              <CardTitle className="text-[16px] leading-relaxed">{m.walkSuccess.newAwardsTitle}</CardTitle>
             </CardHeader>
             <CardContent font="normal">
               <ul className="space-y-4">
@@ -191,7 +196,7 @@ export function WalkSuccess({ result }: { result: FinishWalkResultDto }) {
                   <li key={achievement.code} className="space-y-2">
                     <div className="px-1.5">
                       <Badge font="normal" className="h-7">
-                        {/* У каждой ачивки своя пиксельная иконка (п. 6.8.3). */}
+                        {/* Each achievement has its own pixel icon (spec § 6.8.3). */}
                         <Icon name={achievementIcon(achievement.code)} size={16} />
                         {achievement.title}
                       </Badge>
@@ -215,7 +220,7 @@ export function WalkSuccess({ result }: { result: FinishWalkResultDto }) {
           type="button"
           className="min-h-14 w-full text-base"
         >
-          На главную
+          {m.common.home}
         </Button>
 
         {canDelete ? (
@@ -227,7 +232,7 @@ export function WalkSuccess({ result }: { result: FinishWalkResultDto }) {
             type="button"
             className="min-h-11 w-full text-sm tabular-nums text-text-dim"
           >
-            {deleting ? 'Удаляем…' : `Отменить запись (${formatDuration(secondsLeft)})`}
+            {deleting ? m.common.deleting : fmt(m.walkSuccess.deleteEntry, { timer: formatDuration(secondsLeft) })}
           </Button>
         ) : null}
 

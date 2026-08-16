@@ -5,6 +5,7 @@ import { llmEnabled } from '@/lib/hints/providers';
 import { generateRouteDraft } from '@/lib/routes/generate';
 import type { RouteDraftDto } from '@/lib/types';
 import { generateRouteSchema } from '@/lib/validation';
+import { m } from '@/lib/i18n';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -18,7 +19,7 @@ export const dynamic = 'force-dynamic';
 export async function POST(request: Request) {
   return handle<RouteDraftDto | ApiErrorBody>(async () => {
     if (!llmEnabled()) {
-      return apiError(503, 'LLM_DISABLED', 'Генерация недоступна: LLM-креды не настроены');
+      return apiError(503, 'LLM_DISABLED', m.apiMessages.generationUnavailable);
     }
 
     const input = generateRouteSchema.parse(await readJson(request));
@@ -27,7 +28,7 @@ export async function POST(request: Request) {
       return apiError(
         502,
         'INTERNAL_ERROR',
-        'Не удалось сгенерировать маршрут — попробуйте ещё раз или заполните вручную',
+        m.apiMessages.generationFailed,
       );
     }
     return NextResponse.json(draft);

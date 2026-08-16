@@ -6,30 +6,30 @@ import { Button } from '@/components/ui/8bit/button';
 import { Icon } from '@/components/ui/icon';
 import { apiSend } from '@/lib/client/api';
 import { MIN_SPEED_KMH } from '@/lib/config';
+import { m } from '@/lib/i18n';
 import type { ActiveWalkDto } from '@/lib/types';
 
 /**
- * Смена скорости прямо во время прогулки (п. 6.3): «− 4 км/ч +».
+ * Mid-walk speed change (spec § 6.3): «− 4 km/h +».
  *
- * Шаг ровно 1 км/ч и две крупные кнопки вместо ряда всех скоростей: на планшете
- * у дорожки это одно нажатие вслепую, а прибавляют темп обычно на единицу.
- * Ряд `SpeedPicker` остаётся на старте, где скорость выбирают с нуля.
+ * Step of exactly 1 km/h and two big buttons instead of the full speed row:
+ * on a treadmill tablet this is one blind tap, and pace usually changes by one.
+ * The `SpeedPicker` row stays on the start screen where speed is picked from scratch.
  *
- * Значение на экране меняется сразу, не дожидаясь ответа: человек сверяет его с
- * табло дорожки. Пока запрос в пути, обе кнопки заблокированы, а на нажатой
- * мигают часы — на медленной сети видно, что смена уехала на сервер, и лишние
- * отрезки от нетерпеливых нажатий не плодятся. Если запрос не прошёл —
- * возвращаемся к тому, что знает сервер, и говорим об этом: молча разойтись
- * с дорожкой хуже, чем показать ошибку.
+ * The value updates optimistically — the user checks it against the treadmill
+ * display. While the request is in flight both buttons are disabled and the
+ * pressed one blinks a clock, so impatient taps don't spawn extra segments.
+ * On failure we revert to the server's value and say so: silently diverging
+ * from the treadmill is worse than showing an error.
  */
 
 interface SpeedControlProps {
   walkId: string;
-  /** Текущая скорость по данным сервера. */
+  /** Current speed as known by the server. */
   speedKmh: number;
-  /** Потолок дорожки (п. 6.9.3). */
+  /** Treadmill speed cap (spec § 6.9.3). */
   maxSpeedKmh: number;
-  /** Прогулка с новым отрезком: по ней экран пересчитывает дистанцию. */
+  /** Walk with the new segment; the screen recomputes distance from it. */
   onChanged: (walk: ActiveWalkDto) => void;
   disabled?: boolean;
 }
@@ -41,20 +41,20 @@ export function SpeedControl({
   onChanged,
   disabled = false,
 }: SpeedControlProps) {
-  /** Оптимистичное значение; `null` — показываем серверное. */
+  /** Optimistic value; `null` — show the server's. */
   const [draft, setDraft] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
-  /** Запрос в пути: кнопки заблокированы, на нажатой мигают часы. */
+  /** Request in flight: buttons disabled, the pressed one blinks a clock. */
   const [pending, setPending] = useState(false);
   const [pendingDelta, setPendingDelta] = useState<-1 | 1 | null>(null);
-  // Страховка от двойного вызова до перерисовки: state обновляется асинхронно.
+  // Guard against a double call before re-render: state updates are async.
   const sending = useRef(false);
 
   const min = MIN_SPEED_KMH;
   const max = Math.max(min, Math.floor(maxSpeedKmh));
   const shown = draft ?? speedKmh;
 
-  // Сервер догнал оптимистичное значение — локальная подмена больше не нужна.
+  // The server caught up with the optimistic value — drop the local override.
   useEffect(() => {
     if (draft !== null && draft === speedKmh && !sending.current) setDraft(null);
   }, [draft, speedKmh]);
@@ -72,7 +72,7 @@ export function SpeedControl({
       setError(
         err instanceof Error && err.message
           ? err.message
-          : 'Не вышло сменить скорость — проверьте связь',
+          : m.speedControl.changeFailed,
       );
     } finally {
       sending.current = false;
@@ -96,7 +96,7 @@ export function SpeedControl({
         <Button
           type="button"
           variant="outline"
-          aria-label="Сбросить скорость на 1 км/ч"
+          aria-label={m.speedControl.decreaseAria}
           disabled={disabled || pending || shown <= min}
           onClick={() => bump(-1)}
           className="h-auto min-h-14 w-16 px-0"
@@ -108,20 +108,20 @@ export function SpeedControl({
           )}
         </Button>
 
-        {/* Число — «идентичность», поэтому пиксельный шрифт (п. 6.7.1).
-            aria-live: значение меняется без перезагрузки экрана. */}
+        {/* Number is identity layer — pixel font (spec § 6.7.1).
+            aria-live: the value changes without a screen reload. */}
         <p
           aria-live="polite"
           className="min-w-28 text-center font-pixel text-[24px] leading-none tabular-nums text-text-main"
         >
           {shown}
-          <span className="ml-2 text-[12px] text-text-dim">км/ч</span>
+          <span className="ml-2 text-[12px] text-text-dim">{m.units.kmh}</span>
         </p>
 
         <Button
           type="button"
           variant="outline"
-          aria-label="Прибавить скорость на 1 км/ч"
+          aria-label={m.speedControl.increaseAria}
           disabled={disabled || pending || shown >= max}
           onClick={() => bump(1)}
           className="h-auto min-h-14 w-16 px-0"
@@ -134,8 +134,8 @@ export function SpeedControl({
         </Button>
       </div>
 
-      {/* Подпись читают — обычный sans (п. 6.7.1). */}
-      <p className="text-sm text-text-dim">скорость дорожки</p>
+      {/* Caption is read — regular sans (spec § 6.7.1). */}
+      <p className="text-sm text-text-dim">{m.speedControl.caption}</p>
 
       {error !== null ? (
         <p role="alert" className="text-center text-sm text-citrus">

@@ -1,17 +1,17 @@
 import { TELEGRAM_ENABLED } from '@/lib/config';
 
 /**
- * Низкоуровневый клиент Telegram Bot API (п. 6.10 ТЗ).
+ * Low-level Telegram Bot API client (spec § 6.10).
  *
- * Telegram никогда не в горячем пути (п. 6.10.1): любая ошибка здесь гасится
- * и превращается в `null`/`false` — ни один вызов не бросает исключений наружу.
- * Ошибка API — один повтор, затем запись в лог и отказ (п. 6.10.5):
- * уведомление не настолько важно, чтобы строить очередь.
+ * Telegram is never in the hot path (spec § 6.10.1): every error here is
+ * swallowed into `null`/`false` — no call throws. An API error gets one
+ * retry, then a log entry and give-up (spec § 6.10.5): a notification is not
+ * important enough to build a queue for.
  */
 
 const API_TIMEOUT_MS = 10_000;
 
-/** Подсистема включена: есть токен бота и рубильник не опущен (п. 6.10.7). */
+/** Subsystem is on: bot token present and the kill switch not thrown (spec § 6.10.7). */
 export function telegramEnabled(): boolean {
   return TELEGRAM_ENABLED;
 }
@@ -23,8 +23,8 @@ interface TelegramApiResponse {
 }
 
 /**
- * Один вызов метода Bot API. Возвращает `result` либо `null`.
- * Сетевые ошибки и 5xx ретраятся один раз; 4xx не ретраится — повтор бессмыслен.
+ * One Bot API method call. Returns `result` or `null`. Network errors and
+ * 5xx retry once; 4xx does not — a repeat is pointless.
  */
 async function callApi(method: string, payload: Record<string, unknown>): Promise<unknown | null> {
   const token = process.env.TELEGRAM_BOT_TOKEN;
@@ -53,7 +53,7 @@ async function callApi(method: string, payload: Record<string, unknown>): Promis
       }
       return data.result ?? null;
     } catch (error) {
-      // Таймаут или сетевая ошибка — второй заход, если он ещё остался.
+      // Timeout or network error — take the second attempt if one is left.
       console.error(`[telegram] ${method} network error, attempt ${attempt + 1}`, error);
     }
   }
@@ -61,10 +61,10 @@ async function callApi(method: string, payload: Record<string, unknown>): Promis
   return null;
 }
 
-/** Имя бота меняется только вместе с токеном — безобидный мемо-кэш процесса. */
+/** The bot username only changes with the token — a harmless per-process memo. */
 let cachedUsername: string | null = null;
 
-/** `username` бота для deep link `https://t.me/<бот>?start=…` (п. 6.10.3). */
+/** Bot `username` for the deep link `https://t.me/<bot>?start=…` (spec § 6.10.3). */
 export async function getBotUsername(): Promise<string | null> {
   if (cachedUsername !== null) return cachedUsername;
 
@@ -81,8 +81,8 @@ export async function getBotUsername(): Promise<string | null> {
 }
 
 /**
- * Отправка сообщения. `silent` — «тихий» режим без звука и вибрации
- * для второстепенных категорий (п. 6.10.1).
+ * Send a message. `silent` — no sound or vibration, for secondary categories
+ * (spec § 6.10.1).
  */
 export async function sendMessage(
   chatId: number,
@@ -95,14 +95,14 @@ export async function sendMessage(
   return (await callApi('sendMessage', payload)) !== null;
 }
 
-/** Ответ на нажатие inline-кнопки — короткий тост в клиенте Telegram. */
+/** Reply to an inline button press — a short toast in the Telegram client. */
 export async function answerCallbackQuery(id: string, text?: string): Promise<void> {
   const payload: Record<string, unknown> = { callback_query_id: id };
   if (text !== undefined) payload.text = text;
   await callApi('answerCallbackQuery', payload);
 }
 
-/** Перерисовка inline-клавиатуры под сообщением (тумблеры `/settings`). */
+/** Redraw the inline keyboard under a message (`/settings` toggles). */
 export async function editMessageReplyMarkup(
   chatId: number,
   messageId: number,

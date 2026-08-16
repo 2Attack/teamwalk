@@ -5,6 +5,7 @@ import { createRoute, listRoutesAdmin } from '@/lib/db/queries/routes';
 import { llmEnabled } from '@/lib/hints/providers';
 import type { RouteAdminDto, RoutesAdminResponseDto } from '@/lib/types';
 import { createRouteSchema } from '@/lib/validation';
+import { m } from '@/lib/i18n';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -26,7 +27,7 @@ export async function POST(request: Request) {
       return NextResponse.json(created, { status: 201 });
     } catch (error) {
       if (isUniqueViolation(error, 'routes_name_uniq')) {
-        return apiError(409, 'NAME_TAKEN', 'Маршрут с таким названием уже есть', {
+        return apiError(409, 'NAME_TAKEN', m.apiMessages.routeNameTaken, {
           field: 'name',
         });
       }

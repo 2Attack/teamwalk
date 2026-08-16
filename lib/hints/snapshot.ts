@@ -10,13 +10,12 @@ import { positionOnRoute } from '@/lib/hints/route';
 import { diffOfficeDays, periodStart, toOfficeDay } from '@/lib/time';
 
 /**
- * Обезличенный снапшот для LLM (п. 6.6.2 ТЗ).
+ * Anonymized snapshot for the LLM (spec § 6.6.2).
  *
- * В модель уходит не список сотрудников, а слоты `u1…uN`. Это закрывает сразу
- * четыре проблемы: персональные данные не покидают периметр (бесплатные тарифы
- * учатся на промптах, п. 6.6.1); участник с `hints_opt_out` просто не попадает
- * в снапшот; при смене имени старые хинты не протухают; модель физически не может
- * переврать имя, потому что его не видит.
+ * The model sees slots `u1…uN`, not employee names. This keeps personal data
+ * inside the perimeter (free tiers train on prompts, spec § 6.6.1), lets
+ * `hints_opt_out` users simply not appear, keeps old hints valid after a
+ * rename, and makes it impossible for the model to garble a name it never sees.
  */
 
 export interface HintSnapshotParticipant {
@@ -27,42 +26,42 @@ export interface HintSnapshotParticipant {
   streak_days?: number;
   days_since_last: number | null;
   usual_speed: number | null;
-  /** Отставание от соседа сверху по рейтингу; у лидера отсутствует. */
+  /** Gap to the participant one place above; absent for the leader. */
   gap_ahead_km?: number;
-  /** Километры с понедельника. */
+  /** Kilometers since Monday. */
   km_week: number;
-  /** Изменение места за неделю: +2 — поднялся на два. Ноль опускается. */
+  /** Rank change over the week: +2 — climbed two places. Zero is omitted. */
   rank_change?: number;
-  /** Личный рекорд одной прогулки. Ноль (не ходил) опускается. */
+  /** Personal single-walk record. Zero (never walked) is omitted. */
   best_walk_km?: number;
 }
 
 export interface HintSnapshot {
   team_total_km: number;
   team_km_week: number;
-  /** Арифметику по маршруту делаем мы: на числах LLM ошибается охотнее всего.
-   * Отсутствует, когда маршрут не выбран (п. 6.12.6) — гео-фразы просто не рождаются. */
+  /** Route arithmetic is ours — numbers are where the LLM slips most.
+   * Absent when no route is selected (spec § 6.12.6): geo phrases simply never appear. */
   route_position?: { passed: string; next: string | null; km_left: number };
-  /** Ближайший круглый рубеж команды — готовый сюжет «кто добьёт». */
+  /** Nearest round team milestone — a ready-made "who finishes it" storyline. */
   next_milestone: MilestoneInfo;
-  /** Рекордный день команды за всю историю; отсутствует, пока прогулок нет. */
+  /** Best team day in history; absent until there are walks. */
   record_day?: { day: string; km: number };
-  /** «u2 догонит u1 через N рабочих дней при темпе этой недели» — если догоняет. */
+  /** "u2 catches u1 in N working days at this week's pace" — only when catching up. */
   catchup?: { chaser: string; leader: string; days: number };
   participants: HintSnapshotParticipant[];
 }
 
 export interface SnapshotResult {
   snapshot: HintSnapshot;
-  /** Слот → id участника: по нему подставляем имена и заполняем `subject_id`. */
+  /** Slot → user id: used for name substitution and `subject_id`. */
   slotToUserId: Map<string, string>;
-  /** Слот → имя: подстановка `{{uN}}` происходит на нашей стороне. */
+  /** Slot → name: `{{uN}}` substitution happens on our side. */
   slotToName: Map<string, string>;
-  /** Новичков не подкалываем (п. 6.6.7); флаг в модель не уходит. */
+  /** Newcomers are never teased (spec § 6.6.7); the flag never reaches the model. */
   newcomerSlots: Set<string>;
 }
 
-/** Сколько участников влезает в промпт: топ рейтинга плюс самые «залежавшиеся». */
+/** Prompt capacity: leaderboard top plus the longest-idle participants. */
 const MAX_TOP = 12;
 const MAX_INACTIVE = 8;
 
@@ -76,18 +75,18 @@ interface AggregatedUser {
   usualSpeed: number | null;
   kmWeek: number;
   bestWalkKm: number;
-  /** Офисные даты прогулок, по убыванию. */
+  /** Office days with walks, descending. */
   days: string[];
 }
 
 /**
- * Одна агрегация по всем участникам. `hints_opt_out` здесь не отсекаем:
- * место в рейтинге должно оставаться настоящим, иначе шутки про «второго»
- * будут врать. Исключение происходит уже после расчёта рангов.
+ * One aggregation over all participants. `hints_opt_out` users are kept:
+ * ranks must stay real, or jokes about "second place" would lie. They are
+ * excluded only after ranks are computed.
  */
 async function loadUsers(weekStart: Date): Promise<AggregatedUser[]> {
-  // TZ — константа из конфига, не пользовательский ввод: `sql.raw` здесь безопасен,
-  // а параметр-плейсхолдер в `at time zone` Postgres не может вывести по типу.
+  // TZ is a config constant, not user input: `sql.raw` is safe here, and
+  // Postgres cannot type-infer a bound placeholder inside `at time zone`.
   const officeDay = sql.raw(`at time zone '${TZ}'`);
 
   const rows = await db
@@ -98,8 +97,8 @@ async function loadUsers(weekStart: Date): Promise<AggregatedUser[]> {
       createdAt: users.createdAt,
       totalKm: sql<string>`coalesce(sum(${walks.distanceKm}), 0)`,
       walksCount: sql<number>`count(${walks.id})::int`,
-      // Обычная скорость = самая частая, а не средняя: «ходит на 6 км/ч» звучит
-      // осмысленно только если это реальная кнопка на дорожке.
+      // Usual speed = the most frequent one, not the average: "walks at 6 km/h"
+      // only makes sense if it is an actual treadmill button.
       usualSpeed: sql<number | null>`mode() within group (order by ${walks.speedKmh})`,
       kmWeek: sql<string>`coalesce(sum(${walks.distanceKm}) filter (where ${walks.startedAt} >= ${weekStart}), 0)`,
       bestWalkKm: sql<string>`coalesce(max(${walks.distanceKm}), 0)`,
@@ -128,7 +127,7 @@ async function loadUsers(weekStart: Date): Promise<AggregatedUser[]> {
   }));
 }
 
-/** Рекордный день команды за всю историю — офисная дата и суммарные километры. */
+/** All-time best team day — office date and total kilometers. */
 async function loadRecordDay(): Promise<{ day: string; km: number } | null> {
   const officeDay = sql.raw(`at time zone '${TZ}'`);
   const rows = await db
@@ -148,10 +147,9 @@ async function loadRecordDay(): Promise<{ day: string; km: number } | null> {
 }
 
 /**
- * Серия берётся из того же модуля, что и лидерборд (`lib/game/streak.ts`).
- * Своя «грубая» формула здесь была бы дешевле, но давала бы другое число:
- * без учёта заморозок хинт написал бы «серия 3 дня» рядом с таблицей,
- * где у того же человека 7 — и доверия к ленте не осталось бы.
+ * Streaks come from the same module as the leaderboard (`lib/game/streak.ts`).
+ * A cheaper local formula would ignore freezes and show a different number
+ * than the table next to it — killing trust in the feed.
  */
 async function loadStreakDays(userIds: string[]): Promise<Map<string, number>> {
   if (userIds.length === 0) return new Map();
@@ -159,7 +157,7 @@ async function loadStreakDays(userIds: string[]): Promise<Map<string, number>> {
     const { getStreakDaysBulk } = await import('@/lib/game/streak');
     return await getStreakDaysBulk(userIds);
   } catch (error) {
-    console.error('[hints] не удалось получить серии, снапшот без них', error);
+    console.error('[hints] failed to load streaks, snapshot goes without them', error);
     return new Map();
   }
 }
@@ -173,18 +171,18 @@ export async function buildSnapshot(): Promise<SnapshotResult> {
   ]);
   const changes = rankChanges(all);
 
-  // Ранг считается по всем участникам, включая отказавшихся от хинтов.
+  // Ranks are computed over all participants, opt-outs included.
   const ranked = [...all]
     .sort((a, b) => b.totalKm - a.totalKm || a.name.localeCompare(b.name))
     .map((user, index) => ({ user, rank: index + 1 }));
 
   const visible = ranked.filter((entry) => !entry.user.hintsOptOut);
 
-  // Топ рейтинга + самые давно не ходившие: именно про них получаются шутки,
-  // а середина таблицы всё равно не влезет в разумный промпт.
+  // Leaderboard top + longest idle: that is where the jokes are, and the
+  // middle of the table would not fit a reasonable prompt anyway.
   const top = visible.slice(0, MAX_TOP);
   const rest = visible.slice(MAX_TOP);
-  // Пустая строка сортируется раньше любой даты — ни разу не ходившие идут первыми.
+  // An empty string sorts before any date — never-walked users come first.
   const inactive = [...rest]
     .sort((a, b) => (a.user.days[0] ?? '').localeCompare(b.user.days[0] ?? ''))
     .slice(0, MAX_INACTIVE);
@@ -218,8 +216,8 @@ export async function buildSnapshot(): Promise<SnapshotResult> {
     };
     if (streak > 0) participant.streak_days = streak;
 
-    // Отставание — от реального соседа по рейтингу (он может быть opt-out:
-    // числа обезличены, слота у него нет, утечки не происходит).
+    // The gap is to the real neighbor above (who may be opted out: numbers
+    // are anonymized and they have no slot, so nothing leaks).
     const ahead = ranked[entry.rank - 2];
     if (ahead) {
       participant.gap_ahead_km = Math.round((ahead.user.totalKm - user.totalKm) * 100) / 100;
@@ -259,8 +257,8 @@ export async function buildSnapshot(): Promise<SnapshotResult> {
   }
   if (recordDay) snapshot.record_day = recordDay;
 
-  // Сюжет о погоне — только про верхнюю пару видимых участников: у обоих
-  // должны быть слоты, иначе имя в шутку подставить некому.
+  // The chase storyline covers only the top pair of visible participants:
+  // both need slots, otherwise there is no name to substitute into the joke.
   const [leader, chaser] = visible;
   const leaderSlot = participants[selected.indexOf(leader)]?.slot;
   const chaserSlot = participants[selected.indexOf(chaser)]?.slot;

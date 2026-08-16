@@ -4,27 +4,28 @@ import { useId } from 'react';
 
 import { Button } from '@/components/ui/8bit/button';
 import { MIN_SPEED_KMH } from '@/lib/config';
+import { fmt, m } from '@/lib/i18n';
 
 interface SpeedPickerProps {
-  /** Выбранная скорость; `null` — ещё не выбрана. */
+  /** Selected speed; `null` — not chosen yet. */
   value: number | null;
-  /** Потолок дорожки: ряд строится от `MIN_SPEED_KMH` до него (п. 6.9.3). */
+  /** Treadmill cap: the row runs from `MIN_SPEED_KMH` up to it (spec § 6.9.3). */
   max: number;
   onChange: (speedKmh: number) => void;
   disabled?: boolean;
 }
 
 /**
- * Ряд кнопок вместо выпадающего списка (п. 6.2): на планшете у дорожки это
- * один тап вместо трёх. На узких экранах переносится в две строки по пять.
+ * Button row instead of a dropdown (spec § 6.2): one tap instead of three on
+ * the treadmill tablet. Wraps into two rows of five on narrow screens.
  *
- * Числа — «идентичность», поэтому шрифт остаётся пиксельным (п. 6.7.1).
+ * Numbers are identity layer, so the font stays pixel (spec § 6.7.1).
  */
 export function SpeedPicker({ value, max, onChange, disabled = false }: SpeedPickerProps) {
   const labelId = useId();
   const speeds = buildSpeeds(max);
 
-  /** Стрелки двигают выбор внутри группы — как в нативном radiogroup. */
+  /** Arrows move the selection within the group — like a native radiogroup. */
   function handleKeyDown(event: React.KeyboardEvent<HTMLDivElement>) {
     const step = arrowStep(event.key);
     if (step === null || disabled || speeds.length === 0) return;
@@ -44,10 +45,10 @@ export function SpeedPicker({ value, max, onChange, disabled = false }: SpeedPic
   return (
     <div className="space-y-2">
       <p id={labelId} className="text-sm text-text-dim">
-        Скорость дорожки, км/ч
+        {m.speedPicker.label}
       </p>
-      {/* gap-3: пиксельная рамка 8bitcn выступает на 6 px за габарит кнопки,
-          при меньшем зазоре соседние рамки наезжали бы друг на друга. */}
+      {/* gap-3: the 8bitcn pixel frame sticks out 6 px past the button box;
+          any smaller gap and adjacent frames would overlap. */}
       <div
         role="radiogroup"
         aria-labelledby={labelId}
@@ -62,8 +63,8 @@ export function SpeedPicker({ value, max, onChange, disabled = false }: SpeedPic
               type="button"
               role="radio"
               aria-checked={selected}
-              aria-label={`${speed} км/ч`}
-              // Roving tabindex: в группу заходим по Tab один раз, дальше — стрелками.
+              aria-label={fmt(m.speedPicker.speedAria, { speed })}
+              // Roving tabindex: Tab enters the group once, then arrows.
               tabIndex={selected || (value === null && speed === speeds[0]) ? 0 : -1}
               disabled={disabled}
               variant={selected ? 'default' : 'outline'}
@@ -79,7 +80,7 @@ export function SpeedPicker({ value, max, onChange, disabled = false }: SpeedPic
   );
 }
 
-/** Целые значения от минимума до потолка дорожки. */
+/** Whole values from the minimum to the treadmill cap. */
 function buildSpeeds(max: number): number[] {
   const top = Math.max(MIN_SPEED_KMH, Math.floor(max));
   return Array.from({ length: top - MIN_SPEED_KMH + 1 }, (_, i) => MIN_SPEED_KMH + i);

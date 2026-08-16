@@ -1,16 +1,16 @@
 /**
- * Локальный Telegram-мост для разработки: long polling вместо webhook.
+ * Local Telegram bridge for development: long polling instead of a webhook.
  *
- * Telegram не может достучаться до localhost, поэтому апдейты забираются
- * поллингом (grammY даёт устойчивый цикл с ретраями и бэкоффом) и
- * пробрасываются в наш обычный webhook-эндпоинт с тем же секретным
- * заголовком, что шлёт Telegram. Боевой код при этом прогоняется целиком:
- * проверка секрета, дедупликация по update_id, вся логика бота.
+ * Telegram cannot reach localhost, so updates are fetched by polling (grammY
+ * provides a resilient loop with retries and backoff) and forwarded to our
+ * regular webhook endpoint with the same secret header Telegram sends. The
+ * production code path runs in full: secret check, update_id deduplication,
+ * all bot logic.
  *
- * Запуск: `npm run dev:tg` (рядом с работающим `npm run dev`).
+ * Run: `npm run dev:tg` (alongside a running `npm run dev`).
  *
- * ВНИМАНИЕ: `bot.start()` снимает у бота зарегистрированный webhook —
- * запускать только с дев-ботом, не с токеном боевого.
+ * WARNING: `bot.start()` removes the bot's registered webhook — run only
+ * with the dev bot, never with the production token.
  */
 import { Bot } from 'grammy';
 
@@ -19,14 +19,14 @@ const secret = process.env.TELEGRAM_WEBHOOK_SECRET;
 const target = process.env.TG_BRIDGE_TARGET ?? 'http://localhost:3000/api/telegram/webhook';
 
 if (!token || !secret) {
-  console.error('Нужны TELEGRAM_BOT_TOKEN и TELEGRAM_WEBHOOK_SECRET (см. .env.development.local).');
+  console.error('TELEGRAM_BOT_TOKEN and TELEGRAM_WEBHOOK_SECRET are required (see .env.development.local).');
   process.exit(1);
 }
 
 const bot = new Bot(token);
 
-// Один универсальный обработчик до любых фильтров: апдейт уходит в наш
-// webhook как есть, разбором занимается только боевой processTelegramUpdate.
+// One catch-all handler before any filters: the update goes to our webhook
+// as-is; only the production processTelegramUpdate does the parsing.
 bot.use(async (ctx) => {
   const kind = ctx.message
     ? `message «${ctx.message.text ?? '…'}»`
@@ -46,14 +46,14 @@ bot.use(async (ctx) => {
     });
     console.log(new Date().toLocaleTimeString('ru'), kind, '→', res.status);
   } catch (error) {
-    console.error('мост не дотянулся до дев-сервера:', error?.message ?? error);
+    console.error('bridge could not reach the dev server:', error?.message ?? error);
   }
 });
 
 bot.catch((error) => {
-  console.error('мост споткнулся:', error?.message ?? error);
+  console.error('bridge stumbled:', error?.message ?? error);
 });
 
 await bot.init();
-console.log(`мост @${bot.botInfo.username} → ${target}`);
+console.log(`bridge @${bot.botInfo.username} → ${target}`);
 await bot.start();
