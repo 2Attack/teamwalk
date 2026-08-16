@@ -44,17 +44,17 @@ on load/reload/tab-switch, hidden-tab skip) plus `npx vitest run tests/leader-tr
 
 ### Tests for User Story 1 (write first, must fail)
 
-- [ ] T001 [P] [US1] Write failing table-driven unit tests for the `observe()` transition
+- [x] T001 [P] [US1] Write failing table-driven unit tests for the `observe()` transition
       function in `tests/leader-transition.test.ts` — all six truth-table cases from
       data-model.md (initial null state, period-key change, same leader, leader change,
       podium emptied, re-population baseline), asserting both `fire` and `next`.
 
 ### Implementation for User Story 1
 
-- [ ] T002 [US1] Implement `LeaderWatchState` type and pure `observe(prev, periodKey,
+- [x] T002 [US1] Implement `LeaderWatchState` type and pure `observe(prev, periodKey,
       leaderId)` function in `lib/client/leader-transition.ts` per data-model.md; make
       T001 tests pass. No React imports — plain TS module.
-- [ ] T003 [P] [US1] Implement `FireworksOverlay` in `components/FireworksOverlay.tsx`
+- [x] T003 [P] [US1] Implement `FireworksOverlay` in `components/FireworksOverlay.tsx`
       per research D1/D2/D6: props `{ burstId: number; onDone(): void }`; fixed
       `inset-0`, `pointer-events-none`, `aria-hidden`, high z-index canvas; ~80–120
       axis-aligned square particles (4–8 px, DPR-scaled, positions snapped to integers,
@@ -62,7 +62,7 @@ on load/reload/tab-switch, hidden-tab skip) plus `npx vitest run tests/leader-tr
       `--color-citrus`, `--color-lime`, `--color-silver`, `--color-bronze`; single rAF
       loop that exits when all particles expire or at the 6 s hard cap, then calls
       `onDone`. Cancel rAF and free everything on unmount. No new dependencies.
-- [ ] T004 [US1] Wire detection into `components/Podium.tsx`: hold
+- [x] T004 [US1] Wire detection into `components/Podium.tsx`: hold
       `LeaderWatchState | null` in a `useRef`; on each rendered rows/period change call
       `observe()` with the `useLeaderboard` SWR key as `periodKey` and first-place user id
       (or null); on `fire`, skip if `document.visibilityState === 'hidden'` (research D5),
@@ -87,7 +87,7 @@ celebratory frame.
 
 ### Implementation for User Story 2
 
-- [ ] T006 [US2] Gate the fire signal in `components/Podium.tsx` with
+- [x] T006 [US2] Gate the fire signal in `components/Podium.tsx` with
       `useReducedMotion()` from `motion/react` (existing pattern in
       `components/AchievementToast.tsx`): when reduced, `observe()` state still advances
       but `fire` is discarded before the visibility check, so the overlay never mounts
@@ -101,7 +101,7 @@ celebratory frame.
 
 ## Phase 5: Polish & Cross-Cutting Concerns
 
-- [ ] T008 [P] Add the new module and component to `docs/CONTRACT.md` (zone map):
+- [x] T008 [P] Add the new module and component to `docs/CONTRACT.md` (zone map):
       `lib/client/leader-transition.ts` exports `observe`/`LeaderWatchState`;
       `components/FireworksOverlay.tsx` props contract per contracts/README.md.
 - [ ] T009 Push `feature/first-place-fireworks`, verify the preview deploy, and run the

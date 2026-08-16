@@ -156,6 +156,17 @@ export function Avatar(props: { avatarId: string; name?: string; size?: number;
 // components/AvatarPicker.tsx
 export function AvatarPicker(props: { value: string; onChange: (id: string) => void;
   taken?: string[] }): JSX.Element;
+
+// lib/client/api.ts — владелец: BOARDUI (ключ лидерборда — единственный источник)
+export function leaderboardKey(selection: PeriodSelection): string;
+
+// lib/client/leader-transition.ts — владелец: BOARDUI (specs/001, чистый детектор)
+export interface LeaderWatchState { periodKey: string; leaderId: string }
+export function observe(prev: LeaderWatchState | null, periodKey: string,
+  leaderId: string | null): { fire: boolean; next: LeaderWatchState | null };
+
+// components/FireworksOverlay.tsx — владелец: BOARDUI (canvas-салют, п. 6.8 «слой 3»)
+export function FireworksOverlay(props: { burstId: number; onDone: () => void }): JSX.Element;
 ```
 
 ## Зоны ответственности
@@ -173,4 +184,4 @@ export function AvatarPicker(props: { value: string; onChange: (id: string) => v
 | **HOME** | `app/page.tsx`, `components/UserSelect.tsx`, `components/AddUserDialog.tsx`, `components/StartWalkCard.tsx`, `components/StartCountdown.tsx`, `components/TreadmillPicker.tsx` |
 | **SETTINGS** | `app/settings/page.tsx`, `app/api/treadmills/**`, `app/api/routes/**`, `lib/db/queries/treadmills.ts`, `lib/db/queries/routes.ts`, `lib/routes/generate.ts`, `components/TreadmillSettings.tsx`, `components/TreadmillFormDialog.tsx`, `components/RouteSettings.tsx`, `components/RouteFormDialog.tsx`, `tests/treadmills.validation.test.ts`, `tests/routes.validation.test.ts` (п. 6.11 ТЗ; `GET /api/treadmills` без `scope` по-прежнему отдаёт форму зоны WALKS — `listActiveTreadmills`) |
 | **WALKSCREEN** | `app/walk/[id]/page.tsx`, `components/WalkTimer.tsx`, `components/FinishWalkDialog.tsx`, `components/WalkSuccess.tsx`, `components/WalkerSprite.tsx` |
-| **BOARDUI** | `components/Podium.tsx`, `components/Leaderboard.tsx`, `components/PeriodTabs.tsx`, `components/TeamProgress.tsx`, `components/StreakBadge.tsx`, `components/HintTicker.tsx`, `components/AchievementToast.tsx` |
+| **BOARDUI** | `components/Podium.tsx`, `components/Leaderboard.tsx`, `components/PeriodTabs.tsx`, `components/TeamProgress.tsx`, `components/StreakBadge.tsx`, `components/HintTicker.tsx`, `components/AchievementToast.tsx`, `components/FireworksOverlay.tsx`, `lib/client/leader-transition.ts`, `tests/leader-transition.test.ts` |

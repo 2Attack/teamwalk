@@ -101,12 +101,18 @@ export function useActiveWalk(userId: string | null) {
   );
 }
 
+/**
+ * Single source of the leaderboard SWR key: the fireworks leader-change
+ * detector uses it as the standings discriminator (specs/001, research D3).
+ */
+export function leaderboardKey(selection: PeriodSelection): string {
+  return selection.period === 'custom'
+    ? `/api/leaderboard?period=custom&from=${selection.from}&to=${selection.to}`
+    : `/api/leaderboard?period=${selection.period}`;
+}
+
 export function useLeaderboard(selection: PeriodSelection) {
-  const key =
-    selection.period === 'custom'
-      ? `/api/leaderboard?period=custom&from=${selection.from}&to=${selection.to}`
-      : `/api/leaderboard?period=${selection.period}`;
-  return useSWR<LeaderboardDto>(key, apiGet, LIVE);
+  return useSWR<LeaderboardDto>(leaderboardKey(selection), apiGet, LIVE);
 }
 
 export function useStats() {
