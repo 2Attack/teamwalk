@@ -27,16 +27,9 @@ Quién caminó, cuándo y cuánto — con tabla de clasificación, rachas, logro
 - **UI pixel-art** — 8bitcn sobre shadcn, siempre oscuro, PWA, mobile-first.
 - **Tres idiomas** — en / ru / es, uno por despliegue.
 
-## Stack
-
-Next.js 16 (App Router) · TypeScript strict · React 19 · Tailwind CSS 4 · Drizzle ORM ·
-Neon Postgres (driver HTTP) · Zod · SWR · Motion · Vercel AI Gateway (AI SDK) · Vitest.
-
-Iconos — [pixelarticons](https://pixelarticons.com) (MIT); avatares — DiceBear `pixel-art`. Ambos se generan y committean con `npm run gen:assets` — **cero peticiones a terceros en runtime**.
-
 ## Inicio rápido
 
-Requiere Node.js 20+ y una base [Neon](https://neon.tech) Postgres (o el [montaje local sin nube](#base-de-datos-local-sin-nube)).
+Requiere Node.js 20+ y una base [Neon](https://neon.tech) Postgres.
 
 ```bash
 npm install
@@ -55,7 +48,7 @@ La app funciona completa sin credenciales de LLM (el ticker rota un catálogo es
 
 El botón hace fork del repo, pide las variables (idioma, bot de Telegram opcional, secreto del cron) y aprovisiona un **Neon Postgres** del Marketplace — `DATABASE_URL` se inyecta automáticamente y `buildCommand` ejecuta las migraciones. Si se proporciona un token de Telegram, cada deploy de producción registra además el webhook del bot (`scripts/tg-set-webhook.mts`) — no hace falta ejecutar `setWebhook` a mano. Las pistas con LLM funcionan de serie: en Vercel el AI SDK se autentica con el `VERCEL_OIDC_TOKEN` automático.
 
-La configuración manual son los mismos tres pasos: importar el repo → añadir Neon Postgres desde Storage → desplegar desde `main`. Cualquier otra rama recibe una preview con su propia rama de BD copy-on-write (ver [Despliegues de preview](#despliegues-de-preview)).
+La configuración manual son los mismos tres pasos: importar el repo → añadir Neon Postgres desde Storage → desplegar desde `main`. Cualquier otra rama recibe una preview con su propia rama de BD copy-on-write.
 
 ### Docker (self-hosted)
 
@@ -73,27 +66,6 @@ Para apuntar el contenedor a un Neon en la nube, ejecuta solo la imagen de la ap
 docker build -t teamwalk --build-arg NEXT_PUBLIC_LOCALE=es .
 docker run -p 3000:3000 -e DATABASE_URL=postgres://…neon.tech/… teamwalk
 ```
-
-## Base de datos local sin nube
-
-Para desarrollo offline, el mismo par «Postgres + Neon HTTP proxy» sin el contenedor de la app:
-
-```bash
-docker run -d --name cw-pg -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=teamwalk \
-  -p 5433:5432 postgres:16-alpine
-docker exec -i cw-pg psql -U postgres -d teamwalk < docker/neon-control-plane.sql
-docker run -d --name cw-neon-proxy -p 4444:4444 \
-  -e PG_CONNECTION_STRING=postgres://postgres:postgres@host.docker.internal:5433/teamwalk \
-  ghcr.io/timowilhelm/local-neon-http-proxy:main
-```
-
-La URL va en **`.env.development.local`** — no en `.env.local`, que `vercel env pull` sobrescribe. En dev ese archivo tiene prioridad; `next build` lo ignora; bórralo para volver a la BD en la nube:
-
-```
-DATABASE_URL=postgres://postgres:postgres@db.localtest.me:4444/teamwalk?sslmode=require
-```
-
-El host `localtest.me` es la única señal que cambia el driver al endpoint local; esa rama nunca se activa en producción. Después, lo habitual: `npm run db:migrate` y `npm run dev`.
 
 ## Scripts
 
@@ -126,40 +98,6 @@ El host `localtest.me` es la única señal que cambia el driver al endpoint loca
 ## Localización
 
 Un idioma por despliegue, definido por `NEXT_PUBLIC_LOCALE`: UI, errores de API, catálogo de pistas, prompts del LLM y textos del bot. La variable **se inserta en el bundle del cliente en tiempo de build** — cambiar el idioma implica redesplegar. Los diccionarios viven en `lib/i18n/messages/{ru,en,es}.ts`; `ru` es la referencia y el tipo `Messages` garantiza la paridad completa de claves.
-
-## Despliegues de preview
-
-`main` es producción, cualquier otra rama es una preview:
-
-- Push de una rama → Vercel construye una preview con URL única.
-- El **preview branching** de Neon crea una rama de BD `preview/<rama-git>` — un clon copy-on-write instantáneo de producción — e inyecta su `DATABASE_URL` solo en ese despliegue.
-- `buildCommand` ejecuta `db:migrate` antes de cada build: cada despliegue migra su propia BD.
-
-Telegram está apagado en las previews (sin variables del bot); el cron de notificaciones corre solo en producción — las previews dependen del fallback perezoso en los accesos a la API.
-
-## Arquitectura
-
-- **Sin estado en la memoria del proceso.** La fuente de verdad del cronómetro es `walks.started_at`; el cliente calcula `Date.now() − startedAt`.
-- **La concurrencia es de la BD.** Dos índices únicos parciales garantizan una caminata activa por participante y por cinta; la API mapea `23505` a `409`.
-- **El LLM nunca está en el camino caliente.** El pool de pistas se sirve desde `hints_cache` y se regenera en segundo plano; degradación: AI Gateway → pool anterior → catálogo estático.
-- **Los datos personales no salen del perímetro.** El LLM ve un snapshot anonimizado (`u1…uN`); los nombres se sustituyen en nuestro lado.
-- **Rachas, récords y posición en la ruta nunca se guardan** — se calculan de `walks` al vuelo.
-- **El tiempo solo a través de `lib/time.ts`** (`Europe/Moscow`, «días de oficina» como `YYYY-MM-DD`).
-
-## Estructura del proyecto
-
-```
-app/            páginas y Route Handlers (26 endpoints de API)
-components/     UI: kit pixel (components/ui/8bit), podio, clasificación, ticker
-lib/db/         esquema Drizzle, cliente Neon, agregaciones
-lib/hints/      snapshot, prompt, proveedores, post-filtro, caché, catálogo por idioma
-lib/game/       rachas con congelaciones, logros, progreso del equipo
-lib/telegram/   notificaciones, textos del bot por idioma, lógica del webhook
-lib/i18n/       diccionarios en/ru/es, helpers fmt/plural
-drizzle/        migraciones DDL
-docs/CONTRACT.md   fronteras de zonas y firmas entre módulos
-docs/8BITCN.md     reglas y trampas del kit de UI
-```
 
 ## Créditos
 

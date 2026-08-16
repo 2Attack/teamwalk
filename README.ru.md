@@ -27,16 +27,9 @@
 - **Пиксельный UI** — 8bitcn поверх shadcn, всегда тёмный, PWA, mobile-first.
 - **Три языка** — en / ru / es, один на деплой.
 
-## Стек
-
-Next.js 16 (App Router) · TypeScript strict · React 19 · Tailwind CSS 4 · Drizzle ORM ·
-Neon Postgres (HTTP-драйвер) · Zod · SWR · Motion · Vercel AI Gateway (AI SDK) · Vitest.
-
-Иконки — [pixelarticons](https://pixelarticons.com) (MIT); аватары — DiceBear `pixel-art`. И то и другое закоммичено на этапе генерации (`npm run gen:assets`) — **в рантайме нет запросов к третьим сторонам**.
-
 ## Быстрый старт
 
-Нужны Node.js 20+ и база [Neon](https://neon.tech) Postgres (или [локальная схема без облака](#локальная-база-без-облака)).
+Нужны Node.js 20+ и база [Neon](https://neon.tech) Postgres.
 
 ```bash
 npm install
@@ -55,7 +48,7 @@ npm run dev
 
 Кнопка форкает репозиторий, спрашивает переменные (локаль, опциональный Telegram-бот, секрет крона) и подключает **Neon Postgres** из Marketplace — `DATABASE_URL` подставляется автоматически, `buildCommand` прогоняет миграции. Если указан Telegram-токен, каждый продакшен-деплой сам регистрирует вебхук бота (`scripts/tg-set-webhook.mts`) — ручной `setWebhook` не нужен. LLM-подсказки работают из коробки: на Vercel AI SDK аутентифицируется автоматическим `VERCEL_OIDC_TOKEN`.
 
-Ручная настройка — те же три шага: импорт репозитория → Neon Postgres из Storage → деплой из `main`. Любая другая ветка получает превью со своей copy-on-write веткой БД (см. [Превью-деплои](#превью-деплои)).
+Ручная настройка — те же три шага: импорт репозитория → Neon Postgres из Storage → деплой из `main`. Любая другая ветка получает превью со своей copy-on-write веткой БД.
 
 ### Docker (self-hosted)
 
@@ -73,27 +66,6 @@ NEXT_PUBLIC_LOCALE=ru docker compose up --build   # en (по умолчанию)
 docker build -t teamwalk --build-arg NEXT_PUBLIC_LOCALE=ru .
 docker run -p 3000:3000 -e DATABASE_URL=postgres://…neon.tech/… teamwalk
 ```
-
-## Локальная база без облака
-
-Для офлайн-разработки — та же пара «Postgres + Neon HTTP proxy», но без контейнера приложения:
-
-```bash
-docker run -d --name cw-pg -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=teamwalk \
-  -p 5433:5432 postgres:16-alpine
-docker exec -i cw-pg psql -U postgres -d teamwalk < docker/neon-control-plane.sql
-docker run -d --name cw-neon-proxy -p 4444:4444 \
-  -e PG_CONNECTION_STRING=postgres://postgres:postgres@host.docker.internal:5433/teamwalk \
-  ghcr.io/timowilhelm/local-neon-http-proxy:main
-```
-
-URL кладётся в **`.env.development.local`** — не в `.env.local`, который перезаписывает `vercel env pull`. В dev этот файл приоритетнее; `next build` его игнорирует; удалите файл — вернётесь на облачную базу:
-
-```
-DATABASE_URL=postgres://postgres:postgres@db.localtest.me:4444/teamwalk?sslmode=require
-```
-
-Хост `localtest.me` — единственный сигнал, переключающий драйвер на локальный эндпоинт; в продакшене эта ветка не срабатывает. Дальше как обычно: `npm run db:migrate` и `npm run dev`.
 
 ## Скрипты
 
@@ -126,40 +98,6 @@ DATABASE_URL=postgres://postgres:postgres@db.localtest.me:4444/teamwalk?sslmode=
 ## Локализация
 
 Один язык на деплой, задаётся `NEXT_PUBLIC_LOCALE`: UI, ошибки API, каталог подсказок, LLM-промпты и тексты бота. Переменная **инлайнится в клиентский бандл на этапе сборки** — смена локали означает редеплой. Словари в `lib/i18n/messages/{ru,en,es}.ts`; `ru` — эталон, тип `Messages` гарантирует полный паритет ключей.
-
-## Превью-деплои
-
-`main` — продакшен, любая другая ветка — превью:
-
-- Пуш ветки → Vercel собирает превью с уникальным URL.
-- **Preview branching** Neon создаёт ветку БД `preview/<git-branch>` — мгновенный copy-on-write клон продакшена — и подставляет её `DATABASE_URL` только в этот деплой.
-- `buildCommand` гоняет `db:migrate` перед каждой сборкой: каждый деплой мигрирует свою БД.
-
-Telegram на превью выключен (нет переменных бота); крон уведомлений работает только в продакшене — превью полагаются на ленивый fallback при обращениях к API.
-
-## Архитектура
-
-- **Никакого состояния в памяти процесса.** Источник истины таймера — `walks.started_at`; клиент считает `Date.now() − startedAt`.
-- **Конкурентностью владеет БД.** Два частичных уникальных индекса гарантируют одну активную прогулку на участника и на дорожку; API маппит `23505` в `409`.
-- **LLM никогда не на горячем пути.** Пул подсказок отдаётся из `hints_cache` и перегенерируется в фоне; деградация: AI Gateway → прошлый пул → статический каталог.
-- **Персональные данные не покидают периметр.** LLM видит анонимизированный снапшот (`u1…uN`); имена подставляются на нашей стороне.
-- **Стрики, рекорды и позиция на маршруте не хранятся** — считаются из `walks` на лету.
-- **Время только через `lib/time.ts`** (`Europe/Moscow`, «офисные дни» как `YYYY-MM-DD`).
-
-## Структура проекта
-
-```
-app/            страницы и Route Handlers (26 API-эндпоинтов)
-components/     UI: пиксельный кит (components/ui/8bit), подиум, лидерборд, тикер
-lib/db/         схема Drizzle, клиент Neon, агрегации
-lib/hints/      снапшот, промпт, провайдеры, пост-фильтр, кэш, каталог по локалям
-lib/game/       стрики с заморозками, ачивки, командный прогресс
-lib/telegram/   уведомления, тексты бота по локалям, логика вебхука
-lib/i18n/       словари en/ru/es, хелперы fmt/plural
-drizzle/        DDL-миграции
-docs/CONTRACT.md   границы зон и кросс-модульные сигнатуры
-docs/8BITCN.md     правила и грабли UI-кита
-```
 
 ## Благодарности
 

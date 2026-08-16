@@ -27,16 +27,9 @@ Who walked, when and how far — with a leaderboard, streaks, achievements, a sh
 - **Pixel-art UI** — 8bitcn on top of shadcn, always dark, PWA, mobile-first.
 - **Three languages** — en / ru / es, one per deployment.
 
-## Tech stack
-
-Next.js 16 (App Router) · TypeScript strict · React 19 · Tailwind CSS 4 · Drizzle ORM ·
-Neon Postgres (HTTP driver) · Zod · SWR · Motion · Vercel AI Gateway (AI SDK) · Vitest.
-
-Icons — [pixelarticons](https://pixelarticons.com) (MIT); avatars — DiceBear `pixel-art`. Both are committed at generation time (`npm run gen:assets`) — **no third-party requests at runtime**.
-
 ## Quick start
 
-Requires Node.js 20+ and a [Neon](https://neon.tech) Postgres database (or the [cloud-free setup](#cloud-free-local-database) below).
+Requires Node.js 20+ and a [Neon](https://neon.tech) Postgres database.
 
 ```bash
 npm install
@@ -55,7 +48,7 @@ The app is fully functional without LLM credentials (the hint ticker rotates a s
 
 The button forks the repo, asks for the variables (locale, optional Telegram bot, cron secret) and provisions a **Neon Postgres** from the Marketplace — `DATABASE_URL` is injected automatically and `buildCommand` runs the migrations. If a Telegram token is provided, every production deploy also registers the bot webhook (`scripts/tg-set-webhook.mts`) — no manual `setWebhook` needed. LLM hints work out of the box: on Vercel the AI SDK authenticates via the automatic `VERCEL_OIDC_TOKEN`.
 
-Manual setup is the same three steps: import the repo → attach Neon Postgres from Storage → deploy from `main`. Every other branch gets a preview with its own copy-on-write DB branch (see [Preview deployments](#preview-deployments)).
+Manual setup is the same three steps: import the repo → attach Neon Postgres from Storage → deploy from `main`. Every other branch gets a preview with its own copy-on-write DB branch.
 
 ### Docker (self-hosted)
 
@@ -73,27 +66,6 @@ To point the container at a cloud Neon DB instead, run just the app image with y
 docker build -t teamwalk --build-arg NEXT_PUBLIC_LOCALE=en .
 docker run -p 3000:3000 -e DATABASE_URL=postgres://…neon.tech/… teamwalk
 ```
-
-## Cloud-free local database
-
-For offline development, run the same "Postgres + Neon HTTP proxy" pair without the app container:
-
-```bash
-docker run -d --name cw-pg -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=teamwalk \
-  -p 5433:5432 postgres:16-alpine
-docker exec -i cw-pg psql -U postgres -d teamwalk < docker/neon-control-plane.sql
-docker run -d --name cw-neon-proxy -p 4444:4444 \
-  -e PG_CONNECTION_STRING=postgres://postgres:postgres@host.docker.internal:5433/teamwalk \
-  ghcr.io/timowilhelm/local-neon-http-proxy:main
-```
-
-Then put the URL into **`.env.development.local`** — not `.env.local`, which `vercel env pull` overwrites. In dev this file takes priority; `next build` ignores it; delete it to switch back to the cloud DB:
-
-```
-DATABASE_URL=postgres://postgres:postgres@db.localtest.me:4444/teamwalk?sslmode=require
-```
-
-The `localtest.me` host is the single signal that switches the driver to the local endpoint; that branch never fires in production. Then as usual: `npm run db:migrate` and `npm run dev`.
 
 ## Scripts
 
@@ -126,40 +98,6 @@ The `localtest.me` host is the single signal that switches the driver to the loc
 ## Localization
 
 One language per deployment, set by `NEXT_PUBLIC_LOCALE`: UI, API errors, hint catalog, LLM prompts and bot texts. The variable is **inlined into the client bundle at build time** — changing the locale means a redeploy. Dictionaries live in `lib/i18n/messages/{ru,en,es}.ts`; `ru` is the reference and the `Messages` type enforces full key parity.
-
-## Preview deployments
-
-`main` is production, any other branch is a preview:
-
-- Pushing a branch → Vercel builds a preview with a unique URL.
-- Neon **preview branching** creates a DB branch `preview/<git-branch>` — an instant copy-on-write clone of production — and injects its `DATABASE_URL` into that deploy only.
-- `buildCommand` runs `db:migrate` before every build: each deploy migrates its own DB.
-
-Telegram is off on previews (no bot variables); the notification cron runs in production only — previews rely on the lazy fallback on API access.
-
-## Architecture
-
-- **No state in process memory.** The timer's source of truth is `walks.started_at`; the client computes `Date.now() − startedAt`.
-- **The DB owns concurrency.** Two partial unique indexes guarantee one active walk per participant and per treadmill; the API maps `23505` to `409`.
-- **The LLM is never on the hot path.** The hint pool is served from `hints_cache` and regenerated in the background; degradation: AI Gateway → previous pool → static catalog.
-- **Personal data never leaves the perimeter.** The LLM sees an anonymized snapshot (`u1…uN`); names are substituted on our side.
-- **Streaks, records and route position are never stored** — computed from `walks` on the fly.
-- **Time only through `lib/time.ts`** (`Europe/Moscow`, "office days" as `YYYY-MM-DD`).
-
-## Project structure
-
-```
-app/            pages and Route Handlers (26 API endpoints)
-components/     UI: pixel kit (components/ui/8bit), podium, leaderboard, hint ticker
-lib/db/         Drizzle schema, Neon client, aggregations
-lib/hints/      snapshot, prompt, providers, post-filter, cache, per-locale catalog
-lib/game/       streaks with freezes, achievements, team progress
-lib/telegram/   notifications, per-locale bot texts, webhook logic
-lib/i18n/       dictionaries en/ru/es, fmt/plural helpers
-drizzle/        DDL migrations
-docs/CONTRACT.md   zone boundaries and cross-module signatures
-docs/8BITCN.md     UI-kit rules and landmines
-```
 
 ## Credits
 
