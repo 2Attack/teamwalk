@@ -1,61 +1,42 @@
 <p align="right"><b>English</b> · <a href="README.ru.md">Русский</a> · <a href="README.es.md">Español</a></p>
 
-# TeamWalk
-
-**An internal tracker for the office walking pad: who walked, when and how far — with a leaderboard, streaks, achievements, a shared team route across real cities and a ticker of joke hints generated from live data.**
-
-![Next.js](https://img.shields.io/badge/Next.js_16-App_Router-black?logo=nextdotjs)
-![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178C6?logo=typescript&logoColor=white)
-![Tailwind CSS 4](https://img.shields.io/badge/Tailwind_CSS-4-38BDF8?logo=tailwindcss&logoColor=white)
-![Drizzle ORM](https://img.shields.io/badge/Drizzle-Neon_Postgres-C5F74F?logo=drizzle&logoColor=black)
-![Vitest](https://img.shields.io/badge/tested_with-Vitest-6E9F18?logo=vitest&logoColor=white)
-
 <p align="center">
-  <img src="docs/screenshots/home.png" alt="Home: team route, start-a-walk card, podium and leaderboard" width="68%">
-  <img src="docs/screenshots/walk.png" alt="Active walk: timer, distance, pixel walker, speed control and a hint" width="29%">
+  <img src="docs/screenshots/header.png" alt="TeamWalk — walk together, compete gently, ship steps. An internal office treadmill tracker for teams: no accounts, no auth — built for trust-based teams who just want to walk more." width="100%">
 </p>
 
-Built to the spec in [`TeamWalk_TZ.md`](TeamWalk_TZ.md) (code and docs reference its sections as "spec § N"). There is **no authentication by design** — the trust model is "our own people": you pick yourself from a list, and starting a walk takes one tap.
+<p align="center">
+  <img src="https://img.shields.io/badge/Next.js_16-App_Router-black?logo=nextdotjs" alt="Next.js 16">
+  <img src="https://img.shields.io/badge/TypeScript-strict-3178C6?logo=typescript&logoColor=white" alt="TypeScript strict">
+  <img src="https://img.shields.io/badge/Tailwind_CSS-4-38BDF8?logo=tailwindcss&logoColor=white" alt="Tailwind CSS 4">
+  <img src="https://img.shields.io/badge/Drizzle-Neon_Postgres-C5F74F?logo=drizzle&logoColor=black" alt="Drizzle + Neon">
+  <img src="https://img.shields.io/badge/tested_with-Vitest-6E9F18?logo=vitest&logoColor=white" alt="Vitest">
+  <img src="https://img.shields.io/badge/license-MIT-a3e635" alt="MIT license">
+</p>
 
-## Table of contents
-
-- [Features](#features)
-- [Tech stack](#tech-stack)
-- [Quick start](#quick-start)
-- [Cloud-free local database](#cloud-free-local-database)
-- [Telegram bot in development](#telegram-bot-in-development)
-- [Scripts](#scripts)
-- [Environment variables](#environment-variables)
-- [Localization](#localization)
-- [Preview deployments](#preview-deployments)
-- [Deploying to Vercel](#deploying-to-vercel)
-- [Architecture](#architecture)
-- [Project structure](#project-structure)
-- [Credits](#credits)
+Who walked, when and how far — with a leaderboard, streaks, achievements, a shared team route across real cities and a ticker of joke hints generated from live data. Built to the spec in [`TeamWalk_TZ.md`](TeamWalk_TZ.md) (referenced in code as "spec § N"). **No authentication by design**: you pick yourself from a list, and starting a walk takes one tap.
 
 ## Features
 
-- **One-tap walks.** Pick yourself, pick a speed (a row of big buttons, your last choice pre-selected), get a 3-2-1-GO countdown. The active screen shows a `HH:MM:SS` timer, a running distance estimate, your personal day record with progress, mid-walk speed changes and an animated pixel walker. The finish dialog pre-fills the distance from speed × time — the treadmill display stays the source of truth.
-- **Leaderboard & podium.** Top-3 podium and a full table (distance, walks, streak, actual average speed) for the week, month or all time. Weeks start Monday 00:00 Moscow time.
-- **Streaks with freezes.** Consecutive workdays with at least one walk; weekends neither break nor extend a streak, and 2 automatic freezes per month absorb a missed day — one sick day doesn't kill months of effort.
-- **20 achievements for character, not volume** — Early Bird, Night Owl, Zen (30 min at ≤2 km/h), Marathon, Cruise Control and friends — so the leader doesn't sweep them all.
-- **Team route.** Everyone's kilometers add up and move the team along a real route ("Yaroslavl → Lisbon"). Routes are managed in a catalog with exactly one active; a new route can be drafted by an LLM from a text prompt — always as a human-reviewed draft, never written to the DB directly.
-- **Hint ticker.** Game-loading-screen-style phrases teasing actual participants, assembled by an LLM from an anonymized snapshot of real stats. Jokes are about walking, the treadmill and the numbers — never about anyone's body, weight or health.
-- **Telegram bot (opt-in).** Walk summaries, achievements, "time to stretch" reminders, "the treadmill is free", and a Monday digest — with per-category toggles, `/mute`, and one-command unsubscribe. Linking via QR code rendered client-side.
-- **Multiple treadmills.** The picker appears automatically once a second active treadmill exists; the DB guarantees one active walk per treadmill and per participant.
-- **Pixel-art UI** (8bitcn on top of shadcn), always dark, PWA-installable, mobile-first — the phone next to the treadmill is the primary device.
-- **Three languages** — English, Russian, Spanish — one per deployment (see [Localization](#localization)).
+- **One-tap walks** — pick yourself, pick a speed, get a 3-2-1-GO countdown; live timer, distance, day-record progress and an animated pixel walker.
+- **Leaderboard & podium** — week / month / all time; weeks start Monday 00:00 MSK.
+- **Streaks with freezes** — workdays only; 2 automatic freezes per month absorb a missed day.
+- **20 achievements for character, not volume** — Early Bird, Zen, Marathon and friends.
+- **Team route** — everyone's kilometers move the team along a real route ("Yaroslavl → Lisbon").
+- **Hint ticker** — game-style phrases assembled by an LLM from anonymized live stats.
+- **Telegram bot (opt-in)** — summaries, reminders, "the treadmill is free", Monday digest.
+- **Pixel-art UI** — 8bitcn on top of shadcn, always dark, PWA, mobile-first.
+- **Three languages** — en / ru / es, one per deployment.
 
 ## Tech stack
 
 Next.js 16 (App Router) · TypeScript strict · React 19 · Tailwind CSS 4 · Drizzle ORM ·
 Neon Postgres (HTTP driver) · Zod · SWR · Motion · Vercel AI Gateway (AI SDK) · Vitest.
 
-Icons — [pixelarticons](https://pixelarticons.com) (MIT); avatars — DiceBear `pixel-art`. Both are committed at generation time (`npm run gen:assets`); there are **no third-party requests at runtime**.
+Icons — [pixelarticons](https://pixelarticons.com) (MIT); avatars — DiceBear `pixel-art`. Both are committed at generation time (`npm run gen:assets`) — **no third-party requests at runtime**.
 
 ## Quick start
 
-Requires Node.js 20+ and a [Neon](https://neon.tech) Postgres database (or the cloud-free setup below).
+Requires Node.js 20+ and a [Neon](https://neon.tech) Postgres database (or the [cloud-free setup](#cloud-free-local-database) below).
 
 ```bash
 npm install
@@ -64,37 +45,49 @@ npm run db:migrate                # schema + treadmill seed
 npm run dev
 ```
 
-The seed matters: without a row in `treadmills` a walk cannot be started — the migration creates one automatically.
-
 The app is fully functional without LLM credentials (the hint ticker rotates a static catalog) and without a Telegram token (notifications are simply off).
+
+## Deployment
+
+### Vercel (one click)
+
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fattack-it%2Fteamwalk&env=NEXT_PUBLIC_LOCALE,TELEGRAM_ENABLED,TELEGRAM_BOT_TOKEN,TELEGRAM_WEBHOOK_SECRET,CRON_SECRET&envDescription=UI%20locale%3A%20en%2C%20ru%20or%20es.%20Telegram%3A%20paste%20the%20bot%20token%20from%20%40BotFather%2C%20or%20set%20TELEGRAM_ENABLED%3Dfalse%20and%20put%20%27-%27%20in%20the%20token%20fields.%20TELEGRAM_WEBHOOK_SECRET%20and%20CRON_SECRET%3A%20any%20random%20strings.&envLink=https%3A%2F%2Fgithub.com%2Fattack-it%2Fteamwalk%23readme&project-name=teamwalk&repository-name=teamwalk&stores=%5B%7B%22type%22%3A%22integration%22%2C%22integrationSlug%22%3A%22neon%22%2C%22productSlug%22%3A%22neon%22%7D%5D)
+
+The button forks the repo, asks for the variables (locale, optional Telegram bot, cron secret) and provisions a **Neon Postgres** from the Marketplace — `DATABASE_URL` is injected automatically and `buildCommand` runs the migrations. LLM hints work out of the box: on Vercel the AI SDK authenticates via the automatic `VERCEL_OIDC_TOKEN`.
+
+Manual setup is the same three steps: import the repo → attach Neon Postgres from Storage → deploy from `main`. Every other branch gets a preview with its own copy-on-write DB branch (see [Preview deployments](#preview-deployments)).
+
+### Docker (self-hosted)
+
+The app speaks Neon's SQL-over-HTTP protocol, so the stack is app + Postgres + [Neon HTTP proxy](https://github.com/TimoWilhelm/local-neon-http-proxy) — all wired up in [`docker-compose.yml`](docker-compose.yml):
+
+```bash
+NEXT_PUBLIC_LOCALE=en docker compose up --build   # en (default), ru or es
+```
+
+That's it: Postgres starts with the control-plane table pre-seeded, migrations run on app start, the app listens on <http://localhost:3000>. The locale is inlined at build time — rebuild the image to change it. To enable Telegram or LLM hints, uncomment the corresponding variables in `docker-compose.yml` ([Environment variables](#environment-variables)).
+
+To point the container at a cloud Neon DB instead, run just the app image with your `DATABASE_URL`:
+
+```bash
+docker build -t teamwalk --build-arg NEXT_PUBLIC_LOCALE=en .
+docker run -p 3000:3000 -e DATABASE_URL=postgres://…neon.tech/… teamwalk
+```
 
 ## Cloud-free local database
 
-Neon serves SQL over HTTP, so a plain Postgres won't work directly. For offline work, run a "Postgres + Neon HTTP proxy" pair:
+For offline development, run the same "Postgres + Neon HTTP proxy" pair without the app container:
 
 ```bash
 docker run -d --name cw-pg -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=teamwalk \
   -p 5433:5432 postgres:16-alpine
+docker exec -i cw-pg psql -U postgres -d teamwalk < docker/neon-control-plane.sql
 docker run -d --name cw-neon-proxy -p 4444:4444 \
   -e PG_CONNECTION_STRING=postgres://postgres:postgres@host.docker.internal:5433/teamwalk \
   ghcr.io/timowilhelm/local-neon-http-proxy:main
 ```
 
-Recent proxy versions ask a "control plane" for the allowed-IP list before every request and answer `500 Control plane request failed` without it. Create the table once by hand; `db` is the endpoint name, i.e. the first label of the host `db.localtest.me`:
-
-```bash
-docker exec -i cw-pg psql -U postgres -d teamwalk <<'SQL'
-create schema if not exists neon_control_plane;
-create table if not exists neon_control_plane.endpoints (
-  endpoint_id varchar(255) primary key,
-  allowed_ips varchar(255)
-);
-insert into neon_control_plane.endpoints (endpoint_id, allowed_ips)
-values ('db', '0.0.0.0/0') on conflict (endpoint_id) do nothing;
-SQL
-```
-
-Then put the URL into **`.env.development.local`** — not `.env.local`, which `vercel env pull` overwrites, and production credentials are better left alone. In dev this file takes priority; `next build` with `NODE_ENV=production` ignores it; delete it to switch back to the cloud DB:
+Then put the URL into **`.env.development.local`** — not `.env.local`, which `vercel env pull` overwrites. In dev this file takes priority; `next build` ignores it; delete it to switch back to the cloud DB:
 
 ```
 DATABASE_URL=postgres://postgres:postgres@db.localtest.me:4444/teamwalk?sslmode=require
@@ -104,9 +97,9 @@ The `localtest.me` host is the single signal that switches the driver to the loc
 
 ## Telegram bot in development
 
-Telegram can't reach localhost, so development uses long polling instead of a webhook: `npm run dev:tg` (alongside a running `npm run dev`) starts a grammY bridge that polls updates and forwards them into the regular `/api/telegram/webhook` with the same secret header. The production code path runs in full — secret check, deduplication, all bot logic.
+Telegram can't reach localhost, so development uses long polling instead of a webhook: `npm run dev:tg` (alongside a running `npm run dev`) starts a grammY bridge that polls updates and forwards them into the regular `/api/telegram/webhook` with the same secret header. The production code path runs in full.
 
-Requires `TELEGRAM_BOT_TOKEN` and `TELEGRAM_WEBHOOK_SECRET` in `.env.development.local` (or `.env.local`). Important: polling **removes the bot's registered webhook**, so only ever run the bridge with a dev bot — create a separate one via @BotFather, never use the production token.
+Requires `TELEGRAM_BOT_TOKEN` and `TELEGRAM_WEBHOOK_SECRET` in `.env.development.local`. Important: polling **removes the bot's registered webhook** — only ever run the bridge with a separate dev bot from @BotFather, never the production token.
 
 ## Scripts
 
@@ -116,68 +109,48 @@ Requires `TELEGRAM_BOT_TOKEN` and `TELEGRAM_WEBHOOK_SECRET` in `.env.development
 | `npm run dev:tg` | Telegram → localhost bridge: long polling instead of a webhook (dev bot only) |
 | `npm run build` | Production build |
 | `npm run typecheck` | `tsc --noEmit` — the primary check |
-| `npm test` | Unit tests (Vitest: streaks, distance, hints post-filter, validation, bot texts) |
+| `npm test` | Unit tests (Vitest) |
 | `npm run db:migrate` | Applies `drizzle/*.sql` in order, idempotent |
-| `npm run gen:assets` | Regenerates static assets: avatars (DiceBear `pixel-art`), walker sprite, icons |
-| `npm run gen:icons` | Icons only: `lib/icons.generated.ts` from the `pixelarticons` package |
+| `npm run gen:assets` | Regenerates static assets: avatars, walker sprite, icons |
 
 ## Environment variables
 
 | Variable | Required | Purpose |
 |---|---|---|
 | `DATABASE_URL` | yes | Neon Postgres, pooled connection |
-| `AI_GATEWAY_API_KEY` | no | Vercel AI Gateway — the only LLM provider (hints + route drafts); on Vercel deploys the AI SDK falls back to the automatic `VERCEL_OIDC_TOKEN` |
+| `AI_GATEWAY_API_KEY` | no | Vercel AI Gateway (hints + route drafts); on Vercel deploys the AI SDK falls back to the automatic `VERCEL_OIDC_TOKEN` |
 | `AI_GATEWAY_MODEL` | no | Gateway model, default `xai/grok-4.1-fast-non-reasoning` |
 | `HINTS_ENABLED` | no | `false` → static phrase catalog only, no LLM calls |
-| `HINTS_TTL_MINUTES` | no | Hint pool regeneration period, default 60 |
-| `HINTS_POOL_MAX` | no | Hints per pool, default 24 |
-| `TELEGRAM_BOT_TOKEN` | no | Bot from @BotFather; without it the whole Telegram subsystem is off (spec § 6.10) |
+| `TELEGRAM_BOT_TOKEN` | no | Bot from @BotFather; without it the whole Telegram subsystem is off |
 | `TELEGRAM_WEBHOOK_SECRET` | no | Webhook secret (`setWebhook … secret_token`) and the local bridge |
 | `TELEGRAM_ENABLED` | no | `false` → the bot stays silent, the link panel is hidden |
 | `CRON_SECRET` | no | Protects `/api/cron/notify` (Vercel Cron sends it itself) |
 | `NOTIFY_WINDOW_START_HOUR` / `NOTIFY_WINDOW_END_HOUR` | no | Daytime window for reminders and the digest, default 11–17 MSK |
 | `FREE_WINDOW_START_HOUR` / `FREE_WINDOW_END_HOUR` | no | Window for "treadmill freed up" notifications, default 9–19 MSK |
 | `NEXT_PUBLIC_APP_NAME` | no | Name in the header, default `TeamWalk` |
-| `NEXT_PUBLIC_LOCALE` | no | Product language: `en` (default), `ru`, `es` — see [Localization](#localization) |
+| `NEXT_PUBLIC_LOCALE` | no | Product language: `en` (default), `ru`, `es` |
 
 ## Localization
 
-The whole product ships in one language per deployment, set by `NEXT_PUBLIC_LOCALE`: UI, API error messages, the hint catalog, LLM prompts and Telegram bot texts. There is no in-app switcher. The variable is **inlined into the client bundle at build time** — changing the locale means a redeploy.
-
-Dictionaries live in `lib/i18n/messages/{ru,en,es}.ts`; `ru` is the reference and the `Messages` type enforces full key parity. The test run is pinned to `ru` (`vitest.config.ts`) because content tests assert Russian strings.
+One language per deployment, set by `NEXT_PUBLIC_LOCALE`: UI, API errors, hint catalog, LLM prompts and bot texts. The variable is **inlined into the client bundle at build time** — changing the locale means a redeploy. Dictionaries live in `lib/i18n/messages/{ru,en,es}.ts`; `ru` is the reference and the `Messages` type enforces full key parity.
 
 ## Preview deployments
 
-The model is simple: `main` is production, any other branch is a preview.
+`main` is production, any other branch is a preview:
 
-- Pushing a branch → Vercel builds a preview deploy with a unique URL.
-- The Neon integration has **preview branching** enabled: for every preview deploy Neon creates a DB branch `preview/<git-branch>` — an instant copy-on-write clone of production — and injects its `DATABASE_URL` into that deploy only. Previews never see the production DB; the DB branch is deleted along with the preview per Vercel's retention policy.
-- `buildCommand` in `vercel.json` runs `db:migrate` before every build: each deploy migrates its own DB — prod its own, previews their branch. The scripts are idempotent; re-runs are safe.
+- Pushing a branch → Vercel builds a preview with a unique URL.
+- Neon **preview branching** creates a DB branch `preview/<git-branch>` — an instant copy-on-write clone of production — and injects its `DATABASE_URL` into that deploy only.
+- `buildCommand` runs `db:migrate` before every build: each deploy migrates its own DB.
 
-```bash
-git checkout -b feature/x && git push -u origin feature/x  # preview with its own DB
-git checkout main && git merge feature/x && git push       # prod: deploy + migrations run themselves
-```
-
-Telegram is off on previews (no bot variables — the subsystem turns itself off); `@teamwalk_staging_bot` is for local development via `npm run dev:tg`. The notification cron (`/api/cron/notify`, daily at 08:00 UTC per `vercel.json`) runs **in production only** — previews rely on the lazy fallback that runs on API access.
-
-## Deploying to Vercel
-
-1. Repository on GitHub → import into Vercel.
-2. **Storage → Neon Postgres** (Marketplace): the variables are injected automatically.
-3. No file storage needed — avatars live in the repo and are served from the CDN. DiceBear draws them only during `npm run gen:assets`: at runtime there are no calls to `api.dicebear.com`, otherwise one leaderboard page would fire a dozen third-party requests and the app would lose its avatars offline.
-4. LLM: enable AI Gateway in the project settings — on deploys the AI SDK authenticates itself via `VERCEL_OIDC_TOKEN`; locally you need an `AI_GATEWAY_API_KEY` (Dashboard → AI Gateway → API Keys). Without credentials the hints rotate the static catalog.
-5. Deploy from `main`; every other branch gets a preview.
-
-Stale walks don't need a cron: they are auto-closed by a lazy check on API access (spec § 7.6). The only scheduled job is the daily notification sweep.
+Telegram is off on previews (no bot variables); the notification cron runs in production only — previews rely on the lazy fallback on API access.
 
 ## Architecture
 
-- **No state in process memory.** The timer's source of truth is `walks.started_at`; the client computes `Date.now() − startedAt`, so a page reload, a sleeping device or switching devices never breaks the clock.
-- **The DB owns concurrency, not the code.** Two partial unique indexes guarantee one active walk per participant and one per treadmill; the API maps `23505` to `409 WALK_ALREADY_ACTIVE` / `409 TREADMILL_BUSY`.
-- **The LLM is never on the hot path.** The hint pool lives in `hints_cache`, is served immediately and regenerated in the background (stale-while-revalidate under a single-row mutex). Degradation chain: AI Gateway → previous pool → static catalog.
-- **Personal data never leaves the perimeter.** The LLM receives an anonymized snapshot with slots `u1…uN`; real names are substituted on our side.
-- **Streaks, records and route position are never stored** — computed from `walks` on the fly, so deleting a walk recalculates everything by itself.
+- **No state in process memory.** The timer's source of truth is `walks.started_at`; the client computes `Date.now() − startedAt`.
+- **The DB owns concurrency.** Two partial unique indexes guarantee one active walk per participant and per treadmill; the API maps `23505` to `409`.
+- **The LLM is never on the hot path.** The hint pool is served from `hints_cache` and regenerated in the background; degradation: AI Gateway → previous pool → static catalog.
+- **Personal data never leaves the perimeter.** The LLM sees an anonymized snapshot (`u1…uN`); names are substituted on our side.
+- **Streaks, records and route position are never stored** — computed from `walks` on the fly.
 - **Time only through `lib/time.ts`** (`Europe/Moscow`, "office days" as `YYYY-MM-DD`).
 
 ## Project structure
@@ -199,4 +172,4 @@ docs/8BITCN.md     UI-kit rules and landmines
 
 UI kit — [8bitcn/ui](https://8bitcn.com) on top of [shadcn/ui](https://ui.shadcn.com) · icons — [pixelarticons](https://pixelarticons.com) (MIT) · avatars — [DiceBear](https://dicebear.com) `pixel-art` · fonts and sprites generated in-repo.
 
-Internal project — no license, all rights reserved.
+Licensed under the [MIT License](LICENSE).

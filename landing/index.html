@@ -1,0 +1,733 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TeamWalk — office treadmill tracker</title>
+<meta name="description" content="TeamWalk — an open-source office treadmill walking tracker for teams. Streaks, achievements, a shared team route, and one-click deploy to Vercel.">
+
+<!-- Open Graph. og:url and og:image must be absolute for crawlers:
+     replace the domain below with the real one after deploy. -->
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="TeamWalk">
+<meta property="og:title" content="TeamWalk — office treadmill tracker">
+<meta property="og:description" content="An open-source office treadmill walking tracker for teams. Streaks, achievements, a shared team route, and one-click deploy to Vercel.">
+<meta property="og:url" content="https://teamwalk.vercel.app/">
+<meta property="og:image" content="https://teamwalk.vercel.app/og.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="TeamWalk — pixel-art landing: walk together, compete gently, ship steps.">
+<meta property="og:locale" content="en_US">
+
+<!-- Twitter / X card -->
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="TeamWalk — office treadmill tracker">
+<meta name="twitter:description" content="An open-source office treadmill walking tracker for teams. One-click deploy to Vercel.">
+<meta name="twitter:image" content="https://teamwalk.vercel.app/og.jpg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #1f1a15;
+  --panel: #242019;
+  --border: #3a3126;
+  --citrus: #e8933a;
+  --lime: #a3e635;
+  --text: #f0e4d3;
+  --dim: #b8a88f;
+  --faint: #6b5f4d;
+  --gold: #ffd23f;
+}
+* { box-sizing: border-box; border-radius: 0 !important; }
+html, body { margin: 0; padding: 0; background: var(--bg); }
+body {
+  font-family: 'IBM Plex Sans', system-ui, sans-serif;
+  color: var(--text);
+  line-height: 1.6;
+  overflow-x: hidden;
+}
+a { color: var(--citrus); }
+a:hover { color: var(--lime); }
+
+/* Animations collapse to their final frame under prefers-reduced-motion;
+   every keyframe here ends on a visible/neutral state, same rule as the app. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; }
+}
+@keyframes tw-blink { 0%, 49% { opacity: 1; } 50%, 100% { opacity: 0; } }
+@keyframes walk-cycle { from { background-position-x: 0; } to { background-position-x: -256px; } }
+@keyframes tw-belt { from { transform: translateX(0); } to { transform: translateX(-16px); } }
+@keyframes tw-firework { 0% { transform: scale(0.2); opacity: 0; } 30% { opacity: 1; } 100% { transform: scale(1.4); opacity: 0; } }
+@keyframes tw-flag { 0%, 100% { transform: skewX(0deg); } 50% { transform: skewX(-6deg); } }
+
+/* HERO */
+.hero {
+  position: relative;
+  padding: 96px 24px 80px;
+  display: flex; flex-direction: column; align-items: center;
+  text-align: center;
+  border-bottom: 4px solid var(--border);
+  overflow: hidden;
+}
+.hero-fw { position: absolute; }
+.hero-fw-1 { top: 40px; left: 12%; }
+.hero-fw-2 { top: 90px; right: 14%; }
+.hero-fw-3 { top: 180px; left: 22%; }
+.hero-kicker { font-family: 'Press Start 2P', monospace; font-size: 11px; color: var(--lime); letter-spacing: 2px; margin-bottom: 28px; }
+.hero h1 {
+  font-family: 'Press Start 2P', monospace;
+  font-size: clamp(28px, 6vw, 56px);
+  margin: 0 0 24px;
+  color: var(--citrus);
+  text-shadow: 4px 4px 0 #000;
+  letter-spacing: 2px;
+}
+.hero-tagline { font-family: 'Press Start 2P', monospace; font-size: clamp(11px, 2vw, 16px); color: var(--text); margin: 0 0 20px; line-height: 2; }
+.hero-sub { max-width: 520px; margin: 0 0 12px; color: var(--dim); font-size: 16px; }
+.press-start {
+  font-family: 'Press Start 2P', monospace; font-size: 10px; color: var(--lime);
+  margin: 8px 0 36px; background: none; border: 0; padding: 4px 8px; cursor: pointer;
+}
+.press-start:hover { color: var(--citrus); }
+.press-start:hover .cursor { background: var(--citrus); }
+.press-start .cursor {
+  display: inline-block; width: 10px; height: 14px;
+  background: var(--lime); margin-left: 6px; vertical-align: middle;
+  animation: tw-blink 1s step-end infinite;
+}
+.cta-row { display: flex; gap: 16px; flex-wrap: wrap; justify-content: center; }
+.btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-height: 48px; padding: 12px 24px;
+  font-family: 'Press Start 2P', monospace; font-size: 12px;
+  text-decoration: none;
+  border: 3px solid #000;
+  box-shadow: 5px 5px 0 #000;
+  transition: transform 0.1s, box-shadow 0.1s;
+}
+.btn-primary { background: var(--citrus); color: var(--bg); }
+.btn-primary:hover { background: var(--lime); color: var(--bg); transform: translate(-2px, -2px); box-shadow: 7px 7px 0 #000; }
+.btn-secondary { background: transparent; color: var(--text); border-color: var(--citrus); }
+.btn-secondary:hover { border-color: var(--lime); color: var(--lime); }
+/* Takes PRESS START's slot between the subline and the CTA row. */
+.treadmill-scene { margin: 8px 0 36px; display: flex; flex-direction: column; align-items: center; gap: 14px; }
+.treadmill-scene[hidden] { display: none; }
+/* Walker and belt stay glued together, outside the scene's flex gap. */
+.treadmill-unit { display: flex; flex-direction: column; align-items: center; margin-top: 4px; }
+/* Sprite sheet: 8 frames of 32x32 -> 256x32; keyframes shift exactly 256px per
+   cycle, so the animated layer stays 1x and scaling is transform on the wrapper. */
+.treadmill-walker { width: 64px; height: 64px; overflow: hidden; margin-bottom: -10px; }
+.treadmill-walker-frame {
+  width: 32px; height: 32px;
+  transform: scale(2);
+  transform-origin: top left;
+  background-image: url('./walk.svg');
+  background-repeat: no-repeat;
+  background-size: 256px 32px;
+  image-rendering: pixelated;
+  animation: walk-cycle 0.8s steps(8) infinite;
+}
+.treadmill-belt {
+  width: 160px; height: 14px;
+  border: 3px solid #000; background: var(--border);
+  overflow: hidden; margin-top: 4px;
+  box-shadow: 4px 4px 0 #000;
+}
+.treadmill-belt-stripes {
+  width: 360px; height: 100%;
+  animation: tw-belt 0.6s linear infinite;
+  background-image: repeating-linear-gradient(90deg, var(--faint) 0 8px, transparent 8px 16px);
+}
+
+/* SECTIONS */
+.section { padding: 80px 24px; }
+.section-bordered { border-top: 4px solid var(--border); }
+.section-inner { max-width: 1080px; margin: 0 auto; }
+.section h2 {
+  font-family: 'Press Start 2P', monospace;
+  font-size: clamp(16px, 3vw, 24px);
+  color: var(--text);
+  text-align: center;
+  margin: 0 0 12px;
+}
+.section-sub { text-align: center; color: var(--dim); margin: 0 0 48px; }
+
+/* HOW IT WORKS */
+.steps-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 24px; }
+.step-card {
+  background: var(--panel);
+  border: 3px solid var(--border);
+  box-shadow: 5px 5px 0 #000;
+  padding: 28px 24px;
+  text-align: center;
+}
+.step-num { font-family: 'Press Start 2P', monospace; font-size: 11px; color: var(--lime); margin-bottom: 16px; }
+.step-icon { display: flex; justify-content: center; margin-bottom: 18px; }
+.step-title { font-family: 'Press Start 2P', monospace; font-size: 12px; color: var(--citrus); margin-bottom: 12px; line-height: 1.8; }
+.step-card p { margin: 0; color: var(--dim); font-size: 15px; }
+.icon-flag { animation: tw-flag 1.2s ease-in-out infinite; }
+
+/* FEATURES */
+.features-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 24px; }
+.feature-card {
+  background: var(--panel);
+  border: 3px solid var(--border);
+  box-shadow: 5px 5px 0 #000;
+  padding: 24px;
+  display: flex; gap: 16px; align-items: flex-start;
+}
+.feature-card:hover { border-color: var(--citrus); }
+.feature-icon { flex-shrink: 0; }
+.feature-title { font-family: 'Press Start 2P', monospace; font-size: 11px; color: var(--citrus); margin-bottom: 10px; line-height: 1.8; }
+.feature-card p { margin: 0; color: var(--dim); font-size: 14px; }
+
+/* Live demo of the walk screen HUD in the hero: timer, distance, walker, speed control. */
+.walk-demo-timer { font-family: 'Press Start 2P', monospace; font-size: clamp(22px, 4vw, 32px); color: var(--text); font-variant-numeric: tabular-nums; }
+.walk-demo-km { font-family: 'Press Start 2P', monospace; font-size: clamp(15px, 3vw, 21px); color: var(--citrus); font-variant-numeric: tabular-nums; }
+.walk-demo-km-unit { font-size: 11px; color: var(--dim); margin-left: 4px; }
+.walk-demo-speed { display: flex; align-items: center; gap: 20px; margin-top: 4px; }
+
+/* Countdown 3-2-1-GO — same stepped animations as the app (spec § 6.2). */
+@keyframes count-pop { 0% { transform: scale(2.6); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+@keyframes count-ring { 0% { transform: scale(0.5); opacity: 0.9; } 100% { transform: scale(1.6); opacity: 0; } }
+@keyframes screen-in { 0% { opacity: 0; } 100% { opacity: 1; } }
+.countdown-overlay {
+  position: fixed; inset: 0; z-index: 50;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 48px;
+  width: 100%; background: rgba(0, 0, 0, 0.85);
+  border: 0; padding: 0; cursor: pointer;
+}
+.countdown-overlay[hidden] { display: none; }
+.countdown-stage { position: relative; display: flex; align-items: center; justify-content: center; }
+.countdown-ring {
+  position: absolute; inset: -40px;
+  border: 3px solid var(--citrus);
+  animation: count-ring 600ms steps(5) both;
+}
+.countdown-digit {
+  font-family: 'Press Start 2P', monospace; font-size: clamp(64px, 14vw, 96px);
+  line-height: 1; color: var(--citrus);
+  animation: count-pop 240ms steps(4) both;
+}
+.countdown-overlay.go .countdown-ring { border-color: var(--lime); }
+.countdown-overlay.go .countdown-digit { font-size: clamp(44px, 10vw, 64px); color: var(--lime); }
+.countdown-hint { font-family: 'Press Start 2P', monospace; font-size: 10px; color: var(--dim); min-height: 14px; }
+.demo-in { animation: screen-in 180ms steps(3) both; }
+.wd-btn {
+  width: 56px; height: 48px;
+  background: var(--panel);
+  color: var(--text);
+  font-family: 'Press Start 2P', monospace; font-size: 16px;
+  border: 3px solid var(--border);
+  box-shadow: 4px 4px 0 #000;
+  cursor: pointer;
+  padding: 0;
+}
+.wd-btn:hover:not(:disabled) { border-color: var(--citrus); color: var(--citrus); }
+.wd-btn:active:not(:disabled) { transform: translate(2px, 2px); box-shadow: 2px 2px 0 #000; }
+.wd-btn:disabled { color: var(--faint); cursor: default; }
+.walk-demo-speed-value { min-width: 96px; text-align: center; font-family: 'Press Start 2P', monospace; font-size: 20px; color: var(--text); font-variant-numeric: tabular-nums; }
+.walk-demo-speed-unit { font-size: 10px; color: var(--dim); margin-left: 6px; }
+/* DEPLOY */
+.deploy-inner { max-width: 720px; margin: 0 auto; text-align: center; }
+.deploy-inner > p { color: var(--dim); margin: 0 0 36px; }
+.deploy-badge {
+  display: inline-block;
+  border: 3px solid #000;
+  box-shadow: 5px 5px 0 #000;
+  line-height: 0;
+  transition: transform 0.1s, box-shadow 0.1s;
+}
+.deploy-badge:hover { transform: translate(-2px, -2px); box-shadow: 7px 7px 0 #000; }
+.deploy-badge img { height: 44px; display: block; }
+.deploy-steps { margin: 40px auto 0; display: grid; gap: 14px; text-align: left; max-width: 480px; }
+.deploy-step {
+  display: flex; gap: 14px; align-items: baseline;
+  background: var(--panel);
+  border: 2px solid var(--border);
+  padding: 14px 18px;
+}
+.deploy-step-num { font-family: 'Press Start 2P', monospace; font-size: 11px; color: var(--lime); }
+.deploy-step-text { color: #d8c9b0; font-size: 15px; }
+
+/* HINT TICKER — NPC dialog box like the app's HintTicker. Height is fixed
+   for the worst-case phrase so rotation doesn't shift layout. */
+.hint-strip { border-top: 4px solid var(--border); padding: 32px 24px; display: flex; justify-content: center; }
+.hint-box {
+  width: min(720px, 100%);
+  background: var(--panel);
+  border: 3px solid var(--border);
+  box-shadow: 5px 5px 0 #000;
+  padding: 18px 20px;
+  display: flex; gap: 14px; align-items: flex-start;
+}
+.hint-icon { flex-shrink: 0; margin-top: 2px; }
+.hint-text {
+  margin: 0;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 10px; line-height: 1.9;
+  color: var(--text);
+  min-height: calc(1.9em * 4);
+  overflow-wrap: break-word; min-width: 0;
+}
+@media (min-width: 768px) { .hint-text { font-size: 11px; min-height: calc(1.9em * 3); } }
+.hint-rest { visibility: hidden; }
+
+/* FOOTER */
+.footer { border-top: 4px solid var(--border); padding: 40px 24px; text-align: center; }
+.footer-link { font-family: 'Press Start 2P', monospace; font-size: 10px; color: var(--citrus); text-decoration: none; }
+.footer-link:hover { color: var(--lime); }
+.footer-heart { margin: 20px auto 0; display: flex; justify-content: center; }
+.footer-note { font-family: 'Press Start 2P', monospace; font-size: 8px; color: var(--faint); margin-top: 16px; }
+</style>
+</head>
+<body>
+
+<!-- HERO -->
+<header class="hero">
+  <div class="hero-fw hero-fw-1" data-px="firework" data-color="#e8933a" data-size="60" style="animation: tw-firework 2.2s ease-out 0s infinite;"></div>
+  <div class="hero-fw hero-fw-2" data-px="firework" data-color="#a3e635" data-size="80" style="animation: tw-firework 2.6s ease-out 0.8s infinite;"></div>
+  <div class="hero-fw hero-fw-3" data-px="firework" data-color="#ffd23f" data-size="44" style="animation: tw-firework 2.0s ease-out 1.5s infinite;"></div>
+
+  <div class="hero-kicker">&#9733; OPEN SOURCE OFFICE ARCADE &#9733;</div>
+  <h1>TEAMWALK</h1>
+  <p class="hero-tagline">Walk together. Compete gently.<br>Ship steps.</p>
+  <p class="hero-sub">An internal office treadmill tracker for teams. No accounts, no auth &mdash; built for trust-based teams who just want to walk more.</p>
+  <button class="press-start" id="wd-start" type="button">&#9654; PRESS START<span class="cursor"></span></button>
+
+  <div class="treadmill-scene" id="wd-demo" hidden>
+    <div class="walk-demo-timer" id="wd-timer" role="timer">00:00</div>
+    <div class="walk-demo-km"><span id="wd-km">0.00</span><span class="walk-demo-km-unit">KM</span></div>
+    <div class="treadmill-unit">
+      <div class="treadmill-walker"><div class="treadmill-walker-frame" id="wd-walker"></div></div>
+      <div class="treadmill-belt"><div class="treadmill-belt-stripes" id="wd-belt"></div></div>
+    </div>
+    <div class="walk-demo-speed">
+      <button class="wd-btn" id="wd-minus" type="button" aria-label="Slower">-</button>
+      <div class="walk-demo-speed-value"><span id="wd-speed">4</span><span class="walk-demo-speed-unit">KM/H</span></div>
+      <button class="wd-btn" id="wd-plus" type="button" aria-label="Faster">+</button>
+    </div>
+  </div>
+
+  <div class="cta-row">
+    <a class="btn btn-primary" href="https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fattack-it%2Fteamwalk&env=NEXT_PUBLIC_LOCALE,TELEGRAM_ENABLED,TELEGRAM_BOT_TOKEN,TELEGRAM_WEBHOOK_SECRET,CRON_SECRET&envDescription=UI%20locale%3A%20en%2C%20ru%20or%20es.%20Telegram%3A%20paste%20the%20bot%20token%20from%20%40BotFather%2C%20or%20set%20TELEGRAM_ENABLED%3Dfalse%20and%20put%20%27-%27%20in%20the%20token%20fields.%20TELEGRAM_WEBHOOK_SECRET%20and%20CRON_SECRET%3A%20any%20random%20strings.&envLink=https%3A%2F%2Fgithub.com%2Fattack-it%2Fteamwalk%23readme&project-name=teamwalk&repository-name=teamwalk&stores=%5B%7B%22type%22%3A%22integration%22%2C%22integrationSlug%22%3A%22neon%22%2C%22productSlug%22%3A%22neon%22%7D%5D" target="_blank" rel="noopener">&#9650; DEPLOY TO VERCEL</a>
+    <a class="btn btn-secondary" href="https://github.com/attack-it/teamwalk" target="_blank" rel="noopener">VIEW ON GITHUB</a>
+  </div>
+</header>
+
+<!-- 3-2-1-GO countdown overlay; any tap or Esc cancels while digits run. -->
+<button class="countdown-overlay" id="wd-count" type="button" aria-label="Cancel countdown" hidden>
+  <span class="countdown-stage" aria-hidden="true">
+    <span class="countdown-ring" id="wd-ring"></span>
+    <span class="countdown-digit" id="wd-digit">3</span>
+  </span>
+  <span class="countdown-hint" id="wd-hint">TAP TO CANCEL</span>
+</button>
+
+<!-- HOW IT WORKS -->
+<section class="section">
+  <div class="section-inner">
+    <h2>HOW IT WORKS</h2>
+    <p class="section-sub">Three moves. That's the whole tutorial.</p>
+    <div class="steps-grid">
+      <div class="step-card">
+        <div class="step-num">STEP 01</div>
+        <div class="step-icon" data-px="avatar" data-size="48"></div>
+        <div class="step-title">PICK YOUR AVATAR</div>
+        <p>No sign-up, no password. Choose a pixel walker and you&rsquo;re on the roster.</p>
+      </div>
+      <div class="step-card">
+        <div class="step-num">STEP 02</div>
+        <div class="step-icon" data-px="play" data-size="44"></div>
+        <div class="step-title">START A WALK</div>
+        <p>Grab a free treadmill and hit start. The timer runs while you stroll.</p>
+      </div>
+      <div class="step-card">
+        <div class="step-num">STEP 03</div>
+        <div class="step-icon"><span class="icon-flag" data-px="flag" data-size="48"></span></div>
+        <div class="step-title">EARN &amp; ADVANCE</div>
+        <p>Streaks and achievements stack up while the whole team advances along a shared route.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FEATURES -->
+<section class="section section-bordered">
+  <div class="section-inner">
+    <h2>POWER-UPS</h2>
+    <p class="section-sub">Everything a walking team needs. Nothing it doesn't.</p>
+    <div class="features-grid">
+      <div class="feature-card">
+        <div class="feature-icon" data-px="timer" data-size="40"></div>
+        <div>
+          <div class="feature-title">LIVE WALK TIMER</div>
+          <p>A running clock for every active walk, visible to the whole team.</p>
+        </div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon" data-px="streak" data-size="40"></div>
+        <div>
+          <div class="feature-title">DAILY STREAKS</div>
+          <p>Walk every workday to keep the flame alive. Miss a day, start over.</p>
+        </div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon" data-px="trophy" data-size="40"></div>
+        <div>
+          <div class="feature-title">ACHIEVEMENTS &amp; RECORDS</div>
+          <p>Longest walk, most walks in a week, personal bests &mdash; all tracked.</p>
+        </div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon" data-px="map" data-size="40"></div>
+        <div>
+          <div class="feature-title">TEAM ROUTE MAP</div>
+          <p>Every minute walked moves the team along a shared virtual route.</p>
+        </div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon" data-px="telegram" data-size="40"></div>
+        <div>
+          <div class="feature-title">TELEGRAM BOT</div>
+          <p>Link the team bot once &mdash; walk reminders and team updates land right in Telegram.</p>
+        </div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon" data-px="ai" data-size="40"></div>
+        <div>
+          <div class="feature-title">AI MOTIVATION HINTS</div>
+          <p>Playful AI-generated nudges to get you walking &mdash; with a graceful fallback when offline.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- DEPLOY -->
+<section class="section section-bordered">
+  <div class="deploy-inner">
+    <h2>ONE-CLICK DEPLOY</h2>
+    <p>Fork the repo, deploy to Vercel, and a Neon Postgres database is provisioned automatically. Your team is walking in minutes.</p>
+    <a class="deploy-badge" href="https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fattack-it%2Fteamwalk&env=NEXT_PUBLIC_LOCALE,TELEGRAM_ENABLED,TELEGRAM_BOT_TOKEN,TELEGRAM_WEBHOOK_SECRET,CRON_SECRET&envDescription=UI%20locale%3A%20en%2C%20ru%20or%20es.%20Telegram%3A%20paste%20the%20bot%20token%20from%20%40BotFather%2C%20or%20set%20TELEGRAM_ENABLED%3Dfalse%20and%20put%20%27-%27%20in%20the%20token%20fields.%20TELEGRAM_WEBHOOK_SECRET%20and%20CRON_SECRET%3A%20any%20random%20strings.&envLink=https%3A%2F%2Fgithub.com%2Fattack-it%2Fteamwalk%23readme&project-name=teamwalk&repository-name=teamwalk&stores=%5B%7B%22type%22%3A%22integration%22%2C%22integrationSlug%22%3A%22neon%22%2C%22productSlug%22%3A%22neon%22%7D%5D" target="_blank" rel="noopener">
+      <img src="https://vercel.com/button" alt="Deploy with Vercel">
+    </a>
+    <div class="deploy-steps">
+      <div class="deploy-step"><span class="deploy-step-num">01</span><span class="deploy-step-text">The repo is forked into your GitHub account.</span></div>
+      <div class="deploy-step"><span class="deploy-step-num">02</span><span class="deploy-step-text">Vercel builds and deploys your copy.</span></div>
+      <div class="deploy-step"><span class="deploy-step-num">03</span><span class="deploy-step-text">A Neon Postgres database is provisioned and connected automatically.</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- HINT TICKER: rotating phrases from the app's static hint catalog -->
+<div class="hint-strip">
+  <div class="hint-box" id="hint-box">
+    <span class="hint-icon" data-px="hint" data-size="24"></span>
+    <p class="hint-text"><span id="hint-typed"></span><span class="hint-rest" id="hint-rest" aria-hidden="true"></span></p>
+  </div>
+</div>
+
+<!-- FOOTER -->
+<footer class="footer">
+  <a class="footer-link" href="https://github.com/attack-it/teamwalk" target="_blank" rel="noopener">GITHUB.COM/ATTACK-IT/TEAMWALK</a>
+  <div class="footer-heart" data-px="heart" data-size="28"></div>
+  <div class="footer-note">MADE BY OFFICE WALKERS FOR OFFICE WALKERS</div>
+</footer>
+
+<script>
+// Pixel-art sprites: each grid char maps to a color; '.' is transparent.
+(function () {
+  var O = '#e8933a', L = '#a3e635', W = '#f0e4d3', K = '#12100c', D = '#6b5f4d', G = '#ffd23f';
+  var SPRITES = {
+    firework: { grid: ['..X..X..', 'X..XX..X', '.X.XX.X.', '..XXXX..', '..XXXX..', '.X.XX.X.', 'X..XX..X', '..X..X..'], colors: {} },
+    avatar: { grid: ['.XXXX.', '.XOOX.', '.XOOX.', '..XX..', '.XXXX.', 'X.XX.X'], colors: { X: O, O: K } },
+    play: { grid: ['X.....', 'XX....', 'XXX...', 'XXXX..', 'XXX...', 'XX....', 'X.....'], colors: { X: L } },
+    flag: { grid: ['XOOO..', 'XOOOO.', 'XOOO..', 'X.....', 'X.....', 'X.....'], colors: { X: W, O: O } },
+    timer: { grid: ['.XXX.', 'X...X', 'X.O.X', 'X.OOX', 'X...X', '.XXX.'], colors: { X: W, O: L } },
+    streak: { grid: ['..X..', '.XX..', '.XXX.', 'XXOX.', 'XOOXX', '.XXX.'], colors: { X: O, O: G } },
+    trophy: { grid: ['XXXXX', 'X.O.X', '.XOX.', '..X..', '..X..', '.XXX.'], colors: { X: O, O: G } },
+    map: { grid: ['O....', 'XO...', '.XO..', '..XO.', '...XO', '....F'], colors: { X: D, O: L, F: O } },
+    telegram: {
+      grid: [
+        '....BBBB....',
+        '..BBBBBBBB..',
+        '.BBBBBBBBBB.',
+        '.BBBBBBBBWW.',
+        'BBBBBBBBWWBB',
+        'BBBBBBWWWBBB',
+        'BBBBWWWWBBBB',
+        'BBWWWWWBBBBB',
+        '.BBBBWWBBBB.',
+        '.BBBBWBBBBB.',
+        '..BBBBBBBB..',
+        '....BBBB....'
+      ],
+      colors: { B: '#2aabee', W: W }
+    },
+    ai: { grid: ['.XXX.', 'XOXOX', 'XXXXX', 'X.X.X', '.XXX.', '.X.X.'], colors: { X: W, O: L } },
+    heart: { grid: ['.XX.XX.', 'XXXXXXX', 'XXXXXXX', '.XXXXX.', '..XXX..', '...X...'], colors: { X: '#e83a3a' } },
+    hint: { grid: ['XXXXXXXX', 'X......X', 'X.O.O.OX', 'X......X', 'XXXXXXXX', '..X.....', '.X......'], colors: { X: W, O: L } }
+  };
+  var NS = 'http://www.w3.org/2000/svg';
+
+  function renderSprite(el) {
+    var name = el.getAttribute('data-px');
+    var sprite = SPRITES[name];
+    if (!sprite) return;
+    var size = parseInt(el.getAttribute('data-size'), 10) || 40;
+    var colors = sprite.colors;
+    var fillOverride = el.getAttribute('data-color');
+    var rows = sprite.grid.length, cols = sprite.grid[0].length;
+    var svg = document.createElementNS(NS, 'svg');
+    svg.setAttribute('viewBox', '0 0 ' + cols + ' ' + rows);
+    svg.setAttribute('width', size);
+    svg.setAttribute('height', Math.round(size * rows / cols));
+    svg.setAttribute('aria-hidden', 'true');
+    svg.style.imageRendering = 'pixelated';
+    svg.style.shapeRendering = 'crispEdges';
+    svg.style.display = 'block';
+    sprite.grid.forEach(function (row, y) {
+      for (var x = 0; x < row.length; x++) {
+        var ch = row.charAt(x);
+        if (ch === '.') continue;
+        var fill = fillOverride || colors[ch];
+        if (!fill) continue;
+        var rect = document.createElementNS(NS, 'rect');
+        rect.setAttribute('x', x);
+        rect.setAttribute('y', y);
+        rect.setAttribute('width', 1);
+        rect.setAttribute('height', 1);
+        rect.setAttribute('fill', fill);
+        svg.appendChild(rect);
+      }
+    });
+    el.appendChild(svg);
+  }
+
+  document.querySelectorAll('[data-px]').forEach(renderSprite);
+})();
+
+// Walk-screen demo behind a 3-2-1-GO countdown — same rules as the app:
+// digits at 800ms, the walk "starts" only at GO, the timer counts from the
+// clock, distance accrues per-second at the current speed, and stride tempo
+// is a stepped mapping of speed (no smooth interpolation).
+(function () {
+  const MIN_SPEED = 1, MAX_SPEED = 8;
+  const DIGITS = ['3', '2', '1'];
+  const STEP_MS = 800;
+  const GO_HOLD_MS = 700;
+
+  const startBtn = document.getElementById('wd-start');
+  const demoEl = document.getElementById('wd-demo');
+  const overlay = document.getElementById('wd-count');
+  const digitEl = document.getElementById('wd-digit');
+  const ringEl = document.getElementById('wd-ring');
+  const hintEl = document.getElementById('wd-hint');
+  const timerEl = document.getElementById('wd-timer');
+  const kmEl = document.getElementById('wd-km');
+  const speedEl = document.getElementById('wd-speed');
+  const walkerEl = document.getElementById('wd-walker');
+  const beltEl = document.getElementById('wd-belt');
+  const minusBtn = document.getElementById('wd-minus');
+  const plusBtn = document.getElementById('wd-plus');
+  if (!startBtn || !demoEl || !overlay || !digitEl || !ringEl || !hintEl ||
+      !timerEl || !kmEl || !speedEl || !walkerEl || !beltEl || !minusBtn || !plusBtn) return;
+
+  let speedKmh = 4;
+  let distanceKm = 0;
+  let startedAt = null;
+  let stepIdx = 0;
+  let countTimer = null;
+
+  function stepDurationSec(kmh) {
+    if (kmh <= 2) return 1.2;
+    if (kmh <= 3) return 1;
+    if (kmh <= 4) return 0.8;
+    if (kmh <= 5) return 0.65;
+    if (kmh <= 7) return 0.5;
+    return 0.4;
+  }
+
+  function formatDuration(totalSec) {
+    const safe = Math.max(0, Math.floor(totalSec));
+    const h = Math.floor(safe / 3600);
+    const min = Math.floor((safe % 3600) / 60);
+    const s = safe % 60;
+    const pad = function (n) { return String(n).padStart(2, '0'); };
+    return h > 0 ? pad(h) + ':' + pad(min) + ':' + pad(s) : pad(min) + ':' + pad(s);
+  }
+
+  function render() {
+    const step = stepDurationSec(speedKmh);
+    speedEl.textContent = String(speedKmh);
+    walkerEl.style.animationDuration = step + 's';
+    // Belt keeps the original 0.6/0.8 ratio to the stride.
+    beltEl.style.animationDuration = step * 0.75 + 's';
+    minusBtn.disabled = speedKmh <= MIN_SPEED;
+    plusBtn.disabled = speedKmh >= MAX_SPEED;
+  }
+
+  function tick() {
+    if (startedAt === null) return;
+    distanceKm += speedKmh / 3600;
+    timerEl.textContent = formatDuration((Date.now() - startedAt) / 1000);
+    kmEl.textContent = distanceKm.toFixed(2);
+  }
+
+  // Restart both CSS animations on every digit change (the app re-keys the nodes).
+  function restartAnim(el) {
+    el.style.animation = 'none';
+    void el.offsetWidth;
+    el.style.animation = '';
+  }
+
+  function showStep() {
+    const isGo = stepIdx === DIGITS.length;
+    overlay.classList.toggle('go', isGo);
+    digitEl.textContent = isGo ? 'GO!' : DIGITS[stepIdx];
+    hintEl.textContent = isGo ? '' : 'TAP TO CANCEL';
+    restartAnim(ringEl);
+    restartAnim(digitEl);
+    countTimer = window.setTimeout(isGo ? startWalk : function () {
+      stepIdx += 1;
+      showStep();
+    }, isGo ? GO_HOLD_MS : STEP_MS);
+  }
+
+  function startWalk() {
+    overlay.hidden = true;
+    startedAt = Date.now();
+    distanceKm = 0;
+    timerEl.textContent = '00:00';
+    kmEl.textContent = '0.00';
+    render();
+    demoEl.hidden = false;
+    demoEl.classList.add('demo-in');
+    window.setInterval(tick, 1000);
+  }
+
+  function cancelCountdown() {
+    if (stepIdx === DIGITS.length) return;
+    window.clearTimeout(countTimer);
+    overlay.hidden = true;
+    startBtn.hidden = false;
+    startBtn.focus();
+  }
+
+  startBtn.addEventListener('click', function () {
+    startBtn.hidden = true;
+    stepIdx = 0;
+    overlay.hidden = false;
+    overlay.focus();
+    showStep();
+  });
+
+  overlay.addEventListener('click', cancelCountdown);
+  window.addEventListener('keydown', function (event) {
+    if (event.key === 'Escape' && !overlay.hidden) cancelCountdown();
+  });
+
+  minusBtn.addEventListener('click', function () {
+    speedKmh = Math.max(MIN_SPEED, speedKmh - 1);
+    render();
+  });
+  plusBtn.addEventListener('click', function () {
+    speedKmh = Math.min(MAX_SPEED, speedKmh + 1);
+    render();
+  });
+
+  render();
+})();
+
+// Hint ticker: phrases from the app's static catalog, rotated every 7s with
+// a typewriter reveal (20ms/char, capped at 2.4s) and no immediate repeats.
+// Hover pauses the rotation so a phrase can be read to the end.
+(function () {
+  const HINTS = [
+    'A tortoise does 0.27 km/h. We win even at the lowest speed.',
+    'Every walk is a small victory over the chair. The score keeps growing.',
+    'The treadmill is standing there watching you. Right now. Silently.',
+    'The chair never gets tired. That is exactly its problem.',
+    '3-4 km/h does not stop you from talking on a call. Verified by colleagues.',
+    'Start with 10 minutes. A streak of short walks beats one heroic session.',
+    'Faster is not better: at 4 km/h you can walk and work at the same time.',
+    'A sloth tops out at 0.24 km/h. Even at minimum speed you are four times faster.',
+    'A snail covers 50 meters in an hour. You need one minute for that.',
+    'A penguin walks at 3.6 km/h. That is exactly your pace during a call.',
+    'An ostrich runs 70 km/h. But it is completely useless at desk work.',
+    'A cheetah holds 110 km/h for twenty seconds. You hold 4 km/h for forty minutes.',
+    'A whale swims 100 km a day. But it has zero deadlines.',
+    'A panda moves at 3 km/h and sleeps ten hours a day. You have mastered step one already.'
+  ];
+  const ROTATE_MS = 7000;
+  const TYPE_CHAR_MS = 20;
+  const TYPE_TOTAL_MAX_MS = 2400;
+
+  const box = document.getElementById('hint-box');
+  const typedEl = document.getElementById('hint-typed');
+  const restEl = document.getElementById('hint-rest');
+  if (!box || !typedEl || !restEl) return;
+
+  let order = [];
+  let index = -1;
+  let paused = false;
+  let typeTimer = null;
+
+  function shuffle(items) {
+    const copy = items.slice();
+    for (let i = copy.length - 1; i > 0; i -= 1) {
+      const j = Math.floor(Math.random() * (i + 1));
+      const swap = copy[i];
+      copy[i] = copy[j];
+      copy[j] = swap;
+    }
+    return copy;
+  }
+
+  function show(text) {
+    if (typeTimer !== null) window.clearInterval(typeTimer);
+    typedEl.textContent = '';
+    // The untyped tail stays in flow, invisible, so lines don't reflow per char.
+    restEl.textContent = text;
+    const stepMs = Math.max(1, Math.min(TYPE_CHAR_MS, TYPE_TOTAL_MAX_MS / text.length));
+    // Typed count derives from elapsed time, not tick count: a throttled
+    // background tab then skips frames instead of stretching the reveal.
+    const typeStart = Date.now();
+    typeTimer = window.setInterval(function () {
+      const count = Math.min(text.length, Math.floor((Date.now() - typeStart) / stepMs));
+      typedEl.textContent = text.slice(0, count);
+      restEl.textContent = text.slice(count);
+      if (count >= text.length) window.clearInterval(typeTimer);
+    }, stepMs);
+  }
+
+  function advance() {
+    if (paused) return;
+    index += 1;
+    if (index >= order.length) {
+      const last = order[order.length - 1];
+      order = shuffle(HINTS);
+      if (order.length > 1 && order[0] === last) {
+        const first = order[0];
+        order[0] = order[1];
+        order[1] = first;
+      }
+      index = 0;
+    }
+    show(order[index]);
+  }
+
+  box.addEventListener('mouseenter', function () { paused = true; });
+  box.addEventListener('mouseleave', function () { paused = false; });
+
+  order = shuffle(HINTS);
+  index = 0;
+  show(order[0]);
+  window.setInterval(advance, ROTATE_MS);
+})();
+</script>
+
+</body>
+</html>
