@@ -5,7 +5,7 @@ import { useEffect, useId, useState } from 'react';
 import { Button } from '@/components/ui/8bit/button';
 import { Icon } from '@/components/ui/icon';
 import { cn } from '@/lib/cn';
-import { formatDuration } from '@/lib/format';
+import { elapsedSec, formatDuration } from '@/lib/format';
 import { fmt, m } from '@/lib/i18n';
 import type { TreadmillBusyDto, TreadmillDto } from '@/lib/types';
 
@@ -87,13 +87,6 @@ export function busyLabel(busy: TreadmillBusyDto, now: number): string {
     name: busy.user.name,
     duration: formatDuration(elapsedSec(busy.startedAt, now)),
   });
-}
-
-/** Seconds elapsed since start; negative values clamp to zero. */
-export function elapsedSec(startedAtIso: string, now: number): number {
-  const started = new Date(startedAtIso).getTime();
-  if (!Number.isFinite(started)) return 0;
-  return Math.max(0, Math.floor((now - started) / 1000));
 }
 
 /**

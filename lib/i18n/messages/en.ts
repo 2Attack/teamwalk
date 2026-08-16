@@ -75,9 +75,6 @@ export const en: Messages = {
       'All treadmills are out of service. Once one is back, the start block will reappear by itself — no need to refresh.',
     treadmillJustTaken: 'This treadmill was just taken. Pick a free one.',
     startFailed: 'Could not start the walk. Check your connection and retry.',
-    blockerSingleBusy: '{name} is on the treadmill now, walking for {duration}',
-    blockerAllBusy: 'all treadmills are busy, please wait.',
-    blockerAllBusyTail: ' Longest so far — {label}.',
     blockerChooseFree: 'pick a free treadmill',
   },
 
@@ -161,6 +158,15 @@ export const en: Messages = {
     willNotBeSaved: 'The walk will not be saved.',
     keepWalking: 'Keep walking',
     confirmCancel: 'Yes, cancel',
+  },
+
+  walkCard: {
+    inProgressTitle: 'Walk in progress',
+    busyTitle: 'On the treadmill now',
+    openWalk: 'Open the walk',
+    openWalkAria: 'Open the walk: {name}',
+    elapsed: 'walking for {duration}',
+    speed: '{speed} km/h',
   },
 
   speedControl: {

@@ -63,6 +63,11 @@ export const ICON_PATHS = {
   chevronDown: [
     'M13 16h-2v-2h2v2Zm-2-2H9v-2h2v2Zm4 0h-2v-2h2v2Zm-6-2H7v-2h2v2Zm8 0h-2v-2h2v2ZM7 10H5V8h2v2Zm12 0h-2V8h2v2Z',
   ],
+  /** pixelarticons: arrow-right */
+  arrowRight: [
+    'M4 11v2h16v-2zm12 2v2h2v-2zm-2 2v2h2v-2zm-2 2v2h2v-2zm4-6V9h2v2z',
+    'M14 15V7h2v8zm-2 2V5h2v12z',
+  ],
   /** pixelarticons: calendar-range */
   calendar: [
     'M5 4h14v2H5zm0 16h14v2H5zM3 10h2v10H3zm0-4h2v2H3zm16 0h2v2h-2zm0 4h2v10h-2zM3 8h18v2H3zm12-6h2v2h-2zM7 2h2v2H7zm4 10h6v2h-6zm-4 4h6v2H7z',

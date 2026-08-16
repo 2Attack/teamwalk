@@ -29,7 +29,7 @@
 | `lib/db/schema.ts` | таблицы `users, treadmills, walks, achievements, streakFreezes, hintsCache, hintsMeta` |
 | `lib/types.ts` | все DTO ответов API |
 | `lib/validation.ts` | Zod-схемы: `createUserSchema, patchUserSchema, startWalkSchema, finishWalkSchema, periodSchema, llmHintsSchema` |
-| `lib/format.ts` | `formatDuration, formatKm, calcDistanceKm, avgSpeedKmh, normalizeName, parseDecimalInput` |
+| `lib/format.ts` | `formatDuration, elapsedSec, formatKm, calcDistanceKm, avgSpeedKmh, normalizeName, parseDecimalInput` |
 | `lib/i18n` | `LOCALE, INTL_LOCALE, m` (словарь активной локали), `fmt(template, params)`, `plural(forms, count)`; словари — `lib/i18n/messages/{ru,en,es}.ts`, эталон ключей — `ru` |
 | `lib/time.ts` | `toOfficeDay, officeDayStart, addOfficeDays, diffOfficeDays, isWeekend, prevWorkday, periodStart, officeMonth` |
 | `lib/config.ts` | все константы (лимиты, TTL, окна) |
@@ -182,7 +182,7 @@ export function FireworksOverlay(props: { burstId: number; onDone: () => void })
 | **GAME** | `lib/game/*`, `app/api/users/[id]/stats/route.ts`, `app/api/achievements/route.ts`, `app/api/team/progress/route.ts`, `tests/streak.test.ts` |
 | **TELEGRAM** | `lib/telegram/*`, `app/api/telegram/**`, `app/api/users/[id]/telegram/**`, `app/api/cron/notify/route.ts`, `components/TelegramNudge.tsx`, `components/TelegramLinkDialog.tsx`, `tests/telegram.*.test.ts`, `vercel.json`, `drizzle/0002_telegram.sql` |
 | **UIKIT** | `components/ui/*`, `components/Avatar.tsx`, `components/AvatarPicker.tsx` |
-| **HOME** | `app/page.tsx`, `components/UserSelect.tsx`, `components/AddUserDialog.tsx`, `components/StartWalkCard.tsx`, `components/StartCountdown.tsx`, `components/TreadmillPicker.tsx` |
+| **HOME** | `app/page.tsx`, `components/UserSelect.tsx`, `components/AddUserDialog.tsx`, `components/StartWalkCard.tsx`, `components/StartCountdown.tsx`, `components/TreadmillPicker.tsx`, `components/WalkInProgressCard.tsx`, `lib/start-blocker.ts`, `tests/start-blocker.test.ts` |
 | **SETTINGS** | `app/settings/page.tsx`, `app/api/treadmills/**`, `app/api/routes/**`, `lib/db/queries/treadmills.ts`, `lib/db/queries/routes.ts`, `lib/routes/generate.ts`, `components/TreadmillSettings.tsx`, `components/TreadmillFormDialog.tsx`, `components/RouteSettings.tsx`, `components/RouteFormDialog.tsx`, `tests/treadmills.validation.test.ts`, `tests/routes.validation.test.ts` (п. 6.11 ТЗ; `GET /api/treadmills` без `scope` по-прежнему отдаёт форму зоны WALKS — `listActiveTreadmills`) |
 | **WALKSCREEN** | `app/walk/[id]/page.tsx`, `components/WalkTimer.tsx`, `components/FinishWalkDialog.tsx`, `components/WalkSuccess.tsx`, `components/WalkerSprite.tsx` |
 | **BOARDUI** | `components/Podium.tsx`, `components/Leaderboard.tsx`, `components/PeriodTabs.tsx`, `components/TeamProgress.tsx`, `components/StreakBadge.tsx`, `components/HintTicker.tsx`, `components/AchievementToast.tsx`, `components/FireworksOverlay.tsx`, `lib/client/leader-transition.ts`, `tests/leader-transition.test.ts` |

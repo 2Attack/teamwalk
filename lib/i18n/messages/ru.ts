@@ -95,9 +95,6 @@ export const ru = {
       'Все дорожки выведены из строя. Когда дорожку вернут, блок старта появится сам — обновлять страницу не нужно.',
     treadmillJustTaken: 'Эту дорожку только что заняли. Выберите свободную.',
     startFailed: 'Не удалось начать прогулку. Проверьте сеть и повторите.',
-    blockerSingleBusy: 'сейчас на дорожке {name}, идёт {duration}',
-    blockerAllBusy: 'все дорожки заняты, подождите.',
-    blockerAllBusyTail: ' Дольше всех — {label}.',
     blockerChooseFree: 'выберите свободную дорожку',
   },
 
@@ -184,6 +181,15 @@ export const ru = {
     willNotBeSaved: 'Прогулка не будет сохранена.',
     keepWalking: 'Иду дальше',
     confirmCancel: 'Да, отменить',
+  },
+
+  walkCard: {
+    inProgressTitle: 'Прогулка идёт',
+    busyTitle: 'Сейчас на дорожке',
+    openWalk: 'Открыть прогулку',
+    openWalkAria: 'Открыть прогулку: {name}',
+    elapsed: 'идёт {duration}',
+    speed: '{speed} км/ч',
   },
 
   speedControl: {
