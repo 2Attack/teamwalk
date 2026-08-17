@@ -37,6 +37,6 @@ export const config = {
      * and icons, the unlock flow itself, and the machine endpoints (cron,
      * Telegram webhook) that carry their own dedicated secrets.
      */
-    '/((?!_next/static|_next/image|favicon\\.ico|icon\\.svg|apple-icon\\.png|manifest\\.webmanifest|pin$|api/pin$|api/cron/|api/telegram/).*)',
+    '/((?!_next/static|_next/image|favicon\\.ico|icon\\.svg|apple-icon\\.png|icon-192\\.png|icon-512\\.png|icon-maskable-512\\.png|manifest\\.webmanifest|pin$|api/pin$|api/cron/|api/telegram/).*)',
   ],
 };
