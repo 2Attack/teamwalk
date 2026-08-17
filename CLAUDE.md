@@ -41,6 +41,7 @@ Environment quirks: cron (`/api/cron/notify`) runs only in production — previe
 - **Stale walks** are closed lazily by `lib/walks/autoclose.ts` on API access — no cron (Vercel Hobby plan).
 - **The LLM is never on the hot path.** The hint pool lives in `hints_cache`, is served immediately and regenerated in the background (stale-while-revalidate under a single-row mutex). Degradation: AI Gateway (AI SDK, model in `AI_GATEWAY_MODEL`) → previous pool → static catalog. The LLM receives an anonymized snapshot (slots `u1…uN`); names are substituted on our side.
 - **Time** — always through `lib/time.ts` (`Europe/Moscow`, "office days" as `YYYY-MM-DD`, workdays without a holiday calendar). Never compute dates by hand.
+- **Access gate (optional).** If `ACCESS_PIN` is set (server-only env), `proxy.ts` gates every page and API route: no valid `tw_access` cookie → pages redirect to `/pin`, API answers `401 PIN_REQUIRED`. The cookie is a stateless HMAC of the PIN (`lib/access/pin.ts`) — rotating the PIN invalidates all devices. Exempt: `/api/cron/*`, `/api/telegram/*` (own secrets), static assets, `/pin` + `/api/pin`. Unset var = fully open app; keep new machine endpoints out of the gate via the proxy matcher.
 
 Layers: `app/api/**` (Route Handlers) → `lib/db/queries/*` (aggregations) and `lib/game/*` (streaks/achievements/progress) → `lib/db/schema.ts`. The client goes only through SWR hooks and `apiSend` from `lib/client/api.ts`. All DTOs are in `lib/types.ts`, Zod schemas in `lib/validation.ts`, constants in `lib/config.ts`.
 

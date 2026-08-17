@@ -24,6 +24,16 @@ export const es: Messages = {
     progress: 'Progreso',
   },
 
+  pin: {
+    title: 'Acceso con PIN',
+    prompt: 'Introduce el PIN del equipo para abrir el rastreador.',
+    placeholder: 'Código PIN',
+    submit: 'Entrar',
+    wrongPin: 'PIN incorrecto. Inténtalo de nuevo.',
+    /** 401 envelope message from the proxy for gated API calls. */
+    required: 'Se necesita un PIN para acceder.',
+  },
+
   units: {
     km: 'km',
     kmh: 'km/h',

@@ -41,6 +41,16 @@ export const ru = {
     progress: 'Прогресс',
   },
 
+  pin: {
+    title: 'Доступ по PIN',
+    prompt: 'Введите PIN-код команды, чтобы открыть трекер.',
+    placeholder: 'PIN-код',
+    submit: 'Войти',
+    wrongPin: 'Неверный PIN-код. Попробуйте ещё раз.',
+    /** 401 envelope message from the proxy for gated API calls. */
+    required: 'Нужен PIN-код для доступа.',
+  },
+
   units: {
     km: 'км',
     kmh: 'км/ч',

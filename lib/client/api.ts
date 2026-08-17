@@ -41,6 +41,17 @@ async function parse<T>(response: Response): Promise<T> {
 
   if (!response.ok) {
     const envelope = json as { error?: { code?: string; message?: string; field?: string } } | null;
+    // Access cookie expired or PIN rotated mid-session: go unlock instead of
+    // surfacing 401s into every SWR poll. Never resolves — navigation is in flight.
+    if (
+      response.status === 401 &&
+      envelope?.error?.code === 'PIN_REQUIRED' &&
+      typeof window !== 'undefined'
+    ) {
+      const next = encodeURIComponent(window.location.pathname + window.location.search);
+      window.location.assign(`/pin?next=${next}`);
+      return new Promise<T>(() => {});
+    }
     throw new ApiError(
       response.status,
       envelope?.error?.code ?? 'INTERNAL_ERROR',

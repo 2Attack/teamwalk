@@ -74,6 +74,7 @@ docker run -p 3000:3000 -e DATABASE_URL=postgres://…neon.tech/… teamwalk
 | `TELEGRAM_BOT_TOKEN` | no | Bot from @BotFather; without it the whole Telegram subsystem is off |
 | `TELEGRAM_WEBHOOK_SECRET` | no | Webhook secret (`setWebhook … secret_token`) |
 | `CRON_SECRET` | no | Protects `/api/cron/notify` (Vercel Cron sends it itself) |
+| `ACCESS_PIN` | no | Deployment-wide access PIN: when set, pages and the API require unlocking via `/pin` (cookie lasts ~1 year); empty/unset = open access; changing it logs every device out |
 
 The full list with defaults (LLM hints, notification windows, app name) is documented in [`.env.example`](.env.example).
 

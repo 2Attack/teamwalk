@@ -18,6 +18,8 @@ export type ApiErrorCode =
   | 'WALK_NOT_ACTIVE'
   | 'DELETE_WINDOW_EXPIRED'
   | 'TELEGRAM_DISABLED'
+  | 'PIN_REQUIRED'
+  | 'PIN_INVALID'
   | 'INTERNAL_ERROR';
 
 export interface ApiErrorBody {

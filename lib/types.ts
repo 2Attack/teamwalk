@@ -238,3 +238,8 @@ export interface UserStatsDto {
   lastSpeedKmh: number | null;
   lastTreadmillId: string | null;
 }
+
+/** `POST /api/pin` success — the unlock cookie rides on the response. */
+export interface PinVerifyResponseDto {
+  ok: true;
+}
