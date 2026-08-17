@@ -6,8 +6,9 @@ import { useEffect, useRef, useState } from 'react';
 import { AddUserDialog } from '@/components/AddUserDialog';
 import { SpeedPicker } from '@/components/SpeedPicker';
 import { StartCountdown } from '@/components/StartCountdown';
-import { TreadmillPicker, busyLabel, elapsedSec, useNowTick } from '@/components/TreadmillPicker';
+import { TreadmillPicker, useNowTick } from '@/components/TreadmillPicker';
 import { UserSelect } from '@/components/UserSelect';
+import { WalkInProgressCard } from '@/components/WalkInProgressCard';
 import { Button } from '@/components/ui/8bit/button';
 import { Card, CardAction, CardContent, CardHeader, CardTitle } from '@/components/ui/8bit/card';
 import { Icon } from '@/components/ui/icon';
@@ -22,13 +23,19 @@ import {
   useUserStats,
 } from '@/lib/client/api';
 import { DEFAULT_SPEED_KMH, MAX_SPEED_KMH_ABS } from '@/lib/config';
-import { formatDuration } from '@/lib/format';
-import { fmt, m } from '@/lib/i18n';
-import type { ActiveWalkDto, TreadmillBusyDto, TreadmillDto, UserDto } from '@/lib/types';
+import { m } from '@/lib/i18n';
+import { startBlocker } from '@/lib/start-blocker';
+import type { ActiveWalkDto, TreadmillDto, UserDto } from '@/lib/types';
 
 interface StartWalkCardProps {
   users: UserDto[];
   userId: string | null;
+  /**
+   * The selected participant's walk in progress. Home owns the single SWR
+   * subscription; a non-null walk turns the start controls into a resume card
+   * (starting is impossible anyway — the server answers 409).
+   */
+  activeWalk: ActiveWalkDto | null;
   onSelectUser: (userId: string) => void;
   /**
    * Countdown/start in progress. Home pauses its active-walk subscription
@@ -49,6 +56,7 @@ const GO_DWELL_MS = 400;
 export function StartWalkCard({
   users,
   userId,
+  activeWalk,
   onSelectUser,
   onStartFlowChange,
 }: StartWalkCardProps) {
@@ -67,7 +75,6 @@ export function StartWalkCard({
   const [addOpen, setAddOpen] = useState(false);
 
   const list = treadmills ?? [];
-  const free = list.filter((t) => t.busy === null);
   // Derive the value instead of only storing it in state: on the first frame
   // after treadmills load, the preselection effect has not run yet and the
   // button would flash "pick a treadmill".
@@ -153,6 +160,33 @@ export function StartWalkCard({
     );
   }
 
+  // Walk in progress — resume card instead of the pickers and start button;
+  // UserSelect stays: the shared tablet must allow switching the participant.
+  if (activeWalk !== null) {
+    return (
+      <StartCard title={m.startCard.title} action={<AddUserButton onClick={() => setAddOpen(true)} />}>
+        <UserSelect users={users} value={userId} onChange={onSelectUser} />
+        <div className="space-y-2">
+          <p className="text-sm text-text-dim">{m.walkCard.inProgressTitle}</p>
+          <WalkInProgressCard
+            variant="resume"
+            walkId={activeWalk.id}
+            user={activeWalk.user}
+            startedAt={activeWalk.startedAt}
+            speedKmh={activeWalk.speedKmh}
+            treadmillName={activeWalk.treadmillName}
+          />
+        </div>
+        <AddUserDialog
+          open={addOpen}
+          onClose={() => setAddOpen(false)}
+          users={users}
+          onCreated={(user) => onSelectUser(user.id)}
+        />
+      </StartCard>
+    );
+  }
+
   if (isLoading) {
     return <StartWalkCardSkeleton />;
   }
@@ -169,7 +203,7 @@ export function StartWalkCard({
     );
   }
 
-  const blocker = startBlocker(list, free, selectedTreadmill, now);
+  const blocker = startBlocker(list, selectedTreadmill, now);
   const canStart = userId !== null && speed !== null && blocker === null;
 
   return (
@@ -215,14 +249,30 @@ export function StartWalkCard({
             </>
           )}
         </Button>
-        {blocker && (
+        {blocker?.kind === 'hint' && (
           <p
             aria-live="polite"
             className="flex items-start gap-2 text-sm text-text-dim"
           >
             <Icon name="clock" size={16} className="mt-0.5" />
-            <span>{blocker}</span>
+            <span>{blocker.text}</span>
           </p>
+        )}
+        {blocker?.kind === 'busy' && (
+          <div aria-live="polite" className="space-y-2 pt-1">
+            <p className="text-sm text-text-dim">{m.walkCard.busyTitle}</p>
+            {blocker.walks.map((walk) => (
+              <WalkInProgressCard
+                key={walk.walkId}
+                variant="busy"
+                walkId={walk.walkId}
+                user={walk.user}
+                startedAt={walk.startedAt}
+                speedKmh={walk.speedKmh}
+                treadmillName={walk.treadmillName}
+              />
+            ))}
+          </div>
         )}
       </div>
 
@@ -340,36 +390,6 @@ export function StartWalkCardSkeleton() {
       <Skeleton className="h-14 w-full" />
     </StartCard>
   );
-}
-
-/** Why starting is impossible; `null` — it is possible. Busy state is visible before the press. */
-function startBlocker(
-  list: TreadmillDto[],
-  free: TreadmillDto[],
-  selected: TreadmillDto | null,
-  now: number,
-): string | null {
-  if (list.length === 1) {
-    const busy = list[0].busy;
-    if (busy) {
-      return fmt(m.startCard.blockerSingleBusy, {
-        name: busy.user.name,
-        duration: formatDuration(elapsedSec(busy.startedAt, now)),
-      });
-    }
-  }
-  if (free.length === 0) {
-    // The nearest release time is unknown, so show whoever has walked longest.
-    const busyList = list
-      .map((t) => t.busy)
-      .filter((b): b is TreadmillBusyDto => b !== null)
-      .sort((a, b) => elapsedSec(b.startedAt, now) - elapsedSec(a.startedAt, now));
-    const tail = busyList[0] ? fmt(m.startCard.blockerAllBusyTail, { label: busyLabel(busyList[0], now) }) : '';
-    return `${m.startCard.blockerAllBusy}${tail}`;
-  }
-  if (selected === null) return m.startCard.blockerChooseFree;
-  if (selected.busy) return busyLabel(selected.busy, now);
-  return null;
 }
 
 /** The participant's last treadmill if free; otherwise the first free one by sortOrder. */

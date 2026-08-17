@@ -56,6 +56,8 @@ const MAP = {
   pin: 'map-pin',
   /** "Expand list" — on the member combobox trigger. */
   chevronDown: 'chevron-down',
+  /** Tap-through affordance on the in-progress walk card. */
+  arrowRight: 'arrow-right',
   /** Custom leaderboard period — on the date-range picker button. */
   calendar: 'calendar-range',
   /** "Gearbox" achievement: a cog. */

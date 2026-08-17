@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { use, useEffect, useState } from 'react';
 import useSWR from 'swr';
@@ -284,6 +285,15 @@ export default function WalkPage({ params }: { params: Promise<{ id: string }> }
           no badge without a single walk this week. HP/XP bars are off —
           progress toward the record is already shown by the timer. */}
       <header className="flex flex-col gap-3 px-1.5">
+        {/* Back to home without touching the walk: the timer derives from
+            `started_at`, so leaving the screen loses nothing. Same link as on
+            the settings screen; history is kept — Back returns to the walk. */}
+        <Link
+          href="/"
+          className="font-pixel flex min-h-11 items-center self-start text-xs text-text-dim transition-colors hover:text-text-main focus-visible:text-text-main"
+        >
+          {m.settings.backHome}
+        </Link>
         {/* Start line — above the card, centered; a short label, the pixel
             font is appropriate. */}
         <p className="text-center font-pixel text-[10px] leading-relaxed text-text-dim">

@@ -13,6 +13,13 @@ export function formatDuration(totalSec: number): string {
   return h > 0 ? `${pad(h)}:${pad(m)}:${pad(s)}` : `${pad(m)}:${pad(s)}`;
 }
 
+/** Seconds elapsed since start; negative values (clock skew) clamp to zero. */
+export function elapsedSec(startedAtIso: string, now: number): number {
+  const started = new Date(startedAtIso).getTime();
+  if (!Number.isFinite(started)) return 0;
+  return Math.max(0, Math.floor((now - started) / 1000));
+}
+
 /** `14 мин 32 сек` — human-readable duration for the finish dialog. */
 export function formatDurationHuman(totalSec: number): string {
   const safe = Math.max(0, Math.floor(totalSec));

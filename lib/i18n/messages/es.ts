@@ -76,9 +76,6 @@ export const es: Messages = {
       'Todas las cintas están fuera de servicio. Cuando vuelva alguna, el bloque de inicio aparecerá solo — no hace falta recargar.',
     treadmillJustTaken: 'Esa cinta acaba de ocuparse. Elige una libre.',
     startFailed: 'No se pudo iniciar la caminata. Revisa la conexión y reintenta.',
-    blockerSingleBusy: '{name} está en la cinta ahora, lleva {duration}',
-    blockerAllBusy: 'todas las cintas están ocupadas, espera.',
-    blockerAllBusyTail: ' La más larga — {label}.',
     blockerChooseFree: 'elige una cinta libre',
   },
 
@@ -163,6 +160,15 @@ export const es: Messages = {
     willNotBeSaved: 'La caminata no se guardará.',
     keepWalking: 'Sigo caminando',
     confirmCancel: 'Sí, cancelar',
+  },
+
+  walkCard: {
+    inProgressTitle: 'Caminata en curso',
+    busyTitle: 'Ahora en la cinta',
+    openWalk: 'Abrir la caminata',
+    openWalkAria: 'Abrir la caminata: {name}',
+    elapsed: 'lleva {duration}',
+    speed: '{speed} km/h',
   },
 
   speedControl: {

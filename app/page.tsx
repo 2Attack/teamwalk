@@ -1,6 +1,5 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
 import { AppHeader } from '@/components/AppHeader';
@@ -24,17 +23,16 @@ import type { PeriodSelection } from '@/lib/types';
  * two contradicting top-3s would hang on screen at once.
  */
 export default function HomePage() {
-  const router = useRouter();
   const { data: users, error, isLoading, mutate: reloadUsers } = useUsers();
 
   const [period, setPeriod] = useState<PeriodSelection>({ period: 'week' });
   const [userId, setUserId] = useState<string | null>(null);
   /** Don't read localStorage before the first effect — hydration would diverge. */
   const [restored, setRestored] = useState(false);
-  // The start flow (countdown → POST → navigation) owns the redirect while it
-  // runs: it seeds the active-walk SWR cache before navigating, and the
-  // auto-redirect below reacting to that would race it with a second
-  // navigation. Pausing the subscription keeps exactly one navigator.
+  // The start flow (countdown → POST → navigation) seeds the active-walk SWR
+  // cache before navigating. Pausing the subscription keeps the start card
+  // from swapping to the in-progress card under the countdown overlay for the
+  // "GO!" dwell before the push commits.
   const [startFlowActive, setStartFlowActive] = useState(false);
 
   useEffect(() => {
@@ -59,11 +57,9 @@ export default function HomePage() {
     if (!users.some((u) => u.id === userId)) setUserId(null);
   }, [restored, users, userId]);
 
-  // If the selected participant already has a walk in progress — straight to its screen.
+  // The selected participant's walk in progress feeds the resume card in the
+  // start block. No auto-redirect: home stays reachable while walking.
   const { data: activeWalk } = useActiveWalk(restored && !startFlowActive ? userId : null);
-  useEffect(() => {
-    if (activeWalk) router.replace(`/walk/${activeWalk.id}`);
-  }, [activeWalk, router]);
 
   return (
     <main className="mx-auto w-full max-w-3xl space-y-6 px-4 py-6 sm:space-y-8 sm:px-6 sm:py-8">
@@ -80,6 +76,7 @@ export default function HomePage() {
         <StartWalkCard
           users={users}
           userId={userId}
+          activeWalk={activeWalk ?? null}
           onSelectUser={setUserId}
           onStartFlowChange={setStartFlowActive}
         />
