@@ -59,10 +59,10 @@ export const es: TelegramTexts = {
     `🟢 Se liberó un hueco en «${i.treadmillName}»${i.busyTail}. Veinte minutos de paso no se caminan solos.`,
   ],
 
-  allBusyVariants: [
-    `🔴 No quedan cintas libres. El bot avisará en cuanto se libere un sitio.`,
-    `🔴 Ni una cinta libre — la oficina camina a pleno rendimiento. Atento a la señal verde.`,
-    `🔴 De momento no hace falta bajar: todo está ocupado. La silla lo celebra, pero no por mucho.`,
+  allBusyVariants: (i) => [
+    `🔴 «${i.treadmillName}» acaba de ocuparse — no quedan cintas libres. El bot avisará en cuanto se libere un sitio.`,
+    `🔴 «${i.treadmillName}» era la última libre — la oficina camina a pleno rendimiento. Atento a la señal verde.`,
+    `🔴 Ocuparon «${i.treadmillName}» y era la última. La silla lo celebra, pero no por mucho.`,
   ],
 
   remindStreakVariants: (i) => {

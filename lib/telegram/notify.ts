@@ -230,6 +230,8 @@ export async function notifyTreadmillFreed(input: {
 export async function notifyAllTreadmillsBusy(input: {
   walkId: string;
   startedByUserId: string;
+  /** The treadmill the triggering walk occupied — named in the message. */
+  treadmillName: string;
 }): Promise<void> {
   try {
     if (!telegramEnabled()) return;
@@ -261,7 +263,7 @@ export async function notifyAllTreadmillsBusy(input: {
     const recipients = await listAvailabilityRecipients(input.startedByUserId);
     if (recipients.length === 0) return;
 
-    const text = allBusyText();
+    const text = allBusyText({ treadmillName: input.treadmillName });
     for (const { chatId } of recipients) {
       await sendMessage(chatId, text);
     }

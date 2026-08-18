@@ -91,6 +91,17 @@ No foundational tasks — the feature builds entirely on shipped infrastructure 
 
 ---
 
+## Phase 7: Follow-up — name the taken treadmill (2026-08-18, post-release amendment)
+
+**Purpose**: Product-owner request after the v1 release: the 🔴 message must say which treadmill was taken. See amended research.md D5 and contracts/busy-notification.md.
+
+- [X] T017 Update the `allBusyText` test in `tests/telegram.texts.test.ts` to expect the treadmill name (TDD: RED first)
+- [X] T018 Change `allBusyVariants` to `(i: { treadmillName: string })` in `lib/telegram/texts/types.ts`; rewrite the three variants in `ru/en/es` to name the taken treadmill; update `allBusyText(i)` in `lib/telegram/texts.ts`
+- [X] T019 Add `treadmillName` to `notifyAllTreadmillsBusy` input in `lib/telegram/notify.ts`; pass `walk.treadmillName` from `app/api/walks/start/route.ts`
+- [X] T020 Gates: `npm run typecheck` + `npm test` green; local smoke via dev server; amend research.md D5 and the contract; commit on `feature/004-busy-notify-treadmill-name`
+
+---
+
 ## Dependencies & Execution Order
 
 ### Phase Dependencies

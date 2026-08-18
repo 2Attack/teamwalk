@@ -101,9 +101,9 @@ export function freeText(i: { treadmillName: string; busySec: number }): string 
   return pick(t.freeVariants({ treadmillName: i.treadmillName, busyTail }));
 }
 
-/** "No free treadmills left" — the mirror of `freeText`, count-neutral. */
-export function allBusyText(): string {
-  return pick(t.allBusyVariants);
+/** "No free treadmills left" — the mirror of `freeText`, names the taken one. */
+export function allBusyText(i: { treadmillName: string }): string {
+  return pick(t.allBusyVariants(i));
 }
 
 /**

@@ -149,16 +149,14 @@ describe('freeText', () => {
 });
 
 describe('allBusyText', () => {
-  it('all variants are safe, marked and count-neutral', () => {
+  it('all variants are safe, marked and name the taken treadmill', () => {
     for (let i = 0; i < RUNS; i += 1) {
-      const text = allBusyText();
+      const text = allBusyText({ treadmillName: 'Дорожка у окна' });
       expectWellFormed(text);
       // 🔴 mirrors the freed-up 🟢 so both events are scannable in the chat.
       expect(text).toContain('🔴');
-      // Count-neutral: no treadmill or user names, no numbers — the same
-      // phrase must hold for one treadmill and for several.
-      expect(text).not.toContain('«');
-      expect(text).not.toMatch(/\d/);
+      // The taken treadmill is named; the rest stays count-neutral.
+      expect(text).toContain('Дорожка у окна');
     }
   });
 });
