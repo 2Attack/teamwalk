@@ -59,6 +59,12 @@ export const es: TelegramTexts = {
     `🟢 Se liberó un hueco en «${i.treadmillName}»${i.busyTail}. Veinte minutos de paso no se caminan solos.`,
   ],
 
+  allBusyVariants: [
+    `🔴 No quedan cintas libres. El bot avisará en cuanto se libere un sitio.`,
+    `🔴 Ni una cinta libre — la oficina camina a pleno rendimiento. Atento a la señal verde.`,
+    `🔴 De momento no hace falta bajar: todo está ocupado. La silla lo celebra, pero no por mucho.`,
+  ],
+
   remindStreakVariants: (i) => {
     const streak = days(i.streakDays);
     const idle = workdays(i.idleWorkdays);
