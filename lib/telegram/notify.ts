@@ -10,7 +10,7 @@ import type { ActiveWalkDto, FinishWalkResultDto } from '@/lib/types';
 
 import { sendMessage, telegramEnabled } from './client';
 import { getLink } from './links';
-import { autocloseText, finishText, freeText, startText, uiText } from './texts';
+import { allBusyText, autocloseText, finishText, freeText, startText, uiText } from './texts';
 
 /**
  * Event notifications: start, finish, autoclose.
@@ -120,10 +120,12 @@ export async function notifyWalkFinished(result: FinishWalkResultDto): Promise<v
 }
 
 /**
- * "Are all treadmills busy?" — call **before** freeing one (finish/cancel/
- * autoclose): after the update the "all busy → free" transition is gone.
- * Error or Telegram off — false: the nudge is not worth an extra hot-path
- * query.
+ * "Are all treadmills busy?" — two call sites, opposite sides of the same
+ * transition: **before** freeing one (finish/cancel/autoclose — after the
+ * update the "all busy → free" transition is gone) and **after** occupying
+ * one (`notifyAllTreadmillsBusy` — the all-busy state is durable, so a
+ * post-insert read is race-tolerant). Error or Telegram off — false: the
+ * nudge is not worth an extra hot-path query.
  */
 export async function wereAllTreadmillsBusy(): Promise<boolean> {
   if (!telegramEnabled()) return false;
@@ -151,7 +153,34 @@ export async function wereAllTreadmillsBusy(): Promise<boolean> {
 }
 
 /**
- * "Treadmill freed up" — the only broadcast category. The
+ * Recipients of availability broadcasts (freed / all busy): the `notify_free`
+ * toggle covers both directions of the same interest.
+ */
+async function listAvailabilityRecipients(
+  excludeUserId: string,
+): Promise<Array<{ chatId: number }>> {
+  return db
+    .select({ chatId: telegramLinks.chatId })
+    .from(telegramLinks)
+    .where(
+      and(
+        eq(telegramLinks.notifyFree, true),
+        or(isNull(telegramLinks.mutedUntil), lt(telegramLinks.mutedUntil, sql`now()`)),
+        ne(telegramLinks.userId, excludeUserId),
+        // Whoever is walking right now does not need a treadmill.
+        notExists(
+          db
+            .select({ one: sql`1` })
+            .from(walks)
+            .where(and(eq(walks.status, 'active'), eq(walks.userId, telegramLinks.userId))),
+        ),
+      ),
+    );
+}
+
+/**
+ * "Treadmill freed up" — a broadcast category (see also
+ * `notifyAllTreadmillsBusy`, its mirror). The
  * caller must check `wereAllTreadmillsBusy()` before freeing: the event is
  * the "all busy → one free" transition, not every finish.
  *
@@ -176,23 +205,7 @@ export async function notifyTreadmillFreed(input: {
 
     if (!(await tryDedup(input.freedByUserId, 'free', `free:${input.walkId}`))) return;
 
-    const recipients = await db
-      .select({ chatId: telegramLinks.chatId })
-      .from(telegramLinks)
-      .where(
-        and(
-          eq(telegramLinks.notifyFree, true),
-          or(isNull(telegramLinks.mutedUntil), lt(telegramLinks.mutedUntil, sql`now()`)),
-          ne(telegramLinks.userId, input.freedByUserId),
-          // Whoever is walking right now does not need a treadmill.
-          notExists(
-            db
-              .select({ one: sql`1` })
-              .from(walks)
-              .where(and(eq(walks.status, 'active'), eq(walks.userId, telegramLinks.userId))),
-          ),
-        ),
-      );
+    const recipients = await listAvailabilityRecipients(input.freedByUserId);
     if (recipients.length === 0) return;
 
     // One text per event: every recipient sees the same phrase — a PA
@@ -203,6 +216,57 @@ export async function notifyTreadmillFreed(input: {
     }
   } catch (error) {
     console.error('[telegram] notifyTreadmillFreed failed', error);
+  }
+}
+
+/**
+ * "No free treadmills left" — the mirror of `notifyTreadmillFreed`: the event
+ * is the "one free → all busy" transition, not every start. Called after the
+ * walk insert via `waitUntil()`; the DB is re-read here, so the check costs
+ * the hot path nothing and tolerates a concurrent finish (then it simply
+ * stays silent). Same recipients, window and PA-announcement style as the
+ * freed-up broadcast.
+ */
+export async function notifyAllTreadmillsBusy(input: {
+  walkId: string;
+  startedByUserId: string;
+}): Promise<void> {
+  try {
+    if (!telegramEnabled()) return;
+
+    // Same perishable-event window as the freed-up message: outside it the
+    // event is dropped, never rescheduled.
+    const now = new Date();
+    if (isWeekend(toOfficeDay(now))) return;
+    const hour = officeHour(now);
+    if (hour < FREE_WINDOW_START_HOUR || hour >= FREE_WINDOW_END_HOUR) return;
+
+    // Zero active treadmills also lands here: nothing to announce.
+    if (!(await wereAllTreadmillsBusy())) return;
+
+    // Concurrent starts on the last free treadmills: every background task
+    // sees "all busy", so only the latest-started walk gets to announce —
+    // both racers resolve the same winner.
+    const latest = await db
+      .select({ id: walks.id })
+      .from(walks)
+      .where(eq(walks.status, 'active'))
+      // Secondary key: equal timestamps must still resolve one winner.
+      .orderBy(desc(walks.startedAt), desc(walks.id))
+      .limit(1);
+    if (latest[0]?.id !== input.walkId) return;
+
+    if (!(await tryDedup(input.startedByUserId, 'busy', `busy:${input.walkId}`))) return;
+
+    const recipients = await listAvailabilityRecipients(input.startedByUserId);
+    if (recipients.length === 0) return;
+
+    const text = allBusyText();
+    for (const { chatId } of recipients) {
+      await sendMessage(chatId, text);
+    }
+  } catch (error) {
+    console.error('[telegram] notifyAllTreadmillsBusy failed', error);
   }
 }
 

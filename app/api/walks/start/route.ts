@@ -13,7 +13,7 @@ import { db } from '@/lib/db';
 import { getActiveWalk, getTreadmillById, listActiveTreadmills } from '@/lib/db/queries/walks';
 import { walks } from '@/lib/db/schema';
 import { formatTimeOfDay } from '@/lib/format';
-import { notifyWalkStarted } from '@/lib/telegram/notify';
+import { notifyAllTreadmillsBusy, notifyWalkStarted } from '@/lib/telegram/notify';
 import { ensureNotifySweep } from '@/lib/telegram/sweep';
 import type { ActiveWalkDto, TreadmillDto } from '@/lib/types';
 import { startWalkSchema } from '@/lib/validation';
@@ -187,6 +187,9 @@ export async function POST(request: Request) {
     // Telegram is never in the hot path: the start notification
     // goes after the response; idempotency and "not me" live inside notify.
     waitUntil(notifyWalkStarted(walk));
+    // The "one free → all busy" transition check also runs post-response:
+    // the occupied state is durable, so reading it late is race-tolerant.
+    waitUntil(notifyAllTreadmillsBusy({ walkId: walk.id, startedByUserId: walk.userId }));
 
     return NextResponse.json(walk, { status: 201 });
   });

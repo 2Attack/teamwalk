@@ -67,6 +67,8 @@ export interface TelegramTexts {
   /** " — was busy for 40 minutes"; starts with the separator. */
   busyTail(busy: string): string;
   freeVariants(i: { treadmillName: string; busyTail: string }): readonly string[];
+  /** Last free treadmill taken; count-neutral — must hold for 1 or N units. */
+  allBusyVariants: readonly string[];
 
   remindStreakVariants(i: {
     idleWorkdays: number;

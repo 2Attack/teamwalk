@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { rejectReason } from '../lib/hints/filter';
 import {
+  allBusyText,
   autocloseText,
   digestText,
   farewellText,
@@ -143,6 +144,21 @@ describe('freeText', () => {
       const long = freeText({ treadmillName: 'Т', busySec: 8 * 3600 });
       expect(long).toContain('8 часов');
       expect(long).not.toContain('480');
+    }
+  });
+});
+
+describe('allBusyText', () => {
+  it('all variants are safe, marked and count-neutral', () => {
+    for (let i = 0; i < RUNS; i += 1) {
+      const text = allBusyText();
+      expectWellFormed(text);
+      // 🔴 mirrors the freed-up 🟢 so both events are scannable in the chat.
+      expect(text).toContain('🔴');
+      // Count-neutral: no treadmill or user names, no numbers — the same
+      // phrase must hold for one treadmill and for several.
+      expect(text).not.toContain('«');
+      expect(text).not.toMatch(/\d/);
     }
   });
 });

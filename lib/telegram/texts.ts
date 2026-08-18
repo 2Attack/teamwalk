@@ -101,6 +101,11 @@ export function freeText(i: { treadmillName: string; busySec: number }): string 
   return pick(t.freeVariants({ treadmillName: i.treadmillName, busyTail }));
 }
 
+/** "No free treadmills left" — the mirror of `freeText`, count-neutral. */
+export function allBusyText(): string {
+  return pick(t.allBusyVariants);
+}
+
 /**
  * "Time to stretch" reminder (TZ 6.10.4): the text must give a concrete reason,
  * not state guilt. A streak at risk is game mechanics; "you haven't walked for
