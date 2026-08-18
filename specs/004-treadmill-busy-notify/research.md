@@ -40,12 +40,13 @@ No external unknowns — the feature mirrors an existing, shipped mechanism (`no
 
 ## D5. Text content and localization
 
-**Decision**: New `allBusyVariants: readonly string[]` on the `TelegramTexts` interface (`lib/telegram/texts/types.ts`) — a parameterless variant pool — plus an `allBusyText()` builder in `lib/telegram/texts.ts`. Three variants per locale (matching `freeVariants`), phrased count-neutrally (e.g. ru "Свободных дорожек не осталось…") so the same text works for one treadmill or several. Tone contract as documented in `texts/types.ts`: jokes about walking/treadmill/chair/stats only.
+**Decision** *(amended 2026-08-18 by product-owner request)*: `allBusyVariants(i: { treadmillName: string })` on the `TelegramTexts` interface (`lib/telegram/texts/types.ts`) plus an `allBusyText(i)` builder in `lib/telegram/texts.ts` — the message **names the treadmill that was just taken** (mirroring `freeVariants`), while the rest of the phrasing stays count-neutral. Three variants per locale. Tone contract as documented in `texts/types.ts`: jokes about walking/treadmill/chair/stats only.
 
-**Rationale**: Principle IV — the `TelegramTexts` type enforces en/ru/es parity at compile time; count-neutral phrasing avoids passing treadmill totals and pluralization branches for no user value.
+**Rationale**: Principle IV — the `TelegramTexts` type enforces en/ru/es parity at compile time; naming the taken treadmill matches the freed-up message's style and was explicitly requested.
 
 **Alternatives considered**:
-- *Include the taken treadmill's name or the walker's name*: the useful signal is "don't go down now", not who took it; naming the walker in a broadcast is a jab the tone contract avoids. Rejected.
+- *Fully nameless, count-neutral text* (the original v1 decision, shipped first): dropped on product-owner request — subscribers want to see which treadmill was taken.
+- *Include the walker's name*: naming the walker in a broadcast is a jab the tone contract avoids. Rejected.
 
 ## D6. Trigger scope
 

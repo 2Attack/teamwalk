@@ -46,10 +46,10 @@ export const en: TelegramTexts = {
     `🟢 A spot on “${i.treadmillName}” opened up${i.busyTail}. Twenty minutes of walking won't walk themselves.`,
   ],
 
-  allBusyVariants: [
-    `🔴 No free treadmills right now. The bot will ping you the moment one opens up.`,
-    `🔴 Not a single treadmill free — the office is walking at full capacity. Watch for the green light.`,
-    `🔴 No point heading down yet: everything's taken. The chair celebrates, but not for long.`,
+  allBusyVariants: (i) => [
+    `🔴 “${i.treadmillName}” was just taken — no free treadmills left. The bot will ping you the moment one opens up.`,
+    `🔴 “${i.treadmillName}” was the last one free — the office is walking at full capacity. Watch for the green light.`,
+    `🔴 “${i.treadmillName}” is taken, and that was the last one. The chair celebrates, but not for long.`,
   ],
 
   remindStreakVariants: (i) => {

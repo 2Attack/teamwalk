@@ -189,7 +189,13 @@ export async function POST(request: Request) {
     waitUntil(notifyWalkStarted(walk));
     // The "one free → all busy" transition check also runs post-response:
     // the occupied state is durable, so reading it late is race-tolerant.
-    waitUntil(notifyAllTreadmillsBusy({ walkId: walk.id, startedByUserId: walk.userId }));
+    waitUntil(
+      notifyAllTreadmillsBusy({
+        walkId: walk.id,
+        startedByUserId: walk.userId,
+        treadmillName: walk.treadmillName,
+      }),
+    );
 
     return NextResponse.json(walk, { status: 201 });
   });

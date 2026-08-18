@@ -11,6 +11,8 @@ export async function notifyAllTreadmillsBusy(input: {
   walkId: string;
   /** Its owner — excluded from recipients, owns the notification_log row. */
   startedByUserId: string;
+  /** The treadmill the triggering walk occupied — named in the message. */
+  treadmillName: string;
 }): Promise<void>;
 ```
 
@@ -31,13 +33,13 @@ export async function notifyAllTreadmillsBusy(input: {
 
 ```ts
 // lib/telegram/texts.ts
-export function allBusyText(): string; // random pick from the active locale's pool
+export function allBusyText(i: { treadmillName: string }): string; // random pick from the active locale's pool
 
 // lib/telegram/texts/types.ts — on TelegramTexts:
-allBusyVariants: readonly string[];
+allBusyVariants(i: { treadmillName: string }): readonly string[];
 ```
 
 - Three variants per locale (en/ru/es), same count in each — parity enforced by the `TelegramTexts` interface.
-- Count-neutral phrasing (valid for 1 or N treadmills); no walker or treadmill names.
+- Names the treadmill that was just taken (amended 2026-08-18); the rest of the phrasing stays count-neutral. No walker names.
 - Tone contract of `texts/types.ts`: walking/treadmill/chair/stats jokes only.
 - Suggested marker: 🔴 prefix, mirroring the freed-up 🟢.
