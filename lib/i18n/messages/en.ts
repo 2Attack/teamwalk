@@ -148,6 +148,7 @@ export const en: Messages = {
     legendTime: 'Time, min',
     legendKm: 'Distance, km',
     empty: 'No walks in the last {days} days',
+    emptyRange: 'No walks in the selected period',
     notFound: 'Participant not found',
   },
 
@@ -430,6 +431,7 @@ export const en: Messages = {
     dateFormat: 'Date must be in YYYY-MM-DD format',
     dateInvalid: 'Nonexistent date',
     periodInverted: 'The period start is after its end',
+    rangeTooLong: 'The period cannot be longer than a year',
   },
 
   api: {

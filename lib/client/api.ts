@@ -146,8 +146,16 @@ export function useUserStats(userId: string | null) {
 }
 
 /** Daily time/distance series for the per-user stats page. */
-export function useUserDaily(userId: string | null) {
-  return useSWR<UserDailyStatsDto>(userId ? `/api/users/${userId}/daily` : null, apiGet);
+export function useUserDaily(
+  userId: string | null,
+  range: { from: string; to: string } | null = null,
+) {
+  const query = range ? `?from=${range.from}&to=${range.to}` : '';
+  return useSWR<UserDailyStatsDto>(userId ? `/api/users/${userId}/daily${query}` : null, apiGet, {
+    // Range changes swap the SWR key; without this the page would drop to a
+    // skeleton on every calendar click and unmount the open range popover.
+    keepPreviousData: true,
+  });
 }
 
 /** Participant's Telegram status — for the card and the invite panel. */

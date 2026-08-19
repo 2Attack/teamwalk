@@ -1,4 +1,4 @@
-import { and, asc, eq, gte, sql } from 'drizzle-orm';
+import { and, asc, eq, gte, lt, sql } from 'drizzle-orm';
 
 import { TZ } from '@/lib/config';
 import { db } from '@/lib/db';
@@ -15,8 +15,12 @@ import type { DailyTotalsRow } from '@/lib/stats/daily';
 // expressions. A config constant, never user input.
 const dayExpr = sql<string>`to_char(${walks.startedAt} at time zone ${sql.raw(`'${TZ}'`)}, 'YYYY-MM-DD')`;
 
-/** Per-day totals of finished walks since `since`; only days with walks. */
-export async function getDailyTotals(userId: string, since: Date): Promise<DailyTotalsRow[]> {
+/** Per-day totals of finished walks in `[since, until)`; only days with walks. */
+export async function getDailyTotals(
+  userId: string,
+  since: Date,
+  until: Date,
+): Promise<DailyTotalsRow[]> {
   const rows = await db
     .select({
       day: dayExpr,
@@ -26,7 +30,12 @@ export async function getDailyTotals(userId: string, since: Date): Promise<Daily
     })
     .from(walks)
     .where(
-      and(eq(walks.userId, userId), eq(walks.status, 'finished'), gte(walks.startedAt, since)),
+      and(
+        eq(walks.userId, userId),
+        eq(walks.status, 'finished'),
+        gte(walks.startedAt, since),
+        lt(walks.startedAt, until),
+      ),
     )
     .groupBy(dayExpr)
     .orderBy(asc(dayExpr));

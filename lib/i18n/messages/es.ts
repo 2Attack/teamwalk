@@ -149,6 +149,7 @@ export const es: Messages = {
     legendTime: 'Tiempo, min',
     legendKm: 'Distancia, km',
     empty: 'Sin caminatas en los últimos {days} días',
+    emptyRange: 'Sin caminatas en el periodo seleccionado',
     notFound: 'Participante no encontrado',
   },
 
@@ -433,6 +434,7 @@ export const es: Messages = {
     dateFormat: 'Fecha en formato AAAA-MM-DD',
     dateInvalid: 'Fecha inexistente',
     periodInverted: 'El inicio del periodo es posterior a su fin',
+    rangeTooLong: 'El periodo no puede durar más de un año',
   },
 
   api: {

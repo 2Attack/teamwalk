@@ -168,6 +168,7 @@ export const ru = {
     legendTime: 'Время, мин',
     legendKm: 'Дистанция, км',
     empty: 'За последние {days} дней прогулок не было',
+    emptyRange: 'В выбранном периоде прогулок не было',
     notFound: 'Участник не найден',
   },
 
@@ -455,6 +456,7 @@ export const ru = {
     dateFormat: 'Дата — в формате ГГГГ-ММ-ДД',
     dateInvalid: 'Несуществующая дата',
     periodInverted: 'Начало периода позже его конца',
+    rangeTooLong: 'Период не может быть длиннее года',
   },
 
   api: {

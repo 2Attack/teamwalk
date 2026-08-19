@@ -1,9 +1,10 @@
 'use client';
 
 import Link from 'next/link';
-import { use } from 'react';
+import { use, useState } from 'react';
 
 import { Avatar } from '@/components/Avatar';
+import { DateRangePicker, formatRangeLabel, type DayRange } from '@/components/DateRangePicker';
 import { StatsDailyChart } from '@/components/StatsDailyChart';
 import {
   Card,
@@ -16,6 +17,7 @@ import { Skeleton } from '@/components/ui/8bit/skeleton';
 import { useUserDaily } from '@/lib/client/api';
 import { STATS_DAYS } from '@/lib/config';
 import { fmt, m } from '@/lib/i18n';
+import { addOfficeDays, toOfficeDay } from '@/lib/time';
 
 /**
  * Per-participant statistics. One block for now — the daily
@@ -24,8 +26,13 @@ import { fmt, m } from '@/lib/i18n';
  */
 export default function StatsPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
-  const { data, error, isLoading } = useUserDaily(id);
+  // null — the default "last STATS_DAYS days ending today" window: it follows
+  // the office day across midnight instead of freezing the initial bounds.
+  const [range, setRange] = useState<DayRange | null>(null);
+  const { data, error, isLoading } = useUserDaily(id, range);
 
+  const today = toOfficeDay();
+  const pickerValue = range ?? { from: addOfficeDays(today, -(STATS_DAYS - 1)), to: today };
   const hasWalks = data?.days.some((d) => d.walksCount > 0) ?? false;
 
   return (
@@ -55,14 +62,17 @@ export default function StatsPage({ params }: { params: Promise<{ id: string }> 
 
       {data && (
         <>
-          <header className="flex items-center gap-3">
-            <Avatar avatarId={data.user.avatarId} name={data.user.name} size={48} />
-            <div className="min-w-0">
-              <h1 className="truncate text-lg" title={data.user.name}>
-                {data.user.name}
-              </h1>
-              <p className="font-pixel text-[10px] text-text-dim">{m.statsPage.title}</p>
+          <header className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex min-w-0 items-center gap-3">
+              <Avatar avatarId={data.user.avatarId} name={data.user.name} size={48} />
+              <div className="min-w-0">
+                <h1 className="truncate text-lg" title={data.user.name}>
+                  {data.user.name}
+                </h1>
+                <p className="font-pixel text-[10px] text-text-dim">{m.statsPage.title}</p>
+              </div>
             </div>
+            <DateRangePicker value={pickerValue} onChange={setRange} />
           </header>
 
           <Card font="normal">
@@ -71,7 +81,9 @@ export default function StatsPage({ params }: { params: Promise<{ id: string }> 
                 {m.statsPage.chartTitle}
               </CardTitle>
               <CardDescription font="normal">
-                {fmt(m.statsPage.chartCaption, { days: STATS_DAYS })}
+                {range === null
+                  ? fmt(m.statsPage.chartCaption, { days: STATS_DAYS })
+                  : formatRangeLabel(range)}
               </CardDescription>
             </CardHeader>
             <CardContent font="normal">
@@ -79,7 +91,9 @@ export default function StatsPage({ params }: { params: Promise<{ id: string }> 
                 <StatsDailyChart days={data.days} />
               ) : (
                 <p className="py-8 text-center text-sm text-text-dim">
-                  {fmt(m.statsPage.empty, { days: STATS_DAYS })}
+                  {range === null
+                    ? fmt(m.statsPage.empty, { days: STATS_DAYS })
+                    : m.statsPage.emptyRange}
                 </p>
               )}
             </CardContent>
