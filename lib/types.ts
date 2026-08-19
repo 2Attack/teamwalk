@@ -153,6 +153,21 @@ export interface LeaderboardRowDto {
   lastWalkAt: string | null;
 }
 
+/** One office day of one participant; derived from finished walks. */
+export interface DailyStatDto {
+  /** Office day, `YYYY-MM-DD`. */
+  day: string;
+  km: number;
+  durationSec: number;
+  walksCount: number;
+}
+
+/** `GET /api/users/:id/daily` — continuous series, oldest first. */
+export interface UserDailyStatsDto {
+  user: UserDto;
+  days: DailyStatDto[];
+}
+
 export interface LeaderboardDto {
   period: Period | 'custom';
   rows: LeaderboardRowDto[];

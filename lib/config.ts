@@ -110,5 +110,8 @@ export const NOTIFY_WINDOW_END_HOUR = Number(process.env.NOTIFY_WINDOW_END_HOUR 
 export const FREE_WINDOW_START_HOUR = Number(process.env.FREE_WINDOW_START_HOUR ?? 9);
 export const FREE_WINDOW_END_HOUR = Number(process.env.FREE_WINDOW_END_HOUR ?? 19);
 
+/** Days covered by the per-user daily stats chart (including today). */
+export const STATS_DAYS = 30;
+
 /** localStorage key of the last selected participant. */
 export const LAST_USER_STORAGE_KEY = 'teamwalk:lastUserId';

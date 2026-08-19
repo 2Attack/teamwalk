@@ -138,6 +138,17 @@ export const en: Messages = {
     colAvgSpeed: 'Average speed',
     colAvgSpeedShort: 'Avg speed',
     empty: 'Nobody has walked yet — be the first',
+    statsAria: 'Stats: {name}',
+  },
+
+  statsPage: {
+    title: 'Statistics',
+    chartTitle: 'Time and distance by day',
+    chartCaption: 'Last {days} days',
+    legendTime: 'Time, min',
+    legendKm: 'Distance, km',
+    empty: 'No walks in the last {days} days',
+    notFound: 'Participant not found',
   },
 
   podium: {

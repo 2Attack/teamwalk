@@ -58,6 +58,8 @@ const MAP = {
   chevronDown: 'chevron-down',
   /** Tap-through affordance on the in-progress walk card. */
   arrowRight: 'arrow-right',
+  /** Per-user statistics page — on the leaderboard row link. */
+  chart: 'chart',
   /** Custom leaderboard period — on the date-range picker button. */
   calendar: 'calendar-range',
   /** "Gearbox" achievement: a cog. */

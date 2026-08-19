@@ -1,9 +1,12 @@
 'use client';
 
+import Link from 'next/link';
 import { useMemo } from 'react';
 
 import { Avatar } from '@/components/Avatar';
 import { StreakBadge } from '@/components/StreakBadge';
+import { Button } from '@/components/ui/8bit/button';
+import { Icon } from '@/components/ui/icon';
 import { Card, CardContent } from '@/components/ui/8bit/card';
 import {
   Table,
@@ -134,6 +137,25 @@ function LeaderboardRow({
         <CellLabel>{m.leaderboard.colAvgSpeed}</CellLabel>
         {row.avgSpeedKmh > 0 ? `${row.avgSpeedKmh.toFixed(1)} ${m.units.kmh}` : '—'}
       </TableCell>
+
+      {/* Stats page link; on mobile it docks to the card's right edge. */}
+      <TableCell
+        role="cell"
+        className="px-1 py-1 text-right align-middle max-sm:ml-auto max-sm:px-0 max-sm:py-0"
+      >
+        <Button
+          asChild
+          variant="ghost"
+          size="icon"
+          font="normal"
+          className="min-h-11 min-w-11"
+          aria-label={fmt(m.leaderboard.statsAria, { name: row.user.name })}
+        >
+          <Link href={`/stats/${row.user.id}`}>
+            <Icon name="chart" size={16} />
+          </Link>
+        </Button>
+      </TableCell>
     </TableRow>
   );
 }
@@ -181,7 +203,9 @@ export function Leaderboard({ period, currentUserId }: LeaderboardProps) {
 
   return (
     // 8bitcn wrapper is `w-fit` — without this the table would shrink to content.
-    <div className="w-full [&>div]:w-full">
+    // Slight breakout past the page column: seven columns plus the pixel
+    // stats button need ~24px more than max-w-3xl to fit without a scrollbar.
+    <div className="w-full [&>div]:w-full sm:-mx-3 sm:w-[calc(100%+1.5rem)]">
       <Table
         role="table"
         font="normal"
@@ -215,6 +239,10 @@ export function Leaderboard({ period, currentUserId }: LeaderboardProps) {
             </TableHead>
             <TableHead scope="col" role="columnheader" className={cn(HEAD_CELL, 'w-24 text-right')}>
               {m.leaderboard.colAvgSpeedShort}
+            </TableHead>
+            {/* Stats-link column: the icon is self-explanatory, header stays empty. */}
+            <TableHead scope="col" role="columnheader" className={cn(HEAD_CELL, 'w-14')}>
+              <span className="sr-only">{m.statsPage.title}</span>
             </TableHead>
           </TableRow>
         </TableHeader>

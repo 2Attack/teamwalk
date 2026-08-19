@@ -139,6 +139,17 @@ export const es: Messages = {
     colAvgSpeed: 'Velocidad media',
     colAvgSpeedShort: 'Vel. media',
     empty: 'Nadie ha caminado todavía — sé el primero',
+    statsAria: 'Estadísticas: {name}',
+  },
+
+  statsPage: {
+    title: 'Estadísticas',
+    chartTitle: 'Tiempo y distancia por día',
+    chartCaption: 'Últimos {days} días',
+    legendTime: 'Tiempo, min',
+    legendKm: 'Distancia, km',
+    empty: 'Sin caminatas en los últimos {days} días',
+    notFound: 'Participante no encontrado',
   },
 
   podium: {

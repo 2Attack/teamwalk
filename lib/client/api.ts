@@ -16,6 +16,7 @@ import type {
   TelegramStatusDto,
   TreadmillAdminDto,
   TreadmillDto,
+  UserDailyStatsDto,
   UserDto,
   UserStatsDto,
   WalkDto,
@@ -142,6 +143,11 @@ export function useHints(userId: string | null) {
 
 export function useUserStats(userId: string | null) {
   return useSWR<UserStatsDto>(userId ? `/api/users/${userId}/stats` : null, apiGet);
+}
+
+/** Daily time/distance series for the per-user stats page. */
+export function useUserDaily(userId: string | null) {
+  return useSWR<UserDailyStatsDto>(userId ? `/api/users/${userId}/daily` : null, apiGet);
 }
 
 /** Participant's Telegram status — for the card and the invite panel. */

@@ -158,6 +158,17 @@ export const ru = {
     colAvgSpeed: 'Средняя скорость',
     colAvgSpeedShort: 'Ср. скорость',
     empty: 'Ещё никто не ходил — будьте первым',
+    statsAria: 'Статистика: {name}',
+  },
+
+  statsPage: {
+    title: 'Статистика',
+    chartTitle: 'Время и дистанция по дням',
+    chartCaption: 'Последние {days} дней',
+    legendTime: 'Время, мин',
+    legendKm: 'Дистанция, км',
+    empty: 'За последние {days} дней прогулок не было',
+    notFound: 'Участник не найден',
   },
 
   podium: {
