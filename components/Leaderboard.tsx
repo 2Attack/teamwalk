@@ -1,9 +1,12 @@
 'use client';
 
+import { useRouter } from 'next/navigation';
 import { useMemo } from 'react';
 
 import { Avatar } from '@/components/Avatar';
 import { StreakBadge } from '@/components/StreakBadge';
+import { Button } from '@/components/ui/8bit/button';
+import { Icon } from '@/components/ui/icon';
 import { Card, CardContent } from '@/components/ui/8bit/card';
 import {
   Table,
@@ -78,10 +81,12 @@ function LeaderboardRow({
   row,
   isCurrent,
   isIdle,
+  onOpenStats,
 }: {
   row: LeaderboardRowDto;
   isCurrent: boolean;
   isIdle: boolean;
+  onOpenStats: () => void;
 }) {
   return (
     <TableRow
@@ -134,6 +139,25 @@ function LeaderboardRow({
         <CellLabel>{m.leaderboard.colAvgSpeed}</CellLabel>
         {row.avgSpeedKmh > 0 ? `${row.avgSpeedKmh.toFixed(1)} ${m.units.kmh}` : '—'}
       </TableCell>
+
+      {/* Stats page link; on mobile it docks to the card's right edge.
+          A real button + router.push: the 8bit Button doesn't forward
+          `asChild`, so a nested <Link> would render invalid <button><a>. */}
+      <TableCell
+        role="cell"
+        className="px-1 py-1 text-right align-middle max-sm:ml-auto max-sm:px-0 max-sm:py-0"
+      >
+        <Button
+          variant="ghost"
+          size="icon"
+          font="normal"
+          className="min-h-11 min-w-11"
+          aria-label={fmt(m.leaderboard.statsAria, { name: row.user.name })}
+          onClick={onOpenStats}
+        >
+          <Icon name="chart" size={16} />
+        </Button>
+      </TableCell>
     </TableRow>
   );
 }
@@ -167,6 +191,7 @@ function EmptyState() {
  * i.e. the identity layer.
  */
 export function Leaderboard({ period, currentUserId }: LeaderboardProps) {
+  const router = useRouter();
   const { data, isLoading } = useLeaderboard(period);
 
   // Members with zero distance sink to the bottom, grayed out.
@@ -181,7 +206,9 @@ export function Leaderboard({ period, currentUserId }: LeaderboardProps) {
 
   return (
     // 8bitcn wrapper is `w-fit` — without this the table would shrink to content.
-    <div className="w-full [&>div]:w-full">
+    // Slight breakout past the page column: seven columns plus the pixel
+    // stats button need ~24px more than max-w-3xl to fit without a scrollbar.
+    <div className="w-full [&>div]:w-full sm:-mx-3 sm:w-[calc(100%+1.5rem)]">
       <Table
         role="table"
         font="normal"
@@ -216,6 +243,10 @@ export function Leaderboard({ period, currentUserId }: LeaderboardProps) {
             <TableHead scope="col" role="columnheader" className={cn(HEAD_CELL, 'w-24 text-right')}>
               {m.leaderboard.colAvgSpeedShort}
             </TableHead>
+            {/* Stats-link column: the icon is self-explanatory, header stays empty. */}
+            <TableHead scope="col" role="columnheader" className={cn(HEAD_CELL, 'w-14')}>
+              <span className="sr-only">{m.statsPage.title}</span>
+            </TableHead>
           </TableRow>
         </TableHeader>
         <TableBody className="max-sm:block">
@@ -225,6 +256,7 @@ export function Leaderboard({ period, currentUserId }: LeaderboardProps) {
               row={row}
               isCurrent={Boolean(currentUserId && row.user.id === currentUserId)}
               isIdle={row.totalKm <= 0}
+              onOpenStats={() => router.push(`/stats/${row.user.id}`)}
             />
           ))}
         </TableBody>

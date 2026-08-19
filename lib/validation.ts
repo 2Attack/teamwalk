@@ -226,6 +226,22 @@ export const periodSelectionSchema = z.union([
 ]);
 export type PeriodSelection = z.infer<typeof periodSelectionSchema>;
 
+/**
+ * Custom window of the per-user daily chart (both bounds inclusive).
+ * Capped to a year: the series is zero-filled per day, and an unbounded
+ * range would balloon the response for no chart benefit.
+ */
+export const dailyRangeSchema = z
+  .object({ from: officeDaySchema, to: officeDaySchema })
+  .refine((v) => v.from <= v.to, {
+    message: m.validation.periodInverted,
+    path: ['from'],
+  })
+  .refine((v) => Date.parse(v.to) - Date.parse(v.from) < 366 * 86_400_000, {
+    message: m.validation.rangeTooLong,
+    path: ['to'],
+  });
+
 /** LLM response with hints. */
 export const hintToneSchema = z.enum(['praise', 'tease', 'neutral', 'tip']);
 

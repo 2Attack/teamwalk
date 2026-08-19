@@ -139,6 +139,18 @@ export const es: Messages = {
     colAvgSpeed: 'Velocidad media',
     colAvgSpeedShort: 'Vel. media',
     empty: 'Nadie ha caminado todavía — sé el primero',
+    statsAria: 'Estadísticas: {name}',
+  },
+
+  statsPage: {
+    title: 'Estadísticas',
+    chartTitle: 'Tiempo y distancia por día',
+    chartCaption: 'Últimos {days} días',
+    legendTime: 'Tiempo, min',
+    legendKm: 'Distancia, km',
+    empty: 'Sin caminatas en los últimos {days} días',
+    emptyRange: 'Sin caminatas en el periodo seleccionado',
+    notFound: 'Participante no encontrado',
   },
 
   podium: {
@@ -422,6 +434,7 @@ export const es: Messages = {
     dateFormat: 'Fecha en formato AAAA-MM-DD',
     dateInvalid: 'Fecha inexistente',
     periodInverted: 'El inicio del periodo es posterior a su fin',
+    rangeTooLong: 'El periodo no puede durar más de un año',
   },
 
   api: {
