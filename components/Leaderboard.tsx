@@ -1,6 +1,6 @@
 'use client';
 
-import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useMemo } from 'react';
 
 import { Avatar } from '@/components/Avatar';
@@ -81,10 +81,12 @@ function LeaderboardRow({
   row,
   isCurrent,
   isIdle,
+  onOpenStats,
 }: {
   row: LeaderboardRowDto;
   isCurrent: boolean;
   isIdle: boolean;
+  onOpenStats: () => void;
 }) {
   return (
     <TableRow
@@ -138,22 +140,22 @@ function LeaderboardRow({
         {row.avgSpeedKmh > 0 ? `${row.avgSpeedKmh.toFixed(1)} ${m.units.kmh}` : '—'}
       </TableCell>
 
-      {/* Stats page link; on mobile it docks to the card's right edge. */}
+      {/* Stats page link; on mobile it docks to the card's right edge.
+          A real button + router.push: the 8bit Button doesn't forward
+          `asChild`, so a nested <Link> would render invalid <button><a>. */}
       <TableCell
         role="cell"
         className="px-1 py-1 text-right align-middle max-sm:ml-auto max-sm:px-0 max-sm:py-0"
       >
         <Button
-          asChild
           variant="ghost"
           size="icon"
           font="normal"
           className="min-h-11 min-w-11"
           aria-label={fmt(m.leaderboard.statsAria, { name: row.user.name })}
+          onClick={onOpenStats}
         >
-          <Link href={`/stats/${row.user.id}`}>
-            <Icon name="chart" size={16} />
-          </Link>
+          <Icon name="chart" size={16} />
         </Button>
       </TableCell>
     </TableRow>
@@ -189,6 +191,7 @@ function EmptyState() {
  * i.e. the identity layer.
  */
 export function Leaderboard({ period, currentUserId }: LeaderboardProps) {
+  const router = useRouter();
   const { data, isLoading } = useLeaderboard(period);
 
   // Members with zero distance sink to the bottom, grayed out.
@@ -253,6 +256,7 @@ export function Leaderboard({ period, currentUserId }: LeaderboardProps) {
               row={row}
               isCurrent={Boolean(currentUserId && row.user.id === currentUserId)}
               isIdle={row.totalKm <= 0}
+              onOpenStats={() => router.push(`/stats/${row.user.id}`)}
             />
           ))}
         </TableBody>
